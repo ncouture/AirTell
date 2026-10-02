@@ -1,16 +1,16 @@
 # Implementation Plan: BLE Tracker Deanonymization, Pairing Relay Evaluation & Rogue Beacon Testbed
 
-## Phase 1: Multi-Signal Rotating Identifier Deanonymizer
-- [ ] Task: Write tests for static MAC leakage detection and rotation delay divergence
-  - [ ] Write unit tests in `tests/test_adversarial_deanonymizer.py` for static MAC leakage flag across rotating cryptographic keys
-  - [ ] Write unit tests verifying rotation delay divergence $\Delta t$ detection between address changes and payload updates
-- [ ] Task: Implement `RotatingIdentifierAnalyzer` in `bluetooth_sniffle/adversarial/deanonymizer.py`
-  - [ ] Implement `StaticLeakageDetector` identifying invariant public keys / constant OUI prefixes
-  - [ ] Implement `RotationDesyncAnalyzer` measuring timing differences between AdvA and payload transitions
-- [ ] Task: Implement linkability scoring and trajectory reconstruction
-  - [ ] Implement trajectory correlation based on RSSI gradients and advertisement sequence continuity
-  - [ ] Add unit test verifying trajectory recovery across multiple randomized private address rotations
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+## Phase 1: Multi-Signal Rotating Identifier Deanonymizer [checkpoint: 82884b5]
+- [x] Task: Write tests for static MAC leakage detection and rotation delay divergence [f981eaf]
+  - [x] Write unit tests in `tests/test_adversarial_deanonymizer.py` for static MAC leakage flag across rotating cryptographic keys
+  - [x] Write unit tests verifying rotation delay divergence $\Delta t$ detection between address changes and payload updates
+- [x] Task: Implement `RotatingIdentifierAnalyzer` in `bluetooth_sniffle/adversarial/deanonymizer.py` [82884b5]
+  - [x] Implement `StaticLeakageDetector` identifying invariant public keys / constant OUI prefixes
+  - [x] Implement `RotationDesyncAnalyzer` measuring timing differences between AdvA and payload transitions
+- [x] Task: Implement linkability scoring and trajectory reconstruction [82884b5]
+  - [x] Implement trajectory correlation based on RSSI gradients and advertisement sequence continuity
+  - [x] Add unit test verifying trajectory recovery across multiple randomized private address rotations
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [82884b5]
 
 ## Phase 2: Two-Ended Pairing Relay Architecture
 - [ ] Task: Write unit and integration tests for pairing relay state machine and IPC bridge
