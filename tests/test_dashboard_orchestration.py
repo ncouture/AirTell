@@ -6,11 +6,11 @@ import io
 import json
 import time
 
-from bluetooth_sniffle.protocol.beacons import build_ibeacon
-from bluetooth_sniffle.sniff.pcap import PcapBleWriter
 from app.queue_bridge import EventQueue
 from app.views.offline_replay import parse_session_json, parse_uploaded_pcap
 from app.views.radio_controls import RadioOrchestrator
+from bluetooth_sniffle.protocol.beacons import build_ibeacon
+from bluetooth_sniffle.sniff.pcap import PcapBleWriter
 
 
 def test_radio_orchestrator_beacon_burst_injection() -> None:
@@ -68,7 +68,9 @@ def test_offline_pcap_parsing() -> None:
     buf = io.BytesIO()
     writer = PcapBleWriter(buf)
 
-    ibeacon_bytes = build_ibeacon()
+    ibeacon_bytes = build_ibeacon(
+        uuid="e2c56db5-dffb-48d2-b060-d0f5a71096e0", major=1, minor=2
+    )
     # PDU header (ADV_IND, len=36) + AdvA (6B) + AdvData (30B)
     adv_pdu = bytes([0x00, 36]) + bytes.fromhex("C01122334455") + ibeacon_bytes
     writer.write_packet(ts_usec=1000, chan=37, rssi=-62, packet=adv_pdu)
