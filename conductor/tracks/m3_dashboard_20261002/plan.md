@@ -39,7 +39,7 @@
   - [x] Implement `app/views/packet_inspector.py` with multi-protocol filtering, AD structure decoding, and raw hex views
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [bc7bd3f]
 
-## Phase 4: Testbed & Radio Controls, Offline PCAP Replay & E2E Validation
+## Phase 4: Testbed & Radio Controls, Offline PCAP Replay & E2E Validation [checkpoint: da1c59a]
 - [x] Task: Write integration tests for radio orchestration and offline PCAP parsing [242c785]
   - [x] Write integration test in `tests/test_dashboard_orchestration.py` testing topology triggers from UI
   - [x] Write test verifying offline PCAP file upload and in-browser parsing
@@ -53,4 +53,4 @@
 - [x] Task: Full System End-to-End Verification [8b2b113]
   - [x] Run full test suite (`pytest -v -W error tests/`)
   - [x] Verify `ruff check src tests app` lint cleanliness
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [da1c59a]
