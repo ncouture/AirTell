@@ -40,9 +40,9 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [bc7bd3f]
 
 ## Phase 4: Testbed & Radio Controls, Offline PCAP Replay & E2E Validation
-- [ ] Task: Write integration tests for radio orchestration and offline PCAP parsing
-  - [ ] Write integration test in `tests/test_dashboard_orchestration.py` testing topology triggers from UI
-  - [ ] Write test verifying offline PCAP file upload and in-browser parsing
+- [x] Task: Write integration tests for radio orchestration and offline PCAP parsing [242c785]
+  - [x] Write integration test in `tests/test_dashboard_orchestration.py` testing topology triggers from UI
+  - [x] Write test verifying offline PCAP file upload and in-browser parsing
 - [ ] Task: Implement Testbed & Radio Controls view
   - [ ] Implement `app/views/radio_controls.py` allowing analysts to toggle Topologies (A/B) and trigger beacon injection bursts (iBeacon, AltBeacon, Eddystone, GAEN)
   - [ ] Add live PCAP capture download button
