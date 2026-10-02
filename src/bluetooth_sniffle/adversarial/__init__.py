@@ -19,19 +19,31 @@ from bluetooth_sniffle.adversarial.relay import (
     RelayedLinkLayerPacket,
     SMPPairingState,
 )
+from bluetooth_sniffle.adversarial.rogue_beacon import (
+    AntiStalkingEvasionEvaluator,
+    EvasionBenchmarkResult,
+    RogueBeaconGenerator,
+    SyntheticBeaconSpec,
+    SyntheticPacket,
+)
 
 __all__ = [
+    "AntiStalkingEvasionEvaluator",
+    "EvasionBenchmarkResult",
     "LinkabilityObservation",
     "PairingFailureCode",
     "PairingHandshakeEvent",
     "PairingRelayBridge",
     "PairingSignature",
     "RelayedLinkLayerPacket",
+    "RogueBeaconGenerator",
     "RotationDesyncAnalyzer",
     "RotationDesyncEvent",
     "SMPPairingState",
     "StaticLeakageDetector",
     "StaticLeakageResult",
+    "SyntheticBeaconSpec",
+    "SyntheticPacket",
     "Trajectory",
     "TrajectoryReconstructor",
 ]
