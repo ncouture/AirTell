@@ -35,8 +35,8 @@
 - [x] Task: Implement Multi-Level Alert Feed with Analyst Actions [a443c53]
   - [x] Implement `app/views/alert_feed.py` displaying categorized threat cards with severity badges
   - [x] Implement interactive buttons for Acknowledge Alert, Whitelist Identifier, Tag Custom Note, and Export Incident CSV
-- [ ] Task: Implement Deep Packet Inspector view
-  - [ ] Implement `app/views/packet_inspector.py` with multi-protocol filtering, AD structure decoding, and raw hex views
+- [x] Task: Implement Deep Packet Inspector view [bc7bd3f]
+  - [x] Implement `app/views/packet_inspector.py` with multi-protocol filtering, AD structure decoding, and raw hex views
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 4: Testbed & Radio Controls, Offline PCAP Replay & E2E Validation
