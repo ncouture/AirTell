@@ -1,0 +1,35 @@
+# Product Definition: Bluetooth-Sniffle
+
+## Vision
+Bluetooth-Sniffle is a modular security and privacy testbed coordinating two Sniffle-enabled USB dongles (SONOFF Zigbee 3.0 Plus TI CC2652P) to evaluate, exercise, and monitor Bluetooth Low Energy (BLE) tracking networks, rotating identifiers, and identification methods documented in empirical research (such as PoPETs 2025-0103).
+
+## Operational Focus
+- **Dual-Track Deployment**:
+  - **Laboratory & CI Evaluation**: 100% offline verification using the in-memory `VirtualRadioBus`, asserting bit-for-bit frame compliance, timing monotonicity, and state machine resilience without requiring physical radios.
+  - **Live Field Deployment**: Hardware-in-the-loop multi-channel packet capture, real-time identifier parsing, and anti-stalking threat detection against real-world commercial tracking tags (Apple Find My / AirTags, Google Find Hub, Samsung SmartThings Find, Tile).
+
+## Target Personas
+- **Security & Privacy Researchers**: Investigating crowdsourced offline finding networks and testing tracking countermeasures.
+- **Wireless Security Auditors**: Analyzing BLE Link Layer advertising traffic, testing device re-identification risks, address rotation synchronicity, and active scanning side-effects.
+- **Embedded & RF Engineers**: Developing and validating BLE radio firmware, sniffer bridges, and dual-channel synchronization mechanisms.
+
+## Core Capabilities
+1. **Dual-Device Orchestration**:
+   - **Topology A (Stimulator + Observer)**: Device 1 broadcasts synthesized beacon streams and replay sequences, while Device 2 captures scan requests, connection attempts, and peripheral advertisements.
+   - **Topology B (Dual-Channel Passive Observer)**: Both devices sniff simultaneously on separate primary advertising channels (Ch 37 and Ch 38/39) with microsecond timestamp-monotonic watermark sorting to eliminate channel-hop blindness.
+2. **Beacon Synthesis & Active Probing**:
+   - Bit-for-bit frame builders for Apple iBeacon, AltBeacon, Google Eddystone (UID/URL/TLM), and Google/Apple Exposure Notification (GAEN `0xFD6F`).
+   - Endianness-invariant palindromic MAC address generator across all BLE address types (Public, Random Static, NRPA, RPA).
+   - Active probe generation (`SCAN_REQ`) and response dissection (`SCAN_RSP`) for eliciting Complete Local Names and service UUIDs.
+3. **Passive Sniffing & Anti-Stalking Telemetry**:
+   - Real-time Link Layer PDU dissector extracting manufacturer-specific data (Apple Continuity, Microsoft CDP, generic), service UUIDs, and crowdsourced tracking public keys.
+   - Database-backed anti-stalking tracker (`ble_antistalking_tracker.py`) with sliding-window correlation heuristics (15-minute window, observation thresholds, persistence span) and Twilio SMS alert dispatching. Currently supporting SQLite, with a future roadmap to include support for other database engines.
+   - Full PCAP export (`DLT_BLUETOOTH_LE_LL_WITH_PHDR`, DLT 256) compatible with Wireshark and `crackle`.
+4. **Interactive Visualization & Simulation**:
+   - Real-time Streamlit web dashboard (`streamlit_dashboard.py`) for live RSSI time-series visualization and security alert feeds.
+   - In-memory `VirtualRadioBus` for 100% offline unit, integration, and E2E simulation testing without physical hardware.
+
+## Future Roadmap (Multi-Radio & Infrastructure Extensions)
+- **Pluggable Database Backends**: Abstracting telemetry storage to support additional engines (e.g., PostgreSQL, TimescaleDB, DuckDB) alongside SQLite.
+- **SDR Physical-Layer Fingerprinting**: Interfacing wideband SDRs (e.g. HackRF One) to correlate IQ signal imperfections (frequency offset, phase noise) with BLE MAC rotation cycles.
+- **Cross-Layer Radio Correlation**: Correlating BLE peripheral actions with Wi-Fi and Sub-GHz IoT uplink bursts to analyze side-channel privacy leakage.

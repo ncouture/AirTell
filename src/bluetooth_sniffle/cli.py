@@ -262,8 +262,10 @@ def handle_topology_b(args: argparse.Namespace) -> int:
         while time.monotonic() < deadline and not coord.is_shutting_down:
             if args.mock and hasattr(topo.device1, "bus") and topo.device1.bus is not None:
                 if time.monotonic() >= next_mock_gen:
-                    pdu1 = bytes([0x02, 0x0A]) + bytes.fromhex("112233445566") + bytes.fromhex("0201060303AAFE")
-                    pdu2 = bytes([0x02, 0x0A]) + bytes.fromhex("665544332211") + bytes.fromhex("02010603036FFD")
+                    #pdu1 = bytes([0x02, 0x0A]) + bytes.fromhex("112233445566") + bytes.fromhex("0201060303AAFE")
+                    #pdu2 = bytes([0x02, 0x0A]) + bytes.fromhex("665544332211") + bytes.fromhex("02010603036FFD")
+                    pdu1 = bytes([0x02, 0x0D]) + bytes.fromhex("112233445566") + bytes.fromhex("0201060303AAFE")
+                    pdu2 = bytes([0x02, 0x0D]) + bytes.fromhex("665544332211") + bytes.fromhex("02010603036FFD")
                     topo.device1.bus.deliver_raw_packet(pdu=pdu1, chan=args.chan1, rssi=-62)
                     topo.device1.bus.deliver_raw_packet(pdu=pdu2, chan=args.chan2, rssi=-65)
                     next_mock_gen = time.monotonic() + 0.05
