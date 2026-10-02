@@ -456,38 +456,108 @@ class BLETrackerDB:
             return alerts
 
 
-def parse_sniffle_line(line: str) -> Optional[tuple[str, int, str]]:
-    """Parses output lines from sniffle_receiver CLI or logs.
+class SniffleLineParser:
+    """Stateful multi-line parser for sniff_receiver.py stdout.
 
-    Extracts MAC address, RSSI, and raw payload hex bytes.
+    Sniffle outputs each packet across several lines:
+      1. Header:  ``Timestamp: ...  RSSI: -65  Channel: 37  ...``
+      2. Decode:  ``AdvA: AA:BB:CC:DD:EE:FF (Static)`` (for advertising packets)
+      3. Hexdump: ``0x0000:  02 01 06 ...``  (one or more lines)
+      4. A blank line separating packets.
+
+    The parser accumulates fields across lines and yields a complete
+    ``(mac, rssi, payload_hex)`` tuple once the next packet header or a
+    blank separator line is encountered.
     """
-    line = line.strip()
-    if not line or line.startswith("#"):
+
+    # Header line produced by PacketMessage.str_header()
+    _RE_HEADER = re.compile(r"RSSI:\s*(-?\d+)")
+    # AdvA line produced by AdvaMessage.str_adva() / AdvExtIndMessage
+    _RE_ADVA = re.compile(r"AdvA:\s*([0-9A-Fa-f:]{17})")
+    # Hexdump lines produced by hexdump.hexdump()  e.g. "0x0000:  02 01 06 ...  .....L.."
+    _RE_HEXLINE = re.compile(r"^0x[0-9A-Fa-f]{4}:\s{2}")
+
+    def __init__(self) -> None:
+        self._rssi: Optional[int] = None
+        self._mac: Optional[str] = None
+        self._hex_parts: list[str] = []
+
+    def _flush(self) -> Optional[tuple[str, int, str]]:
+        """Return a parsed result if we have all three components, then reset."""
+        result: Optional[tuple[str, int, str]] = None
+        if self._mac is not None and self._rssi is not None and self._hex_parts:
+            payload_hex = "".join(self._hex_parts).lower()
+            result = (self._mac, self._rssi, payload_hex)
+        self._rssi = None
+        self._mac = None
+        self._hex_parts = []
+        return result
+
+    def feed(self, line: str) -> Optional[tuple[str, int, str]]:
+        """Feed one stdout line; returns a parsed tuple when a packet is complete."""
+        stripped = line.strip()
+
+        # Blank / separator line → flush any accumulated packet
+        if not stripped:
+            return self._flush()
+
+        # Comment or debug lines
+        if stripped.startswith("#"):
+            return None
+
+        # --- Header line (starts a new packet) ---
+        hdr = self._RE_HEADER.search(stripped)
+        if hdr and "Timestamp:" in stripped:
+            # A new header means the previous packet (if any) is complete
+            result = self._flush()
+            self._rssi = int(hdr.group(1))
+            return result
+
+        # --- AdvA line ---
+        adva = self._RE_ADVA.search(stripped)
+        if adva:
+            self._mac = adva.group(1).upper()
+            return None
+
+        # --- Hexdump line ---
+        hexm = self._RE_HEXLINE.match(stripped)
+        if hexm:
+            # Everything after "0xNNNN:  " up to the ASCII printable column.
+            # The ASCII column is separated from hex bytes by two+ spaces
+            # after the last hex byte.  Split off the "0xNNNN:  " prefix,
+            # then take only [0-9a-fA-F] characters.
+            after_prefix = stripped[hexm.end():]
+            hex_only = re.sub(r"[^0-9A-Fa-f]", "", after_prefix.split("  ")[0])
+            # Handle the second group (if present) separated by double-space
+            parts = after_prefix.split("  ")
+            hex_only = ""
+            for part in parts:
+                candidate = re.sub(r"[^0-9A-Fa-f]", "", part)
+                # Stop when we hit the ASCII column (contains non-hex chars
+                # and is much shorter as hex after stripping)
+                if part and all(c in '0123456789abcdefABCDEF ' for c in part.strip()):
+                    hex_only += candidate
+                else:
+                    break
+            self._hex_parts.append(hex_only)
+            return None
+
         return None
 
-    # Matches standard Sniffle log format: AdvAddr=XX:XX:XX... RSSI=-XX Data=XXXX...
-    match = re.search(
-        r"AdvAddr=([0-9A-Fa-f:]+)\s+RSSI=(-?\d+)\s+Data=([0-9A-Fa-f]+)", line
-    )
-    if match:
-        mac = match.group(1).upper()
-        rssi = int(match.group(2))
-        payload_hex = match.group(3).lower()
-        return mac, rssi, payload_hex
 
-    # Fallback match for hexdump / raw stdout format
-    match_alt = re.search(
-        r"(?:AdvA|MAC|Addr)[:=]\s*([0-9A-Fa-f:]+).*?RSSI[:=]\s*(-?\d+).*?Data[:=]\s*([0-9A-Fa-f]+)",
-        line,
-        re.IGNORECASE,
-    )
-    if match_alt:
-        mac = match_alt.group(1).upper()
-        rssi = int(match_alt.group(2))
-        payload_hex = match_alt.group(3).lower()
-        return mac, rssi, payload_hex
+# Module-level parser instance used by parse_sniffle_line so the
+# existing call-site in main() keeps working without changes.
+_parser = SniffleLineParser()
 
-    return None
+
+def parse_sniffle_line(line: str) -> Optional[tuple[str, int, str]]:
+    """Parses output lines from sniff_receiver stdout.
+
+    Accumulates multi-line Sniffle output and returns a ``(mac, rssi,
+    payload_hex)`` tuple once a complete advertising packet has been
+    collected.  Returns ``None`` for intermediate / non-matching lines.
+    """
+    return _parser.feed(line)
 
 
 def classify_payload(payload_hex: str) -> tuple[str, str]:

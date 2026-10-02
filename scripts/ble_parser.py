@@ -10,42 +10,24 @@ payloads and isolates ephemeral public keys used by crowdsourced tracking networ
 """
 
 import argparse
-import re
 import subprocess
 import sys
 
 
+from ble_antistalking_tracker import SniffleLineParser
+
+# Module-level parser instance
+_parser = SniffleLineParser()
+
+
 def parse_sniffle_line(line: str):
-    """Parses output lines from sniffle_receiver CLI.
+    """Parses output lines from sniff_receiver stdout.
 
-    Extracts MAC address, RSSI, and raw payload hex bytes.
+    Delegates to the stateful multi-line SniffleLineParser which accumulates
+    header, AdvA, and hexdump lines before returning a complete
+    ``(mac, rssi, payload_hex)`` tuple.
     """
-    line = line.strip()
-    if not line or line.startswith("#"):
-        return None
-
-    # Matches MAC address, RSSI, and payload data in Sniffle log format
-    match = re.search(
-        r"AdvAddr=([0-9A-Fa-f:]+)\s+RSSI=(-?\d+)\s+Data=([0-9A-Fa-f]+)", line
-    )
-    if match:
-        mac = match.group(1).upper()
-        rssi = int(match.group(2))
-        payload_hex = match.group(3).lower()
-        return mac, rssi, payload_hex
-
-    match_alt = re.search(
-        r"(?:AdvA|MAC|Addr)[:=]\s*([0-9A-Fa-f:]+).*?RSSI[:=]\s*(-?\d+).*?Data[:=]\s*([0-9A-Fa-f]+)",
-        line,
-        re.IGNORECASE,
-    )
-    if match_alt:
-        mac = match_alt.group(1).upper()
-        rssi = int(match_alt.group(2))
-        payload_hex = match_alt.group(3).lower()
-        return mac, rssi, payload_hex
-
-    return None
+    return _parser.feed(line)
 
 
 def analyze_ble_payload(mac: str, rssi: int, payload_hex: str):

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bluetooth-sniffle"
-version = "0.1.0"
+version = "0.2.0"
 description = "Python testbed framework coordinating Sniffle-enabled USB devices for BLE tracking research"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -18,6 +18,9 @@ dependencies = [
     "sniffle",
     "pytest>=9.1.1",
     "matplotlib>=3.10.9",
+    "python-dotenv>=1.2.4",
+    "streamlit>=1.64.0",
+    "plotly>=7.1.0",
 ]
 
 [project.scripts]
