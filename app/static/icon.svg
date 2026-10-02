@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="96" fill="#0F141C"/>
+  <circle cx="256" cy="256" r="200" stroke="#1B2028" stroke-width="8" fill="none"/>
+  <circle cx="256" cy="256" r="140" stroke="#2D3440" stroke-width="6" stroke-dasharray="8 8" fill="none"/>
+  <circle cx="256" cy="256" r="80" stroke="#A8C7FA" stroke-width="4" fill="none" opacity="0.4"/>
+  <line x1="256" y1="56" x2="256" y2="456" stroke="#2D3440" stroke-width="2"/>
+  <line x1="56" y1="256" x2="456" y2="256" stroke="#2D3440" stroke-width="2"/>
+  <!-- Target blip -->
+  <circle cx="340" cy="180" r="12" fill="#F2B8B5"/>
+  <circle cx="340" cy="180" r="24" stroke="#F2B8B5" stroke-width="3" fill="none" opacity="0.6"/>
+  <!-- Center beacon -->
+  <circle cx="256" cy="256" r="18" fill="#A8C7FA"/>
+  <path d="M 230 190 A 80 80 0 0 1 282 190" stroke="#A8C7FA" stroke-width="10" stroke-linecap="round" fill="none"/>
+  <path d="M 205 155 A 120 120 0 0 1 307 155" stroke="#A8C7FA" stroke-width="8" stroke-linecap="round" fill="none" opacity="0.7"/>
+</svg>
