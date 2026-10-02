@@ -1,9 +1,9 @@
 # Implementation Plan: Material Design v3 Dark Tactical PWA Dashboard
 
 ## Phase 1: PWA Infrastructure, Design Tokens & Layout Shell
-- [ ] Task: Write tests for PWA static assets, manifest structure, and M3 design token configuration
-  - [ ] Write unit test in `tests/test_pwa_assets.py` validating `manifest.json` required fields and mime types
-  - [ ] Write unit test verifying service worker caching headers and asset lists
+- [x] Task: Write tests for PWA static assets, manifest structure, and M3 design token configuration [e816b77]
+  - [x] Write unit test in `tests/test_pwa_assets.py` validating `manifest.json` required fields and mime types
+  - [x] Write unit test verifying service worker caching headers and asset lists
 - [ ] Task: Implement M3 Dark Tactical configuration and PWA assets
   - [ ] Create `.streamlit/config.toml` with dark tactical theme tokens (Surface `#0F141C`, Primary `#A8C7FA`, On-Surface `#E1E2E8`)
   - [ ] Create `app/static/manifest.json` with standalone display, app icons, and tactical color schemes
