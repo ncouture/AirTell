@@ -12,17 +12,17 @@
   - [x] Add unit test verifying trajectory recovery across multiple randomized private address rotations
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [82884b5]
 
-## Phase 2: Two-Ended Pairing Relay Architecture
-- [ ] Task: Write unit and integration tests for pairing relay state machine and IPC bridge
-  - [ ] Write unit tests in `tests/test_adversarial_relay.py` validating Link Layer frame forwarding and timestamp fidelity
-  - [ ] Write tests simulating central pairing handshake capture and peripheral proxy frame response
-- [ ] Task: Implement `PairingRelayBridge` in `bluetooth_sniffle/adversarial/relay.py`
-  - [ ] Implement low-latency thread-safe IPC queue bridging Device 1 sniffer to Device 2 proxy
-  - [ ] Implement Link Layer connection state tracker (`CONNECT_IND`, `LL_FEATURE_REQ`, `SMP_PAIRING_REQ`)
-- [ ] Task: Implement pairing handshake inspection and success/failure signal extraction
-  - [ ] Parse `SMP_PAIRING_CONFIRM` and `SMP_PAIRING_FAILED` status codes
-  - [ ] Correlate pairing failure error patterns with rotating MAC addresses to establish device persistent identity
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+## Phase 2: Two-Ended Pairing Relay Architecture [checkpoint: 164182e]
+- [x] Task: Write unit and integration tests for pairing relay state machine and IPC bridge [b66a1a2]
+  - [x] Write unit tests in `tests/test_adversarial_relay.py` validating Link Layer frame forwarding and timestamp fidelity
+  - [x] Write tests simulating central pairing handshake capture and peripheral proxy frame response
+- [x] Task: Implement `PairingRelayBridge` in `bluetooth_sniffle/adversarial/relay.py` [164182e]
+  - [x] Implement low-latency thread-safe IPC queue bridging Device 1 sniffer to Device 2 proxy
+  - [x] Implement Link Layer connection state tracker (`CONNECT_IND`, `LL_FEATURE_REQ`, `SMP_PAIRING_REQ`)
+- [x] Task: Implement pairing handshake inspection and success/failure signal extraction [164182e]
+  - [x] Parse `SMP_PAIRING_CONFIRM` and `SMP_PAIRING_FAILED` status codes
+  - [x] Correlate pairing failure error patterns with rotating MAC addresses to establish device persistent identity
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [164182e]
 
 ## Phase 3: Synthetic Rogue Beacon Generator & Evasion Benchmark
 - [ ] Task: Write unit tests for rogue beacon generator and anti-stalking evasion scenarios
