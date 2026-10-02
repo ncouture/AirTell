@@ -7,9 +7,11 @@ import threading
 import time
 from typing import Any, Optional
 
+import serial.tools.list_ports
 import streamlit as st
 
 from app.queue_bridge import EventQueue, get_event_queue
+from bluetooth_sniffle.device.serial_port import is_sniffle_device
 from bluetooth_sniffle.protocol.beacons import (
     build_altbeacon,
     build_eddystone_uid,
@@ -18,6 +20,30 @@ from bluetooth_sniffle.protocol.beacons import (
 )
 from bluetooth_sniffle.sniff.pcap import PcapBleWriter
 from scripts.ble_antistalking_tracker import BLETrackerDB
+
+
+def discover_available_dongles() -> list[dict[str, Any]]:
+    """Scan host system for attached USB serial devices and identify Sniffle CC2652P dongles.
+
+    Returns:
+        List of dictionaries with device path, description, VID/PID, and is_sniffle flag.
+    """
+    discovered: list[dict[str, Any]] = []
+    try:
+        ports = serial.tools.list_ports.comports()
+        for p in ports:
+            is_sniffle = is_sniffle_device(p)
+            discovered.append({
+                "device": p.device,
+                "description": getattr(p, "description", "") or "Serial Device",
+                "is_sniffle": is_sniffle,
+                "vid": getattr(p, "vid", None),
+                "pid": getattr(p, "pid", None),
+                "manufacturer": getattr(p, "manufacturer", "Unknown"),
+            })
+    except Exception:
+        pass
+    return discovered
 
 
 class RadioOrchestrator:
@@ -30,7 +56,15 @@ class RadioOrchestrator:
         self._running = False
         self._active_topology = "None"
         self._packets_captured = 0
+        self.port1: str = "/dev/ttyUSB0"
+        self.port2: str = "/dev/ttyUSB1"
         self._lock = threading.Lock()
+
+    def set_ports(self, port1: str, port2: str) -> None:
+        """Assign serial device ports for primary and secondary dongles."""
+        with self._lock:
+            self.port1 = port1
+            self.port2 = port2
 
     def is_running(self) -> bool:
         """Check if a background topology runner is active."""
@@ -44,6 +78,8 @@ class RadioOrchestrator:
                 "running": self._running,
                 "active_topology": self._active_topology,
                 "packets_captured": self._packets_captured,
+                "port1": self.port1,
+                "port2": self.port2,
             }
 
     def trigger_beacon_burst(
@@ -240,7 +276,41 @@ def render_radio_controls(
         st.markdown("#### 📊 Hardware Status")
         st.write(f"**State:** `{'ACTIVE' if status['running'] else 'IDLE'}`")
         st.write(f"**Topology:** `{status['active_topology']}`")
+        st.write(f"**Primary Port:** `{status['port1']}`")
+        st.write(f"**Secondary Port:** `{status['port2']}`")
         st.write(f"**Buffer Packets:** `{status['packets_captured']}`")
+
+    st.divider()
+
+    # USB Dongle Auto-Discovery Panel
+    st.markdown("#### 🔌 Hardware USB Dongle Auto-Discovery")
+    st.caption("Automatically scan host USB serial buses for attached Sonoff CC2652P or Ti XDS110 Sniffle dongles.")
+    discovered_dongles = discover_available_dongles()
+    sniffle_dongles = [d for d in discovered_dongles if d.get("is_sniffle")]
+
+    disc_col1, disc_col2 = st.columns(2)
+    with disc_col1:
+        if sniffle_dongles:
+            st.success(f"Detected **{len(sniffle_dongles)}** Sniffle-compatible radio hardware dongle(s) on host.")
+            options = [d["device"] for d in sniffle_dongles]
+            port1 = st.selectbox("Primary Sniffle Dongle (Ch 37):", options=options, index=0)
+            p2_idx = min(1, len(options) - 1)
+            port2 = st.selectbox("Secondary Sniffle Dongle (Ch 38/39):", options=options, index=p2_idx)
+            orchestrator.set_ports(port1, port2)
+        else:
+            st.info("No physical CC2652P USB dongles detected on host. High-Fidelity Mock Mode enabled.")
+            port1 = st.text_input("Primary Dongle Port (or Mock):", value=status.get("port1", "/dev/ttyUSB0"))
+            port2 = st.text_input("Secondary Dongle Port (or Mock):", value=status.get("port2", "/dev/ttyUSB1"))
+            orchestrator.set_ports(port1, port2)
+
+    with disc_col2:
+        with st.expander("Discovered USB Device Telemetry", expanded=bool(discovered_dongles)):
+            if discovered_dongles:
+                for d in discovered_dongles:
+                    status_badge = "✅ Sniffle CC2652P" if d.get("is_sniffle") else "ℹ️ Other Serial"
+                    st.write(f"- `{d['device']}`: **{d['description']}** ({status_badge})")
+            else:
+                st.write("No active USB serial bridges currently enumerated.")
 
     st.divider()
 
