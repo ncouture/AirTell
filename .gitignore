@@ -99,3 +99,13 @@ sniffle_capture*.pcap*
 
 # Sensitive capture/analysis data (JSON)
 src/sniffle/data/*.json
+data/
+scripts/data/
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Assistant scratch dirs
+.claude/
