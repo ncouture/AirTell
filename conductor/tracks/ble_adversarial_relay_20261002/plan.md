@@ -24,17 +24,17 @@
   - [x] Correlate pairing failure error patterns with rotating MAC addresses to establish device persistent identity
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [164182e]
 
-## Phase 3: Synthetic Rogue Beacon Generator & Evasion Benchmark
-- [ ] Task: Write unit tests for rogue beacon generator and anti-stalking evasion scenarios
-  - [ ] Write unit tests in `tests/test_adversarial_rogue_beacon.py` for Find My, Find Hub, SmartThings, and Tile payload construction
-  - [ ] Write tests evaluating detection triggers vs. evasion on sliding-window heuristics
-- [ ] Task: Implement `RogueBeaconGenerator` in `bluetooth_sniffle/adversarial/rogue_beacon.py`
-  - [ ] Implement frame builders with parameterized transmission intervals and jitter
-  - [ ] Support realistic RSSI attenuation curves and channel-hopping sequences
-- [ ] Task: Implement `AntiStalkingEvasionEvaluator` benchmarking `BLETrackerDB` heuristics
-  - [ ] Implement evasion benchmark assessing burst-and-sleep tactics and rotation delay thresholds
-  - [ ] Generate structured markdown/JSON evaluation reports detailing detection evasion rates
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+## Phase 3: Synthetic Rogue Beacon Generator & Evasion Benchmark [checkpoint: f85d826]
+- [x] Task: Write unit tests for rogue beacon generator and anti-stalking evasion scenarios [4119776]
+  - [x] Write unit tests in `tests/test_adversarial_rogue_beacon.py` for Find My, Find Hub, SmartThings, and Tile payload construction
+  - [x] Write tests evaluating detection triggers vs. evasion on sliding-window heuristics
+- [x] Task: Implement `RogueBeaconGenerator` in `bluetooth_sniffle/adversarial/rogue_beacon.py` [f85d826]
+  - [x] Implement frame builders with parameterized transmission intervals and jitter
+  - [x] Support realistic RSSI attenuation curves and channel-hopping sequences
+- [x] Task: Implement `AntiStalkingEvasionEvaluator` benchmarking `BLETrackerDB` heuristics [f85d826]
+  - [x] Implement evasion benchmark assessing burst-and-sleep tactics and rotation delay thresholds
+  - [x] Generate structured markdown/JSON evaluation reports detailing detection evasion rates
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [f85d826]
 
 ## Phase 4: CLI, Dashboard Integration & End-to-End Verification
 - [ ] Task: Write CLI and dashboard view tests for adversarial tools
