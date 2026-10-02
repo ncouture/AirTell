@@ -13,7 +13,7 @@
   - [x] Inject M3 typography and styled app bar header via scoped `st.html()`
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [6562275]
 
-## Phase 2: Event-Driven Queue & Database Schema Extension
+## Phase 2: Event-Driven Queue & Database Schema Extension [checkpoint: aa839cc]
 - [x] Task: Write unit tests for singleton queue bridge and extended database tables [88f0c2b]
   - [x] Write unit test in `tests/test_queue_bridge.py` validating thread-safe push/drain and overflow protection
   - [x] Write unit test in `tests/test_tracker_db_extensions.py` for whitelisting and alert acknowledgment schema
@@ -23,7 +23,7 @@
 - [x] Task: Extend database schema for whitelisting and analyst actions [aa839cc]
   - [x] Add `whitelists` and `alert_actions` tables to `ble_antistalking_tracker.py`
   - [x] Implement CRUD helper functions for whitelisting ephemeral keys/MACs and recording incident notes
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [aa839cc]
 
 ## Phase 3: Core Dashboard Views & Multi-Level Alert Triage
 - [ ] Task: Write component tests for telemetry views and alert categorization
