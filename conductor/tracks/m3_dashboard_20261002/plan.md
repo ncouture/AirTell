@@ -25,7 +25,7 @@
   - [x] Implement CRUD helper functions for whitelisting ephemeral keys/MACs and recording incident notes
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [aa839cc]
 
-## Phase 3: Core Dashboard Views & Multi-Level Alert Triage
+## Phase 3: Core Dashboard Views & Multi-Level Alert Triage [checkpoint: bc7bd3f]
 - [x] Task: Write component tests for telemetry views and alert categorization [20d1da2]
   - [x] Write test in `tests/test_dashboard_views.py` testing live metrics rendering and Plotly RSSI figure generation
   - [x] Write test validating multi-level alert categorization (Suspicious, High Proximity, Unlinkability Hazard)
@@ -37,7 +37,7 @@
   - [x] Implement interactive buttons for Acknowledge Alert, Whitelist Identifier, Tag Custom Note, and Export Incident CSV
 - [x] Task: Implement Deep Packet Inspector view [bc7bd3f]
   - [x] Implement `app/views/packet_inspector.py` with multi-protocol filtering, AD structure decoding, and raw hex views
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [bc7bd3f]
 
 ## Phase 4: Testbed & Radio Controls, Offline PCAP Replay & E2E Validation
 - [ ] Task: Write integration tests for radio orchestration and offline PCAP parsing
