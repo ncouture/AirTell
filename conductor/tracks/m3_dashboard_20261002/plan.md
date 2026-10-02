@@ -48,8 +48,8 @@
   - [x] Add live PCAP capture download button
 - [x] Task: Implement Offline PCAP & Session Replay view [bb79467]
   - [x] Implement `app/views/offline_replay.py` enabling file upload and offline dissection of PCAP and JSON session captures
-- [ ] Task: Assemble main dashboard entrypoint
-  - [ ] Refactor `app/streamlit_dashboard.py` to route between the 5 views via the M3 navigation rail
+- [x] Task: Assemble main dashboard entrypoint [1c23e9d]
+  - [x] Refactor `app/streamlit_dashboard.py` to route between the 5 views via the M3 navigation rail
 - [ ] Task: Full System End-to-End Verification
   - [ ] Run full test suite (`pytest -v -W error tests/`)
   - [ ] Verify `ruff check src tests app` lint cleanliness
