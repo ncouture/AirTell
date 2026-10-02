@@ -4,10 +4,10 @@
 - [x] Task: Write tests for PWA static assets, manifest structure, and M3 design token configuration [e816b77]
   - [x] Write unit test in `tests/test_pwa_assets.py` validating `manifest.json` required fields and mime types
   - [x] Write unit test verifying service worker caching headers and asset lists
-- [ ] Task: Implement M3 Dark Tactical configuration and PWA assets
-  - [ ] Create `.streamlit/config.toml` with dark tactical theme tokens (Surface `#0F141C`, Primary `#A8C7FA`, On-Surface `#E1E2E8`)
-  - [ ] Create `app/static/manifest.json` with standalone display, app icons, and tactical color schemes
-  - [ ] Create `app/static/service-worker.js` with static shell cache-first and telemetry network-first strategy
+- [x] Task: Implement M3 Dark Tactical configuration and PWA assets [e90707d]
+  - [x] Create `.streamlit/config.toml` with dark tactical theme tokens (Surface `#0F141C`, Primary `#A8C7FA`, On-Surface `#E1E2E8`)
+  - [x] Create `app/static/manifest.json` with standalone display, app icons, and tactical color schemes
+  - [x] Create `app/static/service-worker.js` with static shell cache-first and telemetry network-first strategy
 - [ ] Task: Implement M3 Top App Bar and expanding Navigation Rail component
   - [ ] Create navigation component in `app/components/navigation.py` using official Streamlit layout primitives
   - [ ] Inject M3 typography and styled app bar header via scoped `st.html()`
