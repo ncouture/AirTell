@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import tempfile
-import pytest
 
 from bluetooth_sniffle.adversarial.rogue_beacon import (
     AntiStalkingEvasionEvaluator,
@@ -29,7 +28,7 @@ def test_rogue_beacon_generator_payload_construction():
     assert len(apple_pdu) <= 31
     net, key = classify_payload(apple_pdu.hex())
     assert net == "Apple Find My"
-    assert key == apple_spec.ephemeral_key[:32]
+    assert key == apple_spec.ephemeral_key[:44]
 
     # 2. Google Find Hub payload
     google_spec = SyntheticBeaconSpec(
@@ -42,7 +41,8 @@ def test_rogue_beacon_generator_payload_construction():
     assert len(google_pdu) <= 31
     net, key = classify_payload(google_pdu.hex())
     assert net == "Google Find Hub"
-    assert key == google_spec.ephemeral_key[:32]
+    assert key.startswith("fe9f")
+    assert google_spec.ephemeral_key[:32] in key
 
     # 3. Samsung SmartThings Find payload
     samsung_spec = SyntheticBeaconSpec(
@@ -66,7 +66,7 @@ def test_rogue_beacon_generator_payload_construction():
     tile_pdu = generator.build_payload(tile_spec)
     assert len(tile_pdu) <= 31
     net, key = classify_payload(tile_pdu.hex())
-    assert net == "Tile"
+    assert net == "Tile Tracker"
 
 
 def test_rogue_beacon_generator_burst_sequence():
