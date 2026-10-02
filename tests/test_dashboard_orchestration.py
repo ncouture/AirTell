@@ -110,3 +110,33 @@ def test_offline_session_json_parsing() -> None:
     assert parsed[0]["mac_address"] == "AA:BB:CC:DD:EE:01"
     assert parsed[0]["network_type"] == "Tile"
     assert parsed[0]["channel"] == 37
+
+
+def test_radio_orchestrator_serial_port_discovery() -> None:
+    """Validate auto-discovery of USB serial ports for CC2652P dongles."""
+    from unittest.mock import MagicMock, patch
+
+    from app.views.radio_controls import discover_available_dongles
+
+    mock_port1 = MagicMock()
+    mock_port1.device = "/dev/ttyUSB0"
+    mock_port1.description = "Sonoff Zigbee 3.0 USB Dongle Plus"
+    mock_port1.vid = 0x10C4
+    mock_port1.pid = 0xEA60
+    mock_port1.product = "CP2102N USB to UART Bridge Controller"
+
+    mock_port2 = MagicMock()
+    mock_port2.device = "/dev/ttyUSB1"
+    mock_port2.description = "Sonoff Zigbee 3.0 USB Dongle Plus"
+    mock_port2.vid = 0x10C4
+    mock_port2.pid = 0xEA60
+    mock_port2.product = "CP2102N USB to UART Bridge Controller"
+
+    with patch("serial.tools.list_ports.comports", return_value=[mock_port1, mock_port2]):
+        discovered = discover_available_dongles()
+        assert len(discovered) == 2
+        assert discovered[0]["device"] == "/dev/ttyUSB0"
+        assert discovered[0]["is_sniffle"] is True
+        assert discovered[1]["device"] == "/dev/ttyUSB1"
+        assert discovered[1]["is_sniffle"] is True
+
