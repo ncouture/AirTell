@@ -26,9 +26,9 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [aa839cc]
 
 ## Phase 3: Core Dashboard Views & Multi-Level Alert Triage
-- [ ] Task: Write component tests for telemetry views and alert categorization
-  - [ ] Write test in `tests/test_dashboard_views.py` testing live metrics rendering and Plotly RSSI figure generation
-  - [ ] Write test validating multi-level alert categorization (Suspicious, High Proximity, Unlinkability Hazard)
+- [x] Task: Write component tests for telemetry views and alert categorization [20d1da2]
+  - [x] Write test in `tests/test_dashboard_views.py` testing live metrics rendering and Plotly RSSI figure generation
+  - [x] Write test validating multi-level alert categorization (Suspicious, High Proximity, Unlinkability Hazard)
 - [ ] Task: Implement Live Telemetry Overview & RSSI Trends views
   - [ ] Implement `app/views/telemetry_overview.py` with metric cards and channel distributions
   - [ ] Implement `app/views/rssi_trends.py` generating interactive Plotly time series grouped by ephemeral keys
