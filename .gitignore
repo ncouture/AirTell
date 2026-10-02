@@ -100,7 +100,7 @@ sniffle_capture*.pcap*
 # Sensitive capture/analysis data (JSON)
 src/sniffle/data/*.json
 data/
-scripts/data/
+scripts/data
 
 # Databases
 *.db
