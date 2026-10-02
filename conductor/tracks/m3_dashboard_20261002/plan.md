@@ -17,9 +17,9 @@
 - [x] Task: Write unit tests for singleton queue bridge and extended database tables [88f0c2b]
   - [x] Write unit test in `tests/test_queue_bridge.py` validating thread-safe push/drain and overflow protection
   - [x] Write unit test in `tests/test_tracker_db_extensions.py` for whitelisting and alert acknowledgment schema
-- [ ] Task: Implement thread-safe singleton queue bridge
-  - [ ] Implement `EventQueue` in `app/queue_bridge.py` cached via `@st.cache_resource`
-  - [ ] Add non-blocking drain and batching logic for live UI cycles
+- [x] Task: Implement thread-safe singleton queue bridge [673e396]
+  - [x] Implement `EventQueue` in `app/queue_bridge.py` cached via `@st.cache_resource`
+  - [x] Add non-blocking drain and batching logic for live UI cycles
 - [ ] Task: Extend database schema for whitelisting and analyst actions
   - [ ] Add `whitelists` and `alert_actions` tables to `ble_antistalking_tracker.py`
   - [ ] Implement CRUD helper functions for whitelisting ephemeral keys/MACs and recording incident notes
