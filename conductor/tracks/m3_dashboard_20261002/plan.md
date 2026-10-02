@@ -14,9 +14,9 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [6562275]
 
 ## Phase 2: Event-Driven Queue & Database Schema Extension
-- [ ] Task: Write unit tests for singleton queue bridge and extended database tables
-  - [ ] Write unit test in `tests/test_queue_bridge.py` validating thread-safe push/drain and overflow protection
-  - [ ] Write unit test in `tests/test_tracker_db_extensions.py` for whitelisting and alert acknowledgment schema
+- [x] Task: Write unit tests for singleton queue bridge and extended database tables [88f0c2b]
+  - [x] Write unit test in `tests/test_queue_bridge.py` validating thread-safe push/drain and overflow protection
+  - [x] Write unit test in `tests/test_tracker_db_extensions.py` for whitelisting and alert acknowledgment schema
 - [ ] Task: Implement thread-safe singleton queue bridge
   - [ ] Implement `EventQueue` in `app/queue_bridge.py` cached via `@st.cache_resource`
   - [ ] Add non-blocking drain and batching logic for live UI cycles
