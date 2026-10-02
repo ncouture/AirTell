@@ -10,8 +10,8 @@ from app.components.navigation import (
 
 
 def test_navigation_views_definition() -> None:
-    """Validate 5 core operational views are defined with labels and icons."""
-    expected_keys = {"telemetry", "rssi", "alerts", "inspector", "controls"}
+    """Validate 6 core operational views are defined with labels and icons."""
+    expected_keys = {"telemetry", "rssi", "alerts", "inspector", "controls", "adversarial"}
     assert set(NAVIGATION_VIEWS.keys()) == expected_keys
 
     for key, item in NAVIGATION_VIEWS.items():

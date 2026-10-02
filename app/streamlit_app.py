@@ -13,6 +13,7 @@ import streamlit as st
 from app.components.navigation import render_navigation, render_top_app_bar
 from app.components.pwa import inject_pwa_assets
 from app.queue_bridge import get_event_queue
+from app.views.adversarial_evaluation import render_adversarial_evaluation
 from app.views.alert_feed import render_alert_feed
 from app.views.offline_replay import render_offline_replay
 from app.views.packet_inspector import render_packet_inspector
@@ -87,6 +88,8 @@ def main() -> None:
         render_packet_inspector(conn=conn)
     elif active_view == "controls":
         render_radio_controls(tracker_db=tracker_db, event_queue=event_queue)
+    elif active_view == "adversarial":
+        render_adversarial_evaluation(conn=conn, tracker_db=tracker_db, event_queue=event_queue)
 
     if conn:
         conn.close()

@@ -2,12 +2,8 @@
 
 from __future__ import annotations
 
-import time
-import pytest
-
 from bluetooth_sniffle.adversarial.relay import (
     PairingFailureCode,
-    PairingHandshakeEvent,
     PairingRelayBridge,
     RelayedLinkLayerPacket,
     SMPPairingState,

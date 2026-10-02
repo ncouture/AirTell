@@ -118,3 +118,41 @@ def test_packet_inspector_ad_structures_decoding() -> None:
     assert "Local Name" in structures[1]["ad_type_name"]
     assert structures[1]["data_hex"] == "54657374"
     assert structures[1]["data_ascii"] == "Test"
+
+
+def test_render_adversarial_evaluation_structure() -> None:
+    """Validate adversarial evaluation view renders cleanly without runtime exceptions."""
+    from unittest.mock import MagicMock, patch
+
+    from app.views.adversarial_evaluation import render_adversarial_evaluation
+
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_cursor.fetchall.return_value = [
+        ("40:11:22:33:44:55", "apple_key_01", 1727870400.0, -65, "Apple Find My"),
+        ("40:11:22:33:44:56", "apple_key_02", 1727870405.0, -63, "Apple Find My"),
+    ]
+    mock_conn.cursor.return_value = mock_cursor
+
+    mock_tracker_db = MagicMock()
+    mock_event_queue = MagicMock()
+
+    def mock_columns(spec):
+        count = spec if isinstance(spec, int) else len(spec)
+        return [MagicMock() for _ in range(count)]
+
+    with (
+        patch("streamlit.tabs", return_value=[MagicMock(), MagicMock(), MagicMock()]),
+        patch("streamlit.columns", side_effect=mock_columns),
+        patch("streamlit.metric"),
+        patch("streamlit.dataframe"),
+        patch("streamlit.subheader"),
+        patch("streamlit.markdown"),
+        patch("streamlit.caption"),
+        patch("streamlit.divider"),
+        patch("streamlit.selectbox", return_value="Apple Find My"),
+        patch("streamlit.slider", return_value=5),
+        patch("streamlit.button", return_value=False),
+    ):
+        render_adversarial_evaluation(mock_conn, mock_tracker_db, mock_event_queue)
+
