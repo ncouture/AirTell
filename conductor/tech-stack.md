@@ -8,6 +8,7 @@
 ## Hardware & Communications
 - **Serial Interface**: `pyserial>=3.5` (UART communication with TI CC2652P Sniffle radios, baud rates up to 921,600)
 - **Firmware Base**: Sniffle BLE5 sniffer firmware (Texas Instruments CC2652 / CC1352)
+- **Hardware Discovery**: Automatic USB serial port discovery for Sonoff CC2652P (CH340 / CP2102) and TI XDS110 debug probes with mock hardware fallback
 
 ## Cryptography & Data Integrity
 - **Cryptographic Primitives**: `cryptography>=40.0.0` (AES-128, key derivation, and token evaluation)
@@ -16,7 +17,7 @@
 ## Modeling & Storage
 - **Data Modeling & Validation**: `pydantic>=2.0.0` (Packet headers, dissected PDU records, and telemetry session schemas)
 - **Database Abstraction**: `SQLAlchemy` / `SQLModel` ORM layer providing a unified abstraction across storage backends
-- **Current Primary Engine**: `sqlite3` (Thread-safe observations & alerts logging, indexed query windows)
+- **Current Primary Engine**: `sqlite3` (Thread-safe observations & alerts logging, indexed query windows, plus persistent `whitelists` and `alert_actions` tables for triage)
 - **Roadmap Engines**: PostgreSQL, TimescaleDB, and DuckDB supported via SQLAlchemy dialect drivers
 
 ## Frontend, Dashboard & Visualization
@@ -28,5 +29,5 @@
 - **Notifications Extra (`[notifications]`)**: `twilio>=8.0.0` for SMS alerting, kept optional to preserve a lean core installation
 
 ## Testing, Tooling & Code Quality
-- **Test Framework**: `pytest>=9.1.1` with `anyio`, `pytest-cov` (564 multi-tier E2E and unit tests)
+- **Test Framework**: `pytest>=9.1.1` with `anyio`, `pytest-cov` (591 multi-tier E2E, unit, and integration tests across 28 test modules)
 - **Static Analysis & Formatting**: `ruff` (targeting Python 3.10+, line length 120)

@@ -26,7 +26,8 @@ Bluetooth-Sniffle is a modular security and privacy testbed coordinating two Sni
    - Database-backed anti-stalking tracker (`ble_antistalking_tracker.py`) with sliding-window correlation heuristics (15-minute window, observation thresholds, persistence span) and Twilio SMS alert dispatching. Currently supporting SQLite, with a future roadmap to include support for other database engines.
    - Full PCAP export (`DLT_BLUETOOTH_LE_LL_WITH_PHDR`, DLT 256) compatible with Wireshark and `crackle`.
 4. **Interactive Visualization & Simulation**:
-   - Real-time Streamlit web dashboard (`streamlit_dashboard.py`) for live RSSI time-series visualization and security alert feeds.
+   - **Material Design v3 Dark Tactical PWA Dashboard** (`app/streamlit_dashboard.py`, `app/streamlit_app.py`): Progressive Web Application with standalone manifest (`app/static/manifest.json`), service worker caching (`app/static/service-worker.js`), persistent M3 Top App Bar, and expanding Navigation Rail spanning 5 operational views (Telemetry Overview, RSSI Signal Trends, Alert Feed with incident triage and whitelisting, Deep Packet Inspector with AD structure dissection, and Radio Controls with auto-discovery, synthetic burst injection, and offline PCAP/JSON replay).
+   - **Event-Driven Queue Bridge**: Thread-safe singleton `EventQueue` with bounded capacity, drop-oldest overflow protection, and non-blocking draining linking background Sniffle topology threads to Streamlit UI state.
    - In-memory `VirtualRadioBus` for 100% offline unit, integration, and E2E simulation testing without physical hardware.
 
 ## Future Roadmap (Multi-Radio & Infrastructure Extensions)
