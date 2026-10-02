@@ -6,8 +6,6 @@ import threading
 import time
 from typing import Any
 
-import pytest
-
 from app.queue_bridge import EventQueue, get_event_queue
 
 
