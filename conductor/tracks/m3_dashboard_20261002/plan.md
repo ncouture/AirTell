@@ -43,9 +43,9 @@
 - [x] Task: Write integration tests for radio orchestration and offline PCAP parsing [242c785]
   - [x] Write integration test in `tests/test_dashboard_orchestration.py` testing topology triggers from UI
   - [x] Write test verifying offline PCAP file upload and in-browser parsing
-- [ ] Task: Implement Testbed & Radio Controls view
-  - [ ] Implement `app/views/radio_controls.py` allowing analysts to toggle Topologies (A/B) and trigger beacon injection bursts (iBeacon, AltBeacon, Eddystone, GAEN)
-  - [ ] Add live PCAP capture download button
+- [x] Task: Implement Testbed & Radio Controls view [547b7b7]
+  - [x] Implement `app/views/radio_controls.py` allowing analysts to toggle Topologies (A/B) and trigger beacon injection bursts (iBeacon, AltBeacon, Eddystone, GAEN)
+  - [x] Add live PCAP capture download button
 - [ ] Task: Implement Offline PCAP & Session Replay view
   - [ ] Implement `app/views/offline_replay.py` enabling file upload and offline dissection of PCAP and JSON session captures
 - [ ] Task: Assemble main dashboard entrypoint
