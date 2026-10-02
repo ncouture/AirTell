@@ -21,6 +21,9 @@ import time
 from datetime import datetime
 from typing import Any, Optional
 
+from dotenv import load_dotenv
+
+load_dotenv()  # project root's .env
 
 class BLETrackerDB:
     """Thread-safe SQLite database manager for BLE observations and anti-stalking alerts."""
@@ -75,18 +78,52 @@ class BLETrackerDB:
                 )
                 """
             )
+
+            # Table for whitelisted identifiers (ephemeral keys or MACs)
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS whitelists (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    identifier_type TEXT NOT NULL,
+                    identifier_value TEXT NOT NULL,
+                    notes TEXT,
+                    created_at REAL
+                )
+                """
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_whitelist_val ON whitelists (identifier_value)"
+            )
+
+            # Table for analyst alert actions and incident notes
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS alert_actions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    alert_id INTEGER,
+                    action_type TEXT NOT NULL,
+                    analyst_note TEXT,
+                    timestamp REAL
+                )
+                """
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_action_alert ON alert_actions (alert_id)"
+            )
             conn.commit()
 
-    def log_observation(
+    def insert_observation(
         self,
         mac_address: str,
         rssi: int,
         network_type: str,
         ephemeral_key: str,
-        channel: int,
-        raw_payload: str,
-    ) -> None:
-        now = time.time()
+        channel: int = 37,
+        raw_payload: str = "",
+        timestamp: Optional[float] = None,
+    ) -> int:
+        """Insert an observation record and return its row ID."""
+        now = time.time() if timestamp is None else timestamp
         dt_str = datetime.fromtimestamp(now).strftime("%Y-%m-%d %H:%M:%S")
         with self.get_connection() as conn:
             cursor = conn.cursor()
@@ -107,6 +144,176 @@ class BLETrackerDB:
                 ),
             )
             conn.commit()
+            return cursor.lastrowid or 0
+
+    def log_observation(
+        self,
+        mac_address: str,
+        rssi: int,
+        network_type: str,
+        ephemeral_key: str,
+        channel: int,
+        raw_payload: str,
+    ) -> None:
+        self.insert_observation(
+            mac_address=mac_address,
+            rssi=rssi,
+            network_type=network_type,
+            ephemeral_key=ephemeral_key,
+            channel=channel,
+            raw_payload=raw_payload,
+        )
+
+    def log_alert(
+        self,
+        identifier: str,
+        network_type: str,
+        count: int,
+        max_rssi: int,
+        message: str,
+        first_seen: Optional[float] = None,
+        last_seen: Optional[float] = None,
+        timestamp: Optional[float] = None,
+    ) -> int:
+        """Insert an alert record and return its row ID."""
+        now = time.time() if timestamp is None else timestamp
+        f_seen = now if first_seen is None else first_seen
+        l_seen = now if last_seen is None else last_seen
+        dt_str = datetime.fromtimestamp(now).strftime("%Y-%m-%d %H:%M:%S")
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO alerts (timestamp, datetime_str, identifier, network_type, observation_count, first_seen, last_seen, max_rssi, alert_message)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    now,
+                    dt_str,
+                    identifier,
+                    network_type,
+                    count,
+                    f_seen,
+                    l_seen,
+                    max_rssi,
+                    message,
+                ),
+            )
+            conn.commit()
+            return cursor.lastrowid or 0
+
+    def add_whitelist(
+        self, identifier_type: str, identifier_value: str, notes: str = ""
+    ) -> int:
+        """Add an identifier to the whitelist."""
+        now = time.time()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO whitelists (identifier_type, identifier_value, notes, created_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (identifier_type, identifier_value.strip(), notes.strip(), now),
+            )
+            conn.commit()
+            return cursor.lastrowid or 0
+
+    def is_whitelisted(self, identifier_type: str, identifier_value: str) -> bool:
+        """Check if an identifier is whitelisted (case-insensitive)."""
+        val_clean = identifier_value.strip().lower()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT COUNT(*) FROM whitelists
+                WHERE identifier_type = ? AND LOWER(identifier_value) = ?
+                """,
+                (identifier_type, val_clean),
+            )
+            count = cursor.fetchone()[0]
+            if count > 0:
+                return True
+            # Also check if value matches without identifier_type filter
+            cursor.execute(
+                """
+                SELECT COUNT(*) FROM whitelists
+                WHERE LOWER(identifier_value) = ?
+                """,
+                (val_clean,),
+            )
+            return cursor.fetchone()[0] > 0
+
+    def get_whitelists(self) -> list[dict[str, Any]]:
+        """Return all whitelisted identifiers."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT id, identifier_type, identifier_value, notes, created_at FROM whitelists ORDER BY id DESC"
+            )
+            rows = cursor.fetchall()
+            return [
+                {
+                    "id": r[0],
+                    "identifier_type": r[1],
+                    "identifier_value": r[2],
+                    "notes": r[3],
+                    "created_at": r[4],
+                }
+                for r in rows
+            ]
+
+    def remove_whitelist(self, whitelist_id: int) -> bool:
+        """Delete an identifier from the whitelist by ID."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM whitelists WHERE id = ?", (whitelist_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def record_alert_action(
+        self, alert_id: int, action_type: str, analyst_note: str = ""
+    ) -> int:
+        """Record an analyst triage action or note on an alert."""
+        now = time.time()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO alert_actions (alert_id, action_type, analyst_note, timestamp)
+                VALUES (?, ?, ?, ?)
+                """,
+                (alert_id, action_type, analyst_note.strip(), now),
+            )
+            conn.commit()
+            return cursor.lastrowid or 0
+
+    def get_alert_actions(
+        self, alert_id: Optional[int] = None
+    ) -> list[dict[str, Any]]:
+        """Retrieve recorded actions for a specific alert or all alerts."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if alert_id is not None:
+                cursor.execute(
+                    "SELECT id, alert_id, action_type, analyst_note, timestamp FROM alert_actions WHERE alert_id = ? ORDER BY id DESC",
+                    (alert_id,),
+                )
+            else:
+                cursor.execute(
+                    "SELECT id, alert_id, action_type, analyst_note, timestamp FROM alert_actions ORDER BY id DESC"
+                )
+            rows = cursor.fetchall()
+            return [
+                {
+                    "id": r[0],
+                    "alert_id": r[1],
+                    "action_type": r[2],
+                    "analyst_note": r[3],
+                    "timestamp": r[4],
+                }
+                for r in rows
+            ]
 
     def check_stalking_thresholds(
         self,
@@ -127,7 +334,7 @@ class BLETrackerDB:
         with self.get_connection() as conn:
             cursor = conn.cursor()
             query = """
-                SELECT 
+                SELECT
                     COALESCE(NULLIF(ephemeral_key, ''), mac_address) AS tracker_id,
                     network_type,
                     COUNT(*) as pkt_count,
@@ -146,12 +353,16 @@ class BLETrackerDB:
             alerts: list[str] = []
             for row in results:
                 tracker_id, net_type, count, first_s, last_s, max_r, avg_r = row
+                # Suppress whitelisted identifiers
+                if self.is_whitelisted("ephemeral_key", tracker_id) or self.is_whitelisted("mac_address", tracker_id):
+                    continue
+
                 duration_min = (last_s - first_s) / 60.0
 
                 # Suppress duplicate alerts for same tracker within 5 minutes
                 cursor.execute(
                     """
-                    SELECT COUNT(*) FROM alerts 
+                    SELECT COUNT(*) FROM alerts
                     WHERE identifier = ? AND timestamp >= ?
                     """,
                     (tracker_id, now - 300),
@@ -184,6 +395,64 @@ class BLETrackerDB:
                     )
                     alerts.append(msg)
             conn.commit()
+            return alerts
+
+    def check_stalking_heuristics(
+        self,
+        window_minutes: int = 15,
+        min_observations: int = 5,
+        min_duration_minutes: int = 5,
+    ) -> list[dict[str, Any]]:
+        """Analyzes recent observations and returns threat alert dictionaries.
+
+        Suppresses alerts for whitelisted devices and keys.
+        """
+        now = time.time()
+        window_seconds = window_minutes * 60
+        min_time_span = min_duration_minutes * 60
+        cutoff = now - window_seconds
+
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            query = """
+                SELECT
+                    COALESCE(NULLIF(ephemeral_key, ''), mac_address) AS tracker_id,
+                    network_type,
+                    COUNT(*) as pkt_count,
+                    MIN(timestamp) as first_seen,
+                    MAX(timestamp) as last_seen,
+                    MAX(rssi) as max_rssi,
+                    AVG(rssi) as avg_rssi
+                FROM observations
+                WHERE timestamp >= ? AND network_type != 'Unknown'
+                GROUP BY tracker_id
+                HAVING pkt_count >= ? AND (last_seen - first_seen) >= ?
+            """
+            cursor.execute(query, (cutoff, min_observations, min_time_span))
+            results = cursor.fetchall()
+
+            alerts: list[dict[str, Any]] = []
+            for row in results:
+                tracker_id, net_type, count, first_s, last_s, max_r, avg_r = row
+                if self.is_whitelisted("ephemeral_key", tracker_id) or self.is_whitelisted("mac_address", tracker_id):
+                    continue
+
+                duration_min = (last_s - first_s) / 60.0
+                msg = (
+                    f"POSSIBLE STALKER DETECTED: {net_type} beacon"
+                    f" ({tracker_id[:16]}...) seen {count} times over"
+                    f" {duration_min:.1f} mins (Max RSSI: {max_r} dBm)"
+                )
+                alerts.append({
+                    "identifier": tracker_id,
+                    "network_type": net_type,
+                    "observation_count": count,
+                    "first_seen": first_s,
+                    "last_seen": last_s,
+                    "max_rssi": max_r,
+                    "avg_rssi": avg_r,
+                    "alert_message": msg,
+                })
             return alerts
 
 
@@ -276,8 +545,8 @@ def main() -> None:
         description="BLE Anti-Stalking Tracker & SQLite Logger"
     )
     parser.add_argument(
-        "-p",
-        "--port",
+        "-s",
+        "--serial-port",
         default="/dev/ttyUSB0",
         help="Serial port for Sniffle dongle",
     )
@@ -285,7 +554,8 @@ def main() -> None:
         "-c", "--channel", type=int, default=37, help="BLE Advertising channel (37, 38, 39)"
     )
     parser.add_argument(
-        "-db", "--database", type=str, help="SQLite database path"
+        "-db", "--database", type=str, default=os.environ.get("DATABASE", ""),
+        help="Database connection string (only sqlite supported at the moment)"
     )
     parser.add_argument(
         "--twilio-sid", default=os.getenv("TWILIO_ACCOUNT_SID"), help="Twilio Account SID (or env)"
@@ -313,20 +583,21 @@ def main() -> None:
     db = BLETrackerDB(args.database)
     print("[*] BLE Anti-Stalking Tracker Initialized.")
     print(f"[*] Database: {args.database}")
-    print(f"[*] Port: {args.port} | Channel: {args.channel}\n")
+    print(f"[*] Port: {args.serial_port} | Channel: {args.channel}\n")
 
-    base_dir = os.path.basename(sys.argv[0])
-    exe = os.path.join(f"{base_dir}", "sniff_receiver")
-    print(exe)
-    cmd = [exe, "-p", args.port, "-c", str(args.channel)]
+    base_dir = os.path.dirname(sys.argv[0])
+    exe = os.path.join(f"{base_dir}", "sniff_receiver.py")
+    cmd = [exe, "-s", args.serial_port, "-c", str(args.channel)]
+    print(cmd)
 
     try:
         proc = subprocess.Popen(
             cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
         )
+        print(proc)
         last_check_time = time.time()
-
-        assert proc.stdout is not None
+        print(f"proc.stdout = {proc.stdout}")
+        #assert proc.stdout is not None
         for line in proc.stdout:
             parsed = parse_sniffle_line(line)
             if parsed:
@@ -352,7 +623,7 @@ def main() -> None:
                         print("=" * 60 + "\n")
                         send_notification(alert, twilio_cfg)
                     last_check_time = now
-
+        print("done...")
     except FileNotFoundError:
         print(
             "[-] Error: 'sniffle_receiver' executable not found in PATH.",
