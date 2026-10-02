@@ -20,9 +20,9 @@
 - [x] Task: Implement thread-safe singleton queue bridge [673e396]
   - [x] Implement `EventQueue` in `app/queue_bridge.py` cached via `@st.cache_resource`
   - [x] Add non-blocking drain and batching logic for live UI cycles
-- [ ] Task: Extend database schema for whitelisting and analyst actions
-  - [ ] Add `whitelists` and `alert_actions` tables to `ble_antistalking_tracker.py`
-  - [ ] Implement CRUD helper functions for whitelisting ephemeral keys/MACs and recording incident notes
+- [x] Task: Extend database schema for whitelisting and analyst actions [aa839cc]
+  - [x] Add `whitelists` and `alert_actions` tables to `ble_antistalking_tracker.py`
+  - [x] Implement CRUD helper functions for whitelisting ephemeral keys/MACs and recording incident notes
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: Core Dashboard Views & Multi-Level Alert Triage
