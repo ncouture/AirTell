@@ -46,8 +46,8 @@
 - [x] Task: Implement Testbed & Radio Controls view [547b7b7]
   - [x] Implement `app/views/radio_controls.py` allowing analysts to toggle Topologies (A/B) and trigger beacon injection bursts (iBeacon, AltBeacon, Eddystone, GAEN)
   - [x] Add live PCAP capture download button
-- [ ] Task: Implement Offline PCAP & Session Replay view
-  - [ ] Implement `app/views/offline_replay.py` enabling file upload and offline dissection of PCAP and JSON session captures
+- [x] Task: Implement Offline PCAP & Session Replay view [bb79467]
+  - [x] Implement `app/views/offline_replay.py` enabling file upload and offline dissection of PCAP and JSON session captures
 - [ ] Task: Assemble main dashboard entrypoint
   - [ ] Refactor `app/streamlit_dashboard.py` to route between the 5 views via the M3 navigation rail
 - [ ] Task: Full System End-to-End Verification
