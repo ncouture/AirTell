@@ -50,7 +50,7 @@
   - [x] Implement `app/views/offline_replay.py` enabling file upload and offline dissection of PCAP and JSON session captures
 - [x] Task: Assemble main dashboard entrypoint [1c23e9d]
   - [x] Refactor `app/streamlit_dashboard.py` to route between the 5 views via the M3 navigation rail
-- [ ] Task: Full System End-to-End Verification
-  - [ ] Run full test suite (`pytest -v -W error tests/`)
-  - [ ] Verify `ruff check src tests app` lint cleanliness
+- [x] Task: Full System End-to-End Verification [8b2b113]
+  - [x] Run full test suite (`pytest -v -W error tests/`)
+  - [x] Verify `ruff check src tests app` lint cleanliness
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
