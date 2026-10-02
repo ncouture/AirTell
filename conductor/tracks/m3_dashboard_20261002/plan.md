@@ -1,6 +1,6 @@
 # Implementation Plan: Material Design v3 Dark Tactical PWA Dashboard
 
-## Phase 1: PWA Infrastructure, Design Tokens & Layout Shell
+## Phase 1: PWA Infrastructure, Design Tokens & Layout Shell [checkpoint: 6562275]
 - [x] Task: Write tests for PWA static assets, manifest structure, and M3 design token configuration [e816b77]
   - [x] Write unit test in `tests/test_pwa_assets.py` validating `manifest.json` required fields and mime types
   - [x] Write unit test verifying service worker caching headers and asset lists
@@ -11,7 +11,7 @@
 - [x] Task: Implement M3 Top App Bar and expanding Navigation Rail component [6562275]
   - [x] Create navigation component in `app/components/navigation.py` using official Streamlit layout primitives
   - [x] Inject M3 typography and styled app bar header via scoped `st.html()`
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [6562275]
 
 ## Phase 2: Event-Driven Queue & Database Schema Extension
 - [ ] Task: Write unit tests for singleton queue bridge and extended database tables
