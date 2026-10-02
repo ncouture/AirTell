@@ -8,9 +8,9 @@
   - [x] Create `.streamlit/config.toml` with dark tactical theme tokens (Surface `#0F141C`, Primary `#A8C7FA`, On-Surface `#E1E2E8`)
   - [x] Create `app/static/manifest.json` with standalone display, app icons, and tactical color schemes
   - [x] Create `app/static/service-worker.js` with static shell cache-first and telemetry network-first strategy
-- [ ] Task: Implement M3 Top App Bar and expanding Navigation Rail component
-  - [ ] Create navigation component in `app/components/navigation.py` using official Streamlit layout primitives
-  - [ ] Inject M3 typography and styled app bar header via scoped `st.html()`
+- [x] Task: Implement M3 Top App Bar and expanding Navigation Rail component [6562275]
+  - [x] Create navigation component in `app/components/navigation.py` using official Streamlit layout primitives
+  - [x] Inject M3 typography and styled app bar header via scoped `st.html()`
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Event-Driven Queue & Database Schema Extension
