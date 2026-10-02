@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from bluetooth_sniffle.adversarial.deanonymizer import (
     LinkabilityObservation,
     RotationDesyncAnalyzer,

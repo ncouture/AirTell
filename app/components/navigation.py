@@ -30,6 +30,11 @@ NAVIGATION_VIEWS: dict[str, dict[str, str]] = {
         "icon": "🎛️",
         "description": "Testbed orchestration & rogue beacon injection",
     },
+    "adversarial": {
+        "label": "Adversarial Testbed",
+        "icon": "⚡",
+        "description": "Pairing relay, identity deanonymization & evasion benchmarks",
+    },
 }
 
 
