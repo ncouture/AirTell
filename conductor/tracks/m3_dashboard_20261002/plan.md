@@ -32,9 +32,9 @@
 - [x] Task: Implement Live Telemetry Overview & RSSI Trends views [54cda00]
   - [x] Implement `app/views/telemetry_overview.py` with metric cards and channel distributions
   - [x] Implement `app/views/rssi_trends.py` generating interactive Plotly time series grouped by ephemeral keys
-- [ ] Task: Implement Multi-Level Alert Feed with Analyst Actions
-  - [ ] Implement `app/views/alert_feed.py` displaying categorized threat cards with severity badges
-  - [ ] Implement interactive buttons for Acknowledge Alert, Whitelist Identifier, Tag Custom Note, and Export Incident CSV
+- [x] Task: Implement Multi-Level Alert Feed with Analyst Actions [a443c53]
+  - [x] Implement `app/views/alert_feed.py` displaying categorized threat cards with severity badges
+  - [x] Implement interactive buttons for Acknowledge Alert, Whitelist Identifier, Tag Custom Note, and Export Incident CSV
 - [ ] Task: Implement Deep Packet Inspector view
   - [ ] Implement `app/views/packet_inspector.py` with multi-protocol filtering, AD structure decoding, and raw hex views
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
