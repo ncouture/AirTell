@@ -36,18 +36,19 @@
   - [x] Generate structured markdown/JSON evaluation reports detailing detection evasion rates
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [f85d826]
 
-## Phase 4: CLI, Dashboard Integration & End-to-End Verification
-- [ ] Task: Write CLI and dashboard view tests for adversarial tools
-  - [ ] Write CLI invocation tests in `tests/test_cli_adversarial.py`
-  - [ ] Write dashboard view tests for relay telemetry and evasion benchmark controls
-- [ ] Task: Implement CLI commands in `src/bluetooth_sniffle/cli.py`
-  - [ ] Add `bluetooth-sniffle relay` command for two-ended pairing relay testbed
-  - [ ] Add `bluetooth-sniffle deanonymize` command for trace analysis
-  - [ ] Add `bluetooth-sniffle rogue-inject` command for benchmark generation
-- [ ] Task: Integrate adversarial metrics and evasion controls into Streamlit M3 dashboard
-  - [ ] Add Adversarial Testbed view to `app/views/` and wire into M3 navigation rail
-  - [ ] Display live relay handshake states, linkability confidence scores, and evasion benchmark results
-- [ ] Task: Full System End-to-End Verification
-  - [ ] Run full test suite (`pytest -v -W error tests/`)
-  - [ ] Verify `ruff check .` lint cleanliness
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+## Phase 4: CLI, Dashboard Integration & End-to-End Verification [checkpoint: 82f41fe]
+- [x] Task: Write CLI and dashboard view tests for adversarial tools [df0025e]
+  - [x] Write CLI invocation tests in `tests/test_cli_adversarial.py`
+  - [x] Write dashboard view tests for relay telemetry and evasion benchmark controls
+- [x] Task: Implement CLI commands in `src/bluetooth_sniffle/cli.py` [c7650fc]
+  - [x] Add `bluetooth-sniffle relay` command for two-ended pairing relay testbed
+  - [x] Add `bluetooth-sniffle deanonymize` command for trace analysis
+  - [x] Add `bluetooth-sniffle rogue-inject` command for benchmark generation
+- [x] Task: Integrate adversarial metrics and evasion controls into Streamlit M3 dashboard [82f41fe]
+  - [x] Add Adversarial Testbed view to `app/views/` and wire into M3 navigation rail
+  - [x] Display live relay handshake states, linkability confidence scores, and evasion benchmark results
+- [x] Task: Full System End-to-End Verification [82f41fe]
+  - [x] Run full test suite (`pytest -v -W error tests/`)
+  - [x] Verify `ruff check .` lint cleanliness
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [82f41fe]
+
