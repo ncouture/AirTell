@@ -3,7 +3,7 @@
 
 """Standalone Python BLE Offline Finding Parser.
 
-Interfaces with sniffle_receiver CLI or logs to capture raw BLE advertising packets
+Interfaces with sniff_receiver CLI or logs to capture raw BLE advertising packets
 from a CC2652P dongle flashed with Sniffle firmware. Parses 31-byte advertising
 payloads and isolates ephemeral public keys used by crowdsourced tracking networks
 (Apple Find My, Google Find Hub, Tile, and Samsung SmartThings Find).
@@ -12,7 +12,7 @@ payloads and isolates ephemeral public keys used by crowdsourced tracking networ
 import argparse
 import subprocess
 import sys
-
+import os
 
 from ble_antistalking_tracker import SniffleLineParser
 
@@ -55,8 +55,11 @@ def analyze_ble_payload(mac: str, rssi: int, payload_hex: str):
 
 
 def run_sniffle_sniffer(port: str = "/dev/ttyUSB0", channel: int = 37):
-    """Spawns sniffle_receiver process on specified serial port and BLE channel."""
-    cmd = ["sniffle_receiver", "-p", port, "-c", str(channel)]
+    """Spawns sniff_receiver process on specified serial port and BLE channel."""
+    base_dir = os.path.dirname(sys.argv[0])
+    exe = os.path.join(f"{base_dir}", "sniff_receiver.py")
+    cmd = [exe, "-s", port, "-c", str(channel)]
+    print(cmd)
     print(f"[*] Starting Sniffle on {port} (Channel {channel})...")
 
     try:
@@ -70,7 +73,7 @@ def run_sniffle_sniffer(port: str = "/dev/ttyUSB0", channel: int = 37):
                 mac, rssi, payload = parsed
                 analyze_ble_payload(mac, rssi, payload)
     except FileNotFoundError:
-        print("[-] 'sniffle_receiver' command not found. Ensure Sniffle tools are in your PATH.")
+        print("[-] 'sniff_receiver' command not found. Ensure Sniffle tools are in your PATH.")
     except KeyboardInterrupt:
         print("\n[*] Sniffing stopped.")
 
