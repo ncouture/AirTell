@@ -34,15 +34,15 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [checkpoint: 7dd3839]
 
 ## Phase 4: Streamlit UI Integration & Radio Controls View
-- [ ] Task: Write integration tests for Radio Controls live streaming UI in `tests/test_tshark_ui.py`
-  - [ ] Test widget parameter binding to extcap command configuration
-  - [ ] Test live packet table and metric counter updates
-  - [ ] Test hardware preflight diagnostics and missing dependency alerts
-- [ ] Task: Extend `app/views/radio_controls.py` with Live Tshark Extcap Streaming Panel
-  - [ ] Add extcap parameter controls (channel selector, RSSI floor slider, MAC/IRK/string filters, toggles)
-  - [ ] Add live packet stream table (`st.dataframe`), throughput counters (`st.metric`), and dynamic Plotly chart
-  - [ ] Add device conflict and preflight status badges (`AVAILABLE`, `BUSY`, `MISSING DEPENDENCIES`)
-- [ ] Task: Full System End-to-End Verification
-  - [ ] Run full test suite (`pytest -v -W error tests/`)
-  - [ ] Verify `ruff check .` lint cleanliness
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Write integration tests for Radio Controls live streaming UI in `tests/test_tshark_ui.py` 1b5069b
+  - [x] Test widget parameter binding to extcap command configuration
+  - [x] Test live packet table and metric counter updates
+  - [x] Test hardware preflight diagnostics and missing dependency alerts
+- [x] Task: Extend `app/views/radio_controls.py` with Live Tshark Extcap Streaming Panel ab01525
+  - [x] Add extcap parameter controls (channel selector, RSSI floor slider, MAC/IRK/string filters, toggles)
+  - [x] Add live packet stream table (`st.dataframe`), throughput counters (`st.metric`), and dynamic Plotly chart
+  - [x] Add device conflict and preflight status badges (`AVAILABLE`, `BUSY`, `MISSING DEPENDENCIES`)
+- [x] Task: Full System End-to-End Verification ab01525
+  - [x] Run full test suite (`pytest -v -W error tests/`)
+  - [x] Verify `ruff check .` lint cleanliness
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [checkpoint: ab01525]
