@@ -1,15 +1,15 @@
 # Implementation Plan: Live Bluetooth JSON Streaming via Tshark & Sniffle Extcap
 
 ## Phase 1: Asynchronous Tshark Extcap Process Manager & Stream Engine
-- [ ] Task: Write unit tests for command construction, extcap option formatting, and process lifecycle in `tests/test_tshark_runner.py`
-  - [ ] Test formatting of `tshark -i sniffle -o "extcap.sniffle.<option>:<value>"` parameters
-  - [ ] Test line-buffered streaming, stderr capture, and non-blocking stdout reading
-  - [ ] Test graceful shutdown (`SIGTERM` followed by timeout-escalated `SIGKILL`)
-- [ ] Task: Implement `TsharkConfig` and `TsharkExtcapRunner` in `src/bluetooth_sniffle/extcap/runner.py`
-  - [ ] Support parameter mapping: `serport`, `mode`, `advchan`, `rssi`, `mac`, `irk`, `string`, `extadv`, `longrange`, `crcerr`
-  - [ ] Implement background worker thread reading stdout into thread-safe ring buffer (`collections.deque`)
-  - [ ] Implement robust process lifecycle and signal management
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Write unit tests for command construction, extcap option formatting, and process lifecycle in `tests/test_tshark_runner.py` 79656aa
+  - [x] Test formatting of `tshark -i sniffle -o "extcap.sniffle.<option>:<value>"` parameters
+  - [x] Test line-buffered streaming, stderr capture, and non-blocking stdout reading
+  - [x] Test graceful shutdown (`SIGTERM` followed by timeout-escalated `SIGKILL`)
+- [x] Task: Implement `TsharkConfig` and `TsharkExtcapRunner` in `src/bluetooth_sniffle/extcap/runner.py` 8c402a4
+  - [x] Support parameter mapping: `serport`, `mode`, `advchan`, `rssi`, `mac`, `irk`, `string`, `extadv`, `longrange`, `crcerr`
+  - [x] Implement background worker thread reading stdout into thread-safe ring buffer (`collections.deque`)
+  - [x] Implement robust process lifecycle and signal management
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [checkpoint: 8c402a4]
 
 ## Phase 2: Live BLE JSON Dissector & Field Normalization
 - [ ] Task: Write unit tests for JSON stream parsing in `tests/test_tshark_parser.py`
