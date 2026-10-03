@@ -7,3 +7,7 @@
 
 - [x] **Track: BLE Tracker Deanonymization, Pairing Relay Evaluation & Rogue Beacon Testbed**
   *Link: [./tracks/ble_adversarial_relay_20261002/index.md](./tracks/ble_adversarial_relay_20261002/index.md)*
+
+- [ ] **Track: Live Bluetooth JSON Streaming via Tshark and Sniffle Extcap**
+  *Link: [./tracks/tshark_json_stream_20261002/index.md](./tracks/tshark_json_stream_20261002/index.md)*
+
