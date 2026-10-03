@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import sqlite3
-from typing import Optional
+from typing import Any, Optional
 
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+
+from app.queue_bridge import EventQueue
 
 TACTICAL_PALETTE = [
     "#A8C7FA",  # Primary Blue
@@ -94,35 +96,72 @@ def build_rssi_figure(df: pd.DataFrame) -> go.Figure:
     return fig
 
 
-def render_rssi_trends(conn: Optional[sqlite3.Connection]) -> None:
+def render_rssi_trends(
+    conn: Optional[sqlite3.Connection],
+    event_queue: Optional[EventQueue] = None,
+) -> None:
     """Render the RSSI Trends view with interactive filtering and Plotly graphs."""
     st.subheader("📈 RSSI Signal Strength & Tracker Trajectories")
     st.markdown(
         "Chronological signal strength tracking across ephemeral public keys to detect following behaviors and proximity spikes."
     )
 
-    if not conn:
-        st.warning("Database unavailable. Awaiting packet recording.")
+    # 1. Collect live real-time tracker packets from event queue
+    live_rows: list[dict[str, Any]] = []
+    if event_queue is not None:
+        items = event_queue.get_recent(max_items=1000) if hasattr(event_queue, "get_recent") else []
+        for idx, item in enumerate(items, start=1):
+            net = item.get("network_type", "Unknown")
+            if net and net != "Unknown":
+                mac = item.get("mac_address", "Unknown")
+                e_key = item.get("ephemeral_key", "")
+                k_short = (e_key if e_key else mac)[:16]
+                live_rows.append({
+                    "id": f"live-{idx}",
+                    "datetime_str": item.get("datetime_str", ""),
+                    "timestamp": float(item.get("timestamp", 0.0)),
+                    "mac_address": mac,
+                    "rssi": int(item.get("rssi", -100)),
+                    "network_type": net,
+                    "key_short": k_short,
+                    "ephemeral_key": e_key,
+                    "channel": item.get("channel", 37),
+                })
+
+    df_db = pd.DataFrame()
+    if conn:
+        query = """
+        SELECT id, datetime_str, timestamp, mac_address, rssi, network_type,
+               SUBSTR(COALESCE(NULLIF(ephemeral_key, ''), mac_address), 1, 16) as key_short,
+               ephemeral_key, channel
+        FROM observations
+        WHERE network_type != 'Unknown'
+        ORDER BY id DESC
+        LIMIT 2000
+        """
+        try:
+            df_db = pd.read_sql_query(query, conn)
+        except Exception as e:
+            st.error(f"Error loading signal telemetry from database: {e}")
+
+    # 2. Combine historical DB records with live streaming packets
+    frames_to_concat = []
+    if not df_db.empty:
+        frames_to_concat.append(df_db)
+    if live_rows:
+        df_live = pd.DataFrame(live_rows)
+        frames_to_concat.append(df_live)
+
+    if not frames_to_concat:
+        st.info("No crowdsourced tracking beacons (Apple, Google, Tile, Samsung) recorded yet. Start Tshark capture in Radio Controls or inject beacon bursts.")
         return
 
-    query = """
-    SELECT id, datetime_str, timestamp, mac_address, rssi, network_type,
-           SUBSTR(COALESCE(NULLIF(ephemeral_key, ''), mac_address), 1, 16) as key_short,
-           ephemeral_key, channel
-    FROM observations
-    WHERE network_type != 'Unknown'
-    ORDER BY id DESC
-    LIMIT 2000
-    """
-    try:
-        df = pd.read_sql_query(query, conn)
-    except Exception as e:
-        st.error(f"Error loading signal telemetry: {e}")
-        return
+    df = pd.concat(frames_to_concat, ignore_index=True)
+    if "datetime_str" in df.columns:
+        df = df.sort_values(by="datetime_str", ascending=True)
 
-    if df.empty:
-        st.info("No crowdsourced tracking beacons (Apple, Google, Tile, Samsung) recorded yet.")
-        return
+    if live_rows:
+        st.caption(f"⚡ **Live Stream Active:** {len(live_rows)} in-memory tracker observations plotted alongside historical data.")
 
     # Filter controls
     f_col1, f_col2 = st.columns([2, 1])

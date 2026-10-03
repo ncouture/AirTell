@@ -12,6 +12,7 @@ from app.queue_bridge import EventQueue
 from bluetooth_sniffle.extcap.topology import (
     TsharkTopologyManager,
     check_port_availability,
+    get_process_holding_port,
 )
 
 
@@ -62,6 +63,59 @@ class TestPortAvailabilityGuard:
         avail, reason = check_port_availability("/dev/ttyUSB99")
         assert avail is False
         assert "not found" in reason.lower() or "does not exist" in reason.lower()
+
+    def test_get_process_holding_port_open_fd(self) -> None:
+        """Process holding open fd to port should be identified."""
+        from unittest.mock import mock_open
+
+        with (
+            patch("os.path.isdir", return_value=True),
+            patch("os.listdir", side_effect=lambda p: ["9999"] if p == "/proc" else (["3"] if "fd" in p else [])),
+            patch("os.readlink", return_value="/dev/ttyUSB0"),
+            patch("builtins.open", mock_open(read_data=b"python3\x00scripts/ble_antistalking_tracker.py\x00")),
+        ):
+            result = get_process_holding_port("/dev/ttyUSB0")
+            assert result is not None
+            assert "9999" in result
+            assert "holds open descriptor to /dev/ttyUSB0" in result
+
+    def test_get_process_holding_port_cmdline_match(self) -> None:
+        """Process commandline with sniffer script and port should be identified."""
+        from unittest.mock import mock_open
+
+        with (
+            patch("os.path.isdir", return_value=True),
+            patch("os.listdir", side_effect=lambda p: ["9999"] if p == "/proc" else []),
+            patch("builtins.open", mock_open(read_data=b"python3\x00scripts/sniff_receiver.py\x00--port\x00/dev/ttyUSB1\x00")),
+        ):
+            result = get_process_holding_port("/dev/ttyUSB1")
+            assert result is not None
+            assert "sniff_receiver.py" in result
+            assert "9999" in result
+
+    def test_get_process_holding_port_ignores_current_and_parent_pid(self) -> None:
+        """Current process and parent process PIDs should be skipped to prevent self-contention."""
+        with (
+            patch("os.getpid", return_value=1234),
+            patch("os.getppid", return_value=5678),
+            patch("os.path.isdir", return_value=True),
+            patch("os.listdir", return_value=["1234", "5678"]),
+        ):
+            result = get_process_holding_port("/dev/ttyUSB0")
+            assert result is None
+
+    def test_get_process_holding_port_ignores_non_sniffer_cmdlines(self) -> None:
+        """Unrelated processes with port in arguments should be ignored if not matching sniffer tools."""
+        from unittest.mock import mock_open
+
+        with (
+            patch("os.path.isdir", return_value=True),
+            patch("os.listdir", side_effect=lambda p: ["9999"] if p == "/proc" else []),
+            patch("builtins.open", mock_open(read_data=b"python3\x00unrelated_tool.py\x00/dev/ttyUSB0\x00")),
+        ):
+            result = get_process_holding_port("/dev/ttyUSB0")
+            assert result is None
+
 
 
 class TestTsharkTopologyManager:
