@@ -17,7 +17,10 @@ from app.views.adversarial_evaluation import render_adversarial_evaluation
 from app.views.alert_feed import render_alert_feed
 from app.views.offline_replay import render_offline_replay
 from app.views.packet_inspector import render_packet_inspector
-from app.views.radio_controls import render_radio_controls
+from app.views.radio_controls import (
+    get_tshark_topology_manager,
+    render_radio_controls,
+)
 from app.views.rssi_trends import render_rssi_trends
 from app.views.telemetry_overview import render_telemetry_overview
 from bluetooth_sniffle.device.serial_port import check_device_usage
@@ -61,16 +64,32 @@ def main() -> None:
     dev0_in_use = check_device_usage("/dev/ttyUSB0")
     dev1_in_use = check_device_usage("/dev/ttyUSB1")
 
-    dongle1_status = f"/dev/ttyUSB0: {'IN USE' if dev0_in_use else 'IDLE'}"
-    dongle2_status = f"/dev/ttyUSB1: {'IN USE' if dev1_in_use else 'IDLE'}"
+    # Real-Time Dongle & Tshark Status for Top App Bar
+    tshark_mgr = get_tshark_topology_manager()
+    t_status = tshark_mgr.get_status()
+    if t_status["running"]:
+        d1 = f"/dev/ttyUSB0: ACTIVE ({t_status['topology']})"
+        d2 = f"/dev/ttyUSB1: {'ACTIVE' if 'Topology A' in t_status['topology'] else 'STANDBY'}"
+        chans = "LIVE TSHARK STREAM"
+        d1_active = True
+        d2_active = "Topology A" in t_status["topology"] or dev1_in_use
+    else:
+        d1 = f"/dev/ttyUSB0: {'IN USE' if dev0_in_use else 'IDLE'}"
+        d2 = f"/dev/ttyUSB1: {'IN USE' if dev1_in_use else 'IDLE'}"
+        chans = "CH 37 / 38 / 39"
+        d1_active = dev0_in_use
+        d2_active = dev1_in_use
+
+    dongle1_status = d1
+    dongle2_status = d2
 
     # M3 Top App Bar
     render_top_app_bar(
         dongle1_status=dongle1_status,
         dongle2_status=dongle2_status,
-        active_channels="CH 37 / 38",
-        dongle1_active=dev0_in_use,
-        dongle2_active=dev1_in_use,
+        active_channels=chans,
+        dongle1_active=d1_active,
+        dongle2_active=d2_active,
     )
 
     # Sidebar Navigation Rail
@@ -90,15 +109,15 @@ def main() -> None:
         with st.expander("📁 Offline Replay"):
             render_offline_replay(tracker_db=tracker_db, conn=conn)
 
-    # Route active operational view
+    # Route active operational view with live real-time event queue
     if active_view == "telemetry":
         render_telemetry_overview(conn=conn, event_queue=event_queue)
     elif active_view == "rssi":
-        render_rssi_trends(conn=conn)
+        render_rssi_trends(conn=conn, event_queue=event_queue)
     elif active_view == "alerts":
-        render_alert_feed(conn=conn, tracker_db=tracker_db)
+        render_alert_feed(conn=conn, tracker_db=tracker_db, event_queue=event_queue)
     elif active_view == "inspector":
-        render_packet_inspector(conn=conn)
+        render_packet_inspector(conn=conn, event_queue=event_queue)
     elif active_view == "controls":
         render_radio_controls(tracker_db=tracker_db, event_queue=event_queue)
     elif active_view == "adversarial":

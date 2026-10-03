@@ -216,3 +216,119 @@ class TestTsharkBleJsonParser:
         assert parser.parse_line("") is None
         assert parser.parse_line("   ") is None
         assert parser.parse_packet_dict({}) is None
+
+    def test_parse_multiline_streaming_json_array(self) -> None:
+        """Verify that multiline pretty-printed -T json array lines are properly accumulated and parsed."""
+        parser = TsharkBleJsonParser()
+        lines = [
+            "[\n",
+            "  {\n",
+            '    "_index": "packets-2026-10-02",\n',
+            '    "_source": {\n',
+            '      "layers": {\n',
+            '        "frame": {\n',
+            '          "frame.time_epoch": "1790988227.569"\n',
+            "        },\n",
+            '        "btle": {\n',
+            '          "btle.advertising_address": "11:22:33:44:55:66"\n',
+            "        }\n",
+            "      }\n",
+            "    }\n",
+            "  },\n",
+            "  {\n",
+            '    "_index": "packets-2026-10-02",\n',
+            '    "_source": {\n',
+            '      "layers": {\n',
+            '        "frame": {\n',
+            '          "frame.time_epoch": "1790988228.123"\n',
+            "        },\n",
+            '        "btle": {\n',
+            '          "btle.advertising_address": "aa:bb:cc:dd:ee:ff"\n',
+            "        }\n",
+            "      }\n",
+            "    }\n",
+            "  }\n",
+            "]\n",
+        ]
+        parsed_obs = []
+        for line in lines:
+            obs = parser.parse_line(line)
+            if obs:
+                parsed_obs.append(obs)
+
+        assert len(parsed_obs) == 2
+        assert parsed_obs[0]["mac_address"] == "11:22:33:44:55:66"
+        assert parsed_obs[0]["timestamp"] == 1790988227.569
+        assert parsed_obs[1]["mac_address"] == "AA:BB:CC:DD:EE:FF"
+        assert parsed_obs[1]["timestamp"] == 1790988228.123
+
+    def test_extract_timestamp_iso8601(self) -> None:
+        """Verify that ISO 8601 strings from Wireshark EK output are correctly converted to float."""
+        parser = TsharkBleJsonParser()
+        doc = {
+            "layers": {
+                "frame": {
+                    "frame_frame_time_epoch": "2026-10-03T03:00:36.202241000Z",
+                },
+                "btle": {
+                    "btle_btle_advertising_address": "12:34:56:78:90:ab",
+                },
+            },
+        }
+        obs = parser.parse_packet_dict(doc)
+        assert obs is not None
+        assert abs(obs["timestamp"] - 1790996436.202241) < 0.001
+
+    def test_nested_ad_structures_and_google_find_hub(self) -> None:
+        """Verify that standard -T json nested AD structures extract service_data and uuid_16 for Google Find Hub."""
+        parser = TsharkBleJsonParser()
+        doc = {
+            "_source": {
+                "layers": {
+                    "frame": {"frame.time_epoch": "1790000000.000"},
+                    "btle": {
+                        "btle.advertising_address": "6b:20:e5:42:db:a0",
+                        "btcommon.eir_ad.advertising_data": {
+                            "btcommon.eir_ad.entry": {
+                                "btcommon.eir_ad.entry.length": "23",
+                                "btcommon.eir_ad.entry.type": "0x16",
+                                "btcommon.eir_ad.entry.uuid_16": "0xfe9f",
+                                "btcommon.eir_ad.entry.service_data": "00:01:02:03:04:05:06:07:08:09:0a:0b:0c:0d:0e:0f:10:11:12:13",
+                            }
+                        },
+                    },
+                    "btle_rf": {
+                        "btle_rf.signal_dbm": "-78",
+                        "btle_rf.channel": "0",
+                    },
+                },
+            },
+        }
+        obs = parser.parse_packet_dict(doc)
+        assert obs is not None
+        assert obs["network_type"] == "Google Find Hub"
+        assert obs["mac_address"] == "6B:20:E5:42:DB:A0"
+        assert obs["channel"] == 37
+        assert obs["rssi"] == -78
+        assert "fe9f" in obs["raw_payload"]
+        assert len(obs["ephemeral_key"]) > 0
+
+    def test_apple_nearby_not_falsely_classified_as_find_my(self) -> None:
+        """Standard Apple Continuity Nearby Info (Type 0x10) must not be flagged as Find My tracking beacon."""
+        parser = TsharkBleJsonParser()
+        doc = {
+            "layers": {
+                "frame": {"frame_frame_time_epoch": "1790000000.000"},
+                "btle": {
+                    "btle_btle_advertising_address": "4e:fc:b3:3b:6f:f6",
+                    "btcommon_btcommon_eir_ad_entry_company_id": "0x004c",
+                    "btcommon_btcommon_eir_ad_entry_data": "10:07:3f:1f:c7:61:a8:fe:48",
+                },
+                "btle_rf": {"btle_rf_btle_rf_signal_dbm": "-73", "btle_rf_btle_rf_channel": "37"},
+            },
+        }
+        obs = parser.parse_packet_dict(doc)
+        assert obs is not None
+        assert obs["company_id"] == "0x004c"
+        assert obs["network_type"] == "Unknown"
+

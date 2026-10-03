@@ -3,15 +3,25 @@
 from __future__ import annotations
 
 import io
+import shutil
+import subprocess
 import threading
 import time
 from typing import Any, Optional
 
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 import serial.tools.list_ports
 import streamlit as st
 
 from app.queue_bridge import EventQueue, get_event_queue
 from bluetooth_sniffle.device.serial_port import check_device_usage, is_sniffle_device
+from bluetooth_sniffle.extcap.runner import TsharkConfig
+from bluetooth_sniffle.extcap.topology import (
+    TsharkTopologyManager,
+    check_port_availability,
+)
 from bluetooth_sniffle.protocol.beacons import (
     build_altbeacon,
     build_eddystone_uid,
@@ -237,6 +247,165 @@ def export_queue_to_pcap(event_queue: EventQueue) -> bytes:
     return buf.getvalue()
 
 
+def check_tshark_dependencies() -> dict[str, Any]:
+    """Verify presence of tshark binary and sniffle extcap plugin interface.
+
+    Returns:
+        Dictionary indicating availability, path, and error string if any.
+    """
+    tshark_bin = shutil.which("tshark")
+    if not tshark_bin:
+        return {
+            "tshark_available": False,
+            "sniffle_extcap_available": False,
+            "tshark_path": "",
+            "error": "Tshark not found in system PATH. Please install Wireshark/tshark.",
+        }
+
+    try:
+        res = subprocess.run(
+            [tshark_bin, "-D"],
+            capture_output=True,
+            text=True,
+            timeout=5.0,
+            check=False,
+        )
+        if "sniffle" in res.stdout.lower():
+            return {
+                "tshark_available": True,
+                "sniffle_extcap_available": True,
+                "tshark_path": tshark_bin,
+                "error": None,
+            }
+        return {
+            "tshark_available": True,
+            "sniffle_extcap_available": False,
+            "tshark_path": tshark_bin,
+            "error": "Sniffle extcap plugin not detected in tshark -D interfaces.",
+        }
+    except Exception as exc:
+        return {
+            "tshark_available": True,
+            "sniffle_extcap_available": False,
+            "tshark_path": tshark_bin,
+            "error": f"Error querying tshark interfaces: {exc}",
+        }
+
+
+def format_preflight_badge(is_available: bool, reason: str) -> str:
+    """Format human-readable preflight badge for port availability.
+
+    Args:
+        is_available: True if port is free to acquire.
+        reason: Detail message explaining availability or conflict.
+
+    Returns:
+        Formatted badge text with tactical emoji.
+    """
+    if is_available:
+        return "🟢 AVAILABLE"
+    if "not found" in reason.lower() or "not exist" in reason.lower():
+        return "⚪ OFFLINE"
+    return "🔴 BUSY"
+
+
+def map_ui_to_tshark_config(
+    serport: str = "/dev/ttyUSB0",
+    mode: str = "passive_scan",
+    advchan: int | str = 37,
+    rssi_floor: int = -128,
+    mac_filter: str = "",
+    irk_filter: str = "",
+    payload_str: str = "",
+    extadv: bool = False,
+    longrange: bool = False,
+    crcerr: bool = False,
+    output_format: str = "ek",
+) -> TsharkConfig:
+    """Map UI widget parameters to a typed TsharkConfig instance."""
+    return TsharkConfig(
+        serport=serport,
+        mode=mode,
+        advchan=advchan,
+        rssi=rssi_floor if rssi_floor > -128 else None,
+        mac=mac_filter.strip() if mac_filter.strip() else None,
+        irk=irk_filter.strip() if irk_filter.strip() else None,
+        string=payload_str.strip() if payload_str.strip() else None,
+        extadv=extadv,
+        longrange=longrange,
+        crcerr=crcerr,
+        output_format=output_format,
+    )
+
+
+def build_live_packet_dataframe(packets: list[dict[str, Any]]) -> pd.DataFrame:
+    """Transform list of packet observations into structured display DataFrame."""
+    columns = [
+        "datetime_str",
+        "channel",
+        "mac_address",
+        "rssi",
+        "pdu_type",
+        "network_type",
+        "company_id",
+        "ephemeral_key",
+    ]
+    if not packets:
+        return pd.DataFrame(columns=columns)
+
+    rows: list[dict[str, Any]] = []
+    for p in packets:
+        rows.append({
+            "datetime_str": p.get("datetime_str", ""),
+            "channel": p.get("channel", 37),
+            "mac_address": p.get("mac_address", "Unknown"),
+            "rssi": p.get("rssi", -128),
+            "pdu_type": p.get("pdu_type", "ADV_IND"),
+            "network_type": p.get("network_type", "Unknown"),
+            "company_id": p.get("company_id", ""),
+            "ephemeral_key": p.get("ephemeral_key", ""),
+        })
+    return pd.DataFrame(rows)
+
+
+def build_tshark_live_chart(df: pd.DataFrame) -> go.Figure:
+    """Build Plotly line chart displaying live signal strength trends."""
+    if df.empty or "rssi" not in df.columns:
+        fig = go.Figure()
+        fig.update_layout(
+            paper_bgcolor="#0F141C",
+            plot_bgcolor="#1B2028",
+            font_color="#E1E2E8",
+            title="Awaiting Live Tshark Stream...",
+            yaxis_range=[-105, -20],
+        )
+        return fig
+
+    fig = px.line(
+        df,
+        x="datetime_str" if "datetime_str" in df.columns else None,
+        y="rssi",
+        color="mac_address" if "mac_address" in df.columns else None,
+        title="Live BLE Signal Strength Trends (Tshark Stream)",
+        labels={"datetime_str": "Time", "rssi": "RSSI (dBm)", "mac_address": "MAC Address"},
+        markers=True,
+    )
+    fig.update_layout(
+        paper_bgcolor="#0F141C",
+        plot_bgcolor="#1B2028",
+        font_color="#E1E2E8",
+        yaxis_range=[-105, -20],
+        margin=dict(l=20, r=20, t=40, b=20),
+    )
+    return fig
+
+
+@st.cache_resource
+def get_tshark_topology_manager() -> TsharkTopologyManager:
+    """Return singleton TsharkTopologyManager instance."""
+    return TsharkTopologyManager(event_queue=get_event_queue())
+
+
 def render_radio_controls(
     tracker_db: Optional[BLETrackerDB] = None,
     event_queue: Optional[EventQueue] = None,
@@ -360,6 +529,160 @@ def render_radio_controls(
 
     st.divider()
 
+    # Live Tshark Extcap Streaming Panel
+    st.markdown("#### 🦈 Live BLE JSON Streaming via Tshark & Extcap")
+    st.caption(
+        "Wrap sniffle_extcap.py with Tshark (-T ek / -T json) to stream live dissected BLE frames directly into the EventQueue without interrupting background processes."
+    )
+
+    tshark_manager = get_tshark_topology_manager()
+    tshark_status = tshark_manager.get_status()
+    deps = check_tshark_dependencies()
+
+    port1 = orchestrator.port1
+    port2 = orchestrator.port2
+    avail1, reason1 = check_port_availability(port1)
+    avail2, reason2 = check_port_availability(port2)
+
+    # Diagnostics Card Row
+    d_col1, d_col2, d_col3, d_col4 = st.columns(4)
+    with d_col1:
+        st.metric(
+            label="Tshark Binary",
+            value="INSTALLED" if deps["tshark_available"] else "MISSING",
+            delta="Available" if deps["tshark_available"] else "Not in PATH",
+        )
+    with d_col2:
+        st.metric(
+            label="Sniffle Extcap Plugin",
+            value="REGISTERED" if deps["sniffle_extcap_available"] else "UNREGISTERED",
+            delta="Ready" if deps["sniffle_extcap_available"] else "Missing from tshark -D",
+        )
+    with d_col3:
+        st.metric(
+            label=f"Port 1 ({port1})",
+            value=format_preflight_badge(avail1, reason1),
+            help=reason1,
+        )
+    with d_col4:
+        st.metric(
+            label=f"Port 2 ({port2})",
+            value=format_preflight_badge(avail2, reason2),
+            help=reason2,
+        )
+
+    if deps.get("error"):
+        st.warning(f"⚠️ **Preflight Notice:** {deps['error']}")
+
+    ts_topo = st.radio(
+        "Tshark Orchestration Topology:",
+        options=[
+            "Topology A: Dual-Channel Aggregation (Radio 1 + Radio 2)",
+            "Topology B: Single-Channel Sniffing (Dedicated Radio)",
+        ],
+        index=0,
+        key="tshark_topology_select",
+    )
+    is_topo_a = "Topology A" in ts_topo
+
+    # Form parameters
+    p_col1, p_col2, p_col3 = st.columns([1, 1, 1])
+    with p_col1:
+        ts_chan1 = st.selectbox("Primary Radio Channel:", options=[37, 38, 39, "auto", "all"], index=0, key="ts_c1")
+        ts_chan2 = 38
+        if is_topo_a:
+            ts_chan2 = st.selectbox("Secondary Radio Channel:", options=[37, 38, 39], index=1, key="ts_c2")
+        ts_rssi = st.slider("RSSI Floor Cutoff (dBm):", min_value=-128, max_value=0, value=-80, key="ts_rssi")
+
+    with p_col2:
+        ts_mac = st.text_input("Target Advertiser MAC Filter:", placeholder="e.g. AA:BB:CC:DD:EE:FF", key="ts_mac")
+        ts_irk = st.text_input("Advertiser IRK (32 Hex Digits):", placeholder="Optional 16-byte IRK", key="ts_irk")
+        ts_string = st.text_input("Payload String Search:", placeholder="e.g. FindMy", key="ts_str")
+
+    with p_col3:
+        ts_extadv = st.checkbox("BT5 Extended Advertising (--extadv)", value=False, key="ts_extadv")
+        ts_longrange = st.checkbox("Coded PHY Long Range (--longrange)", value=False, key="ts_lr")
+        ts_crcerr = st.checkbox("Capture Packets with CRC Errors (--crcerr)", value=False, key="ts_crc")
+        ts_format = st.selectbox("JSON Output Format:", options=["ek", "json"], index=0, key="ts_fmt")
+
+    # Start/Stop Buttons
+    btn_col1, btn_col2 = st.columns([1, 3])
+    with btn_col1:
+        if not tshark_status["running"]:
+            if st.button("▶ Start Tshark Capture", type="primary", key="btn_start_tshark"):
+                if is_topo_a:
+                    started = tshark_manager.start_topology_a(
+                        port1=port1,
+                        port2=port2,
+                        chan1=ts_chan1 if isinstance(ts_chan1, int) else 37,
+                        chan2=ts_chan2 if isinstance(ts_chan2, int) else 38,
+                        rssi_cutoff=ts_rssi,
+                        mac=ts_mac if ts_mac.strip() else None,
+                        irk=ts_irk if ts_irk.strip() else None,
+                        string=ts_string if ts_string.strip() else None,
+                        extadv=ts_extadv,
+                        longrange=ts_longrange,
+                        crcerr=ts_crcerr,
+                        output_format=ts_format,
+                    )
+                else:
+                    started = tshark_manager.start_topology_b(
+                        port=port1,
+                        chan=ts_chan1 if isinstance(ts_chan1, int) else 37,
+                        rssi_cutoff=ts_rssi,
+                        mac=ts_mac if ts_mac.strip() else None,
+                        irk=ts_irk if ts_irk.strip() else None,
+                        string=ts_string if ts_string.strip() else None,
+                        extadv=ts_extadv,
+                        longrange=ts_longrange,
+                        crcerr=ts_crcerr,
+                        output_format=ts_format,
+                    )
+                if started:
+                    st.success("Tshark live capturing started successfully!")
+                    st.rerun()
+                else:
+                    st.error(tshark_manager.get_status().get("error") or "Failed to start Tshark process.")
+        else:
+            if st.button("⏹ Stop Tshark Capture", type="secondary", key="btn_stop_tshark"):
+                tshark_manager.stop()
+                st.info("Tshark capture stopped.")
+                st.rerun()
+
+    # Telemetry and stream visualization
+    t_col1, t_col2, t_col3, t_col4 = st.columns(4)
+    with t_col1:
+        st.metric("Capture State", "ACTIVE" if tshark_status["running"] else "IDLE")
+    with t_col2:
+        st.metric("Active Topology", tshark_status["topology"])
+    with t_col3:
+        st.metric("Packets Dissected", tshark_status["packets_captured"])
+    with t_col4:
+        st.metric("Queue Depth", event_queue.size() if event_queue else 0)
+
+    # Live packet dataframe and Plotly chart
+    recent_packets = list(tshark_manager.parser.buffered_observations)
+    df_live = build_live_packet_dataframe(recent_packets)
+
+    st.markdown("##### 📡 Live Streamed BLE Observations")
+    if not df_live.empty:
+        st.dataframe(df_live, use_container_width=True, height=220)
+        st.plotly_chart(build_tshark_live_chart(df_live), use_container_width=True)
+    else:
+        st.info("No packets currently streamed. Start Tshark capture or inject beacon burst to view telemetry.")
+
+    with st.expander("🔬 Tshark Process Metrics & Diagnostics Log", expanded=False):
+        st.json(tshark_status)
+        for p, r in tshark_manager.runners.items():
+            st.markdown(f"**Logs for `{p}`:**")
+            logs = r.get_stderr_logs()
+            if logs:
+                st.code("\n".join(logs[-10:]), language="text")
+            else:
+                st.write("No diagnostic stderr messages recorded.")
+
+    st.divider()
+
     # Live PCAP Export
     st.markdown("#### 💾 Live PCAP Capture Download")
     q = event_queue or get_event_queue()
@@ -370,3 +693,4 @@ def render_radio_controls(
         file_name="sniffle_live_capture.pcap",
         mime="application/vnd.tcpdump.pcap",
     )
+

@@ -58,10 +58,13 @@ def render_telemetry_overview(
         "Real-time packet throughput, multi-channel distribution, and active tracking network monitors."
     )
 
-    # Ingest any live queue items into a temporary snapshot
+    # Ingest live queue items into a snapshot without destructive draining
     live_items: list[dict[str, Any]] = []
     if event_queue is not None:
-        live_items = event_queue.drain(max_items=200)
+        if hasattr(event_queue, "get_recent"):
+            live_items = event_queue.get_recent(max_items=500)
+        else:
+            live_items = event_queue.drain(max_items=200)
 
     # Query DB observations
     obs_list: list[dict[str, Any]] = []

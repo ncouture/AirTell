@@ -13,6 +13,7 @@ import logging
 import re
 import threading
 import time
+from datetime import datetime
 from typing import Any, Optional
 
 from app.queue_bridge import EventQueue
@@ -101,9 +102,11 @@ class TsharkBleJsonParser:
         self._lock: threading.Lock = threading.Lock()
         self._total_parsed: int = 0
         self._parse_errors: int = 0
+        self._json_buffer: list[str] = []
+        self._brace_depth: int = 0
 
     def parse_line(self, line: str) -> dict[str, Any] | None:
-        """Parse a single line from Tshark stdout stream.
+        """Parse a single line from Tshark stdout stream (supporting both -T ek and -T json).
 
         Args:
             line: Raw line from stdout.
@@ -119,23 +122,38 @@ class TsharkBleJsonParser:
         if clean.startswith('{"index"') or clean.startswith("{'index'"):
             return None
 
-        # Strip trailing commas if line comes from streaming JSON array
-        if clean.endswith(","):
-            clean = clean[:-1].strip()
+        # Fast path: complete single-line JSON record (e.g. -T ek)
+        if clean.startswith("{") and (clean.endswith("}") or clean.endswith("},")):
+            candidate = clean[:-1].strip() if clean.endswith(",") else clean
+            try:
+                doc = json.loads(candidate)
+                if isinstance(doc, dict):
+                    return self.parse_packet_dict(doc)
+            except Exception:
+                pass
 
         if clean in ("[", "]"):
             return None
 
-        try:
-            doc = json.loads(clean)
-        except Exception:
-            self._parse_errors += 1
-            return None
+        # Multi-line streaming JSON accumulator for -T json
+        self._json_buffer.append(clean)
+        self._brace_depth += clean.count("{") - clean.count("}")
 
-        if not isinstance(doc, dict):
-            return None
+        if self._brace_depth <= 0 and self._json_buffer:
+            combined = "".join(self._json_buffer).strip()
+            self._json_buffer.clear()
+            self._brace_depth = 0
+            if combined.endswith(","):
+                combined = combined[:-1].strip()
+            try:
+                doc = json.loads(combined)
+                if isinstance(doc, dict):
+                    return self.parse_packet_dict(doc)
+            except Exception:
+                self._parse_errors += 1
+                return None
 
-        return self.parse_packet_dict(doc)
+        return None
 
     def parse_packet_dict(self, doc: dict[str, Any]) -> dict[str, Any] | None:
         """Dissect packet dictionary from either -T ek or -T json format.
@@ -233,10 +251,12 @@ class TsharkBleJsonParser:
         return observation
 
     def _extract_timestamp(self, doc: dict[str, Any], frame_data: dict[str, Any]) -> float:
-        """Extract epoch timestamp float."""
+        """Extract epoch timestamp float, supporting numeric, millisecond, and ISO 8601 representations."""
         candidates = [
             frame_data.get("frame_frame_time_epoch"),
             frame_data.get("frame.time_epoch"),
+            frame_data.get("frame_frame_time"),
+            frame_data.get("frame.time"),
             doc.get("timestamp"),
         ]
         for c in candidates:
@@ -248,6 +268,13 @@ class TsharkBleJsonParser:
                         val /= 1000.0
                     return val
                 except (ValueError, TypeError):
+                    pass
+                # ISO 8601 string parsing (e.g. '2026-10-03T03:00:36.202241000Z')
+                try:
+                    iso_str = str(c).strip().replace("Z", "+00:00")
+                    dt = datetime.fromisoformat(iso_str)
+                    return dt.timestamp()
+                except Exception:
                     pass
         return time.time()
 
@@ -309,8 +336,25 @@ class TsharkBleJsonParser:
                 pass
         return "ADV_IND"
 
+    def _collect_ad_values(self, obj: Any, target_suffixes: tuple[str, ...]) -> list[Any]:
+        """Recursively collect values from dictionary or list where keys end with target suffixes."""
+        found: list[Any] = []
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                if any(k.endswith(suffix) or k == suffix for suffix in target_suffixes):
+                    if isinstance(v, list):
+                        found.extend(v)
+                    elif v is not None and v != "":
+                        found.append(v)
+                if isinstance(v, (dict, list)):
+                    found.extend(self._collect_ad_values(v, target_suffixes))
+        elif isinstance(obj, list):
+            for item in obj:
+                found.extend(self._collect_ad_values(item, target_suffixes))
+        return found
+
     def _extract_payload(self, btle_data: dict[str, Any], btcommon_data: Any) -> str:
-        """Extract all advertising hex payload fragments."""
+        """Extract all advertising hex payload fragments across flat and nested structures."""
         parts: list[str] = []
 
         # From btle scan response or direct payload
@@ -318,21 +362,46 @@ class TsharkBleJsonParser:
         if scan_data:
             parts.append(normalize_hex_payload(scan_data))
 
-        # From btle EIR / AD structures
+        # Direct EIR data (EK format)
         eir_data = btle_data.get("btcommon_btcommon_eir_ad_entry_data") or btle_data.get("btcommon.eir_ad.entry.data")
         if eir_data:
             parts.append(normalize_hex_payload(eir_data))
 
+        # Direct service data (EK format)
+        svc_data = btle_data.get("btcommon_btcommon_eir_ad_entry_service_data") or btle_data.get("btcommon.eir_ad.entry.service_data")
+        if svc_data:
+            parts.append(normalize_hex_payload(svc_data))
+
+        # Direct UUIDs (EK format)
+        uuid_data = btle_data.get("btcommon_btcommon_eir_ad_entry_uuid_16") or btle_data.get("btcommon.eir_ad.entry.uuid_16")
+        if uuid_data:
+            parts.append(normalize_hex_payload(uuid_data))
+
+        # Nested AD/EIR entries (-T json format)
+        nested_values = self._collect_ad_values(
+            btle_data,
+            ("data", "service_data", "uuid_16", "custom_uuid_128", "scan_response_data"),
+        )
+        for nv in nested_values:
+            norm = normalize_hex_payload(nv)
+            if norm and norm not in parts:
+                parts.append(norm)
+
         if isinstance(btcommon_data, dict):
-            c_data = btcommon_data.get("btcommon.eir_ad.entry.data") or btcommon_data.get("btcommon_btcommon_eir_ad_entry_data")
-            if c_data:
-                parts.append(normalize_hex_payload(c_data))
+            c_values = self._collect_ad_values(
+                btcommon_data,
+                ("data", "service_data", "uuid_16", "custom_uuid_128"),
+            )
+            for cv in c_values:
+                norm = normalize_hex_payload(cv)
+                if norm and norm not in parts:
+                    parts.append(norm)
 
         return "".join(parts)
 
     def _extract_company_id(self, btle_data: dict[str, Any], btcommon_data: Any) -> str:
-        """Extract and format manufacturer company identifier."""
-        raw = self._find_first_matching(
+        """Extract and format manufacturer company identifier from flat or nested structures."""
+        direct_raw = self._find_first_matching(
             [
                 btle_data.get("btcommon_btcommon_eir_ad_entry_company_id"),
                 btle_data.get("btcommon.eir_ad.entry.company_id"),
@@ -340,7 +409,16 @@ class TsharkBleJsonParser:
                 btcommon_data.get("btcommon.eir_ad.entry.company_id") if isinstance(btcommon_data, dict) else None,
             ]
         )
-        return format_company_id(raw)
+        if direct_raw:
+            return format_company_id(direct_raw)
+
+        # Recursive search for nested entries (-T json format)
+        found = self._collect_ad_values(btle_data, ("company_id",))
+        if not found and isinstance(btcommon_data, dict):
+            found = self._collect_ad_values(btcommon_data, ("company_id",))
+        if found:
+            return format_company_id(found[0])
+        return ""
 
     def _classify_tracking_network(
         self,
@@ -351,13 +429,16 @@ class TsharkBleJsonParser:
         """Classify tracking protocol and extract ephemeral public key."""
         payload_lower = raw_payload.lower()
 
-        # 1. Apple Find My (Company ID 0x004c, Type 0x12 or Find My offline payload)
+        # 1. Apple Find My (Company ID 0x004c with Find My Type 0x12 or iBeacon 0x02)
         if company_id == "0x004c":
             if "1219" in payload_lower or "4c001219" in payload_lower:
-                idx = payload_lower.find("1219")
+                idx = payload_lower.find("1219") if "1219" in payload_lower else payload_lower.find("4c001219") + 4
                 key_fragment = payload_lower[idx + 4 : idx + 4 + 44]
                 return "Apple Find My", key_fragment or f"apple_{mac_address[-5:].replace(':', '')}"
-            return "Apple Find My", f"apple_{mac_address[-5:].replace(':', '')}"
+            if "0215" in payload_lower or "4c000215" in payload_lower:
+                idx = payload_lower.find("0215") if "0215" in payload_lower else payload_lower.find("4c000215") + 4
+                key_fragment = payload_lower[idx + 4 : idx + 4 + 32]
+                return "Apple Find My", key_fragment or f"apple_{mac_address[-5:].replace(':', '')}"
 
         if "4c001219" in payload_lower:
             idx = payload_lower.find("4c001219")

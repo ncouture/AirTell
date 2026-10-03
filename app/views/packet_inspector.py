@@ -8,6 +8,8 @@ from typing import Any, Optional
 import pandas as pd
 import streamlit as st
 
+from app.queue_bridge import EventQueue
+
 AD_TYPE_NAMES: dict[int, str] = {
     0x01: "Flags",
     0x02: "Incomplete List of 16-bit Service UUIDs",
@@ -81,16 +83,31 @@ def decode_ad_structures(payload_hex: str) -> list[dict[str, Any]]:
     return structures
 
 
-def render_packet_inspector(conn: Optional[sqlite3.Connection]) -> None:
+def render_packet_inspector(
+    conn: Optional[sqlite3.Connection],
+    event_queue: Optional[EventQueue] = None,
+) -> None:
     """Render the Deep Packet Inspector view."""
     st.subheader("🔍 Deep Packet Inspector & Protocol Dissection")
     st.markdown(
         "Low-level Link Layer payload analysis, BLE Advertising Data (AD) structure dissection, and raw hex exploration."
     )
 
-    if not conn:
-        st.warning("Database unavailable.")
-        return
+    # 1. Collect live dissected packets from EventQueue
+    live_packets: list[dict[str, Any]] = []
+    if event_queue is not None:
+        items = event_queue.get_recent(max_items=500) if hasattr(event_queue, "get_recent") else []
+        for idx, p in enumerate(items, start=1):
+            live_packets.append({
+                "id": f"LIVE-{idx:03d}",
+                "datetime_str": p.get("datetime_str", ""),
+                "channel": p.get("channel", 37),
+                "mac_address": p.get("mac_address", "Unknown"),
+                "rssi": p.get("rssi", -100),
+                "network_type": p.get("network_type", "Unknown"),
+                "ephemeral_key": p.get("ephemeral_key", ""),
+                "raw_payload": p.get("raw_payload", ""),
+            })
 
     # Filter row
     f_col1, f_col2, f_col3 = st.columns([2, 2, 1])
@@ -102,32 +119,57 @@ def render_packet_inspector(conn: Optional[sqlite3.Connection]) -> None:
     with f_col3:
         row_limit = st.selectbox("Max Packets:", options=[100, 250, 500, 1000], index=1)
 
-    query = """
-    SELECT id, datetime_str, channel, mac_address, rssi, network_type, ephemeral_key, raw_payload
-    FROM observations
-    WHERE 1=1
-    """
-    params: list[Any] = []
-    if selected_net != "All":
-        query += " AND network_type = ?"
-        params.append(selected_net)
-    if search_query:
-        query += " AND (mac_address LIKE ? OR ephemeral_key LIKE ?)"
-        wildcard = f"%{search_query.strip()}%"
-        params.extend([wildcard, wildcard])
+    df_db = pd.DataFrame()
+    if conn:
+        query = """
+        SELECT id, datetime_str, channel, mac_address, rssi, network_type, ephemeral_key, raw_payload
+        FROM observations
+        WHERE 1=1
+        """
+        params: list[Any] = []
+        if selected_net != "All":
+            query += " AND network_type = ?"
+            params.append(selected_net)
+        if search_query:
+            query += " AND (mac_address LIKE ? OR ephemeral_key LIKE ?)"
+            wildcard = f"%{search_query.strip()}%"
+            params.extend([wildcard, wildcard])
 
-    query += " ORDER BY id DESC LIMIT ?"
-    params.append(row_limit)
+        query += " ORDER BY id DESC LIMIT ?"
+        params.append(row_limit)
 
-    try:
-        df = pd.read_sql_query(query, conn, params=params)
-    except Exception as e:
-        st.error(f"Error executing packet query: {e}")
+        try:
+            df_db = pd.read_sql_query(query, conn, params=params)
+        except Exception as e:
+            st.error(f"Error executing packet query: {e}")
+
+    # Filter live packets
+    filtered_live = []
+    for lp in live_packets:
+        if selected_net != "All" and lp["network_type"] != selected_net:
+            continue
+        if search_query:
+            q_clean = search_query.strip().lower()
+            if q_clean not in lp["mac_address"].lower() and q_clean not in lp["ephemeral_key"].lower():
+                continue
+        filtered_live.append(lp)
+
+    frames = []
+    if filtered_live:
+        frames.append(pd.DataFrame(filtered_live))
+    if not df_db.empty:
+        frames.append(df_db)
+
+    if not frames:
+        st.info("No packets match current filter parameters. Awaiting Tshark stream or beacon bursts.")
         return
 
-    if df.empty:
-        st.info("No packets match current filter parameters.")
-        return
+    df = pd.concat(frames, ignore_index=True)
+    if "datetime_str" in df.columns:
+        df = df.sort_values(by="datetime_str", ascending=False).head(row_limit)
+
+    if filtered_live:
+        st.caption(f"⚡ **Live Stream Active:** {len(filtered_live)} in-memory dissected packets available for inspection.")
 
     st.write(f"Showing **{len(df)}** packets:")
     st.dataframe(
