@@ -29,5 +29,6 @@
 - **Notifications Extra (`[notifications]`)**: `twilio>=8.0.0` for SMS alerting, kept optional to preserve a lean core installation
 
 ## Testing, Tooling & Code Quality
-- **Test Framework**: `pytest>=9.1.1` with `anyio`, `pytest-cov` (607 multi-tier E2E, unit, and integration tests across 32 test modules)
+- **Packet Dissection & Streaming Engine**: `tshark` (Wireshark CLI engine with Sniffle extcap plugin wrapper, supporting line-delimited `-T ek` and `-T json` streaming)
+- **Test Framework**: `pytest>=9.1.1` with `anyio`, `pytest-cov` (658 multi-tier E2E, unit, and integration tests across 36 test modules)
 - **Static Analysis & Formatting**: `ruff` (targeting Python 3.10+, line length 120)
