@@ -24,14 +24,14 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [checkpoint: 5a14469]
 
 ## Phase 3: Multi-Dongle Topology Orchestration & Contention Guard
-- [ ] Task: Write unit tests for port conflict detection and dual-channel aggregation in `tests/test_tshark_topology.py`
-  - [ ] Test non-destructive device locking checks preventing collisions with active Sniffle processes
-  - [ ] Test concurrent dual-dongle aggregation across separate primary advertising channels
-- [ ] Task: Implement `TsharkTopologyManager` in `src/bluetooth_sniffle/extcap/topology.py`
-  - [ ] Implement non-interfering device probe (`check_port_availability`) guarding existing DB logging
-  - [ ] Implement Topology A (Dual-Channel: Ch 37 on Radio 1, Ch 38 on Radio 2)
-  - [ ] Implement Topology B (Single-Channel / Cross-Band with cellular/SDR coexistence)
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Write unit tests for port conflict detection and dual-channel aggregation in `tests/test_tshark_topology.py` ddb0dbd
+  - [x] Test non-destructive device locking checks preventing collisions with active Sniffle processes
+  - [x] Test concurrent dual-dongle aggregation across separate primary advertising channels
+- [x] Task: Implement `TsharkTopologyManager` in `src/bluetooth_sniffle/extcap/topology.py` 7dd3839
+  - [x] Implement non-interfering device probe (`check_port_availability`) guarding existing DB logging
+  - [x] Implement Topology A (Dual-Channel: Ch 37 on Radio 1, Ch 38 on Radio 2)
+  - [x] Implement Topology B (Single-Channel / Cross-Band with cellular/SDR coexistence)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [checkpoint: 7dd3839]
 
 ## Phase 4: Streamlit UI Integration & Radio Controls View
 - [ ] Task: Write integration tests for Radio Controls live streaming UI in `tests/test_tshark_ui.py`
