@@ -12,16 +12,16 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [checkpoint: 8c402a4]
 
 ## Phase 2: Live BLE JSON Dissector & Field Normalization
-- [ ] Task: Write unit tests for JSON stream parsing in `tests/test_tshark_parser.py`
-  - [ ] Test extraction from Elasticsearch line-delimited JSON (`-T ek`)
-  - [ ] Test extraction from standard streaming JSON arrays (`-T json`)
-  - [ ] Test extraction of timestamp, MAC, RSSI, channel, PDU type, and company ID
-  - [ ] Test identification of tracking networks (Apple Find My, Google Find Hub, SmartThings, Tile)
-- [ ] Task: Implement `TsharkBleJsonParser` in `src/bluetooth_sniffle/extcap/parser.py`
-  - [ ] Extract and normalize Link Layer fields into standard observation schema
-  - [ ] Implement `EventQueue` bridge pushing normalized observations to application singleton queue
-  - [ ] Enforce memory bounds and drop-oldest retention
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Write unit tests for JSON stream parsing in `tests/test_tshark_parser.py` 6545e1a
+  - [x] Test extraction from Elasticsearch line-delimited JSON (`-T ek`)
+  - [x] Test extraction from standard streaming JSON arrays (`-T json`)
+  - [x] Test extraction of timestamp, MAC, RSSI, channel, PDU type, and company ID
+  - [x] Test identification of tracking networks (Apple Find My, Google Find Hub, SmartThings, Tile)
+- [x] Task: Implement `TsharkBleJsonParser` in `src/bluetooth_sniffle/extcap/parser.py` 5a14469
+  - [x] Extract and normalize Link Layer fields into standard observation schema
+  - [x] Implement `EventQueue` bridge pushing normalized observations to application singleton queue
+  - [x] Enforce memory bounds and drop-oldest retention
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [checkpoint: 5a14469]
 
 ## Phase 3: Multi-Dongle Topology Orchestration & Contention Guard
 - [ ] Task: Write unit tests for port conflict detection and dual-channel aggregation in `tests/test_tshark_topology.py`
