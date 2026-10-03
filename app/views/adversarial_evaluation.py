@@ -23,6 +23,7 @@ from bluetooth_sniffle.adversarial.relay import (
 from bluetooth_sniffle.adversarial.rogue_beacon import (
     AntiStalkingEvasionEvaluator,
 )
+from bluetooth_sniffle.device.serial_port import check_device_usage
 from scripts.ble_antistalking_tracker import BLETrackerDB
 
 
@@ -128,7 +129,12 @@ def render_adversarial_evaluation(
         with r_col1:
             relay_status = "IDLE (Awaiting Connection)"
             st.markdown(f"**Current Handshake State:** `{relay_status}`")
-            st.markdown("**Active Bridge Topology:** `Device 1 (Sniffer) ➔ Relay Queue ➔ Device 2 (Proxy)`")
+            st.markdown("**Active Bridge Topology:** `Relay Master (/dev/ttyUSB0) ➔ TCP (Port 7352) ➔ Relay Slave (/dev/ttyUSB1)`")
+            m_used = check_device_usage("/dev/ttyUSB0")
+            s_used = check_device_usage("/dev/ttyUSB1")
+            m_badge = "🟢 IN USE (open)" if m_used else "⚪ IDLE (not open)"
+            s_badge = "🟢 IN USE (open)" if s_used else "⚪ IDLE (not open)"
+            st.markdown(f"**Hardware Status:** Master (`/dev/ttyUSB0`): `{m_badge}` | Slave (`/dev/ttyUSB1`): `{s_badge}`")
 
         with r_col2:
             if st.button("Simulate Relay Handshake Burst", key="btn_sim_relay"):

@@ -11,7 +11,7 @@ import serial.tools.list_ports
 import streamlit as st
 
 from app.queue_bridge import EventQueue, get_event_queue
-from bluetooth_sniffle.device.serial_port import is_sniffle_device
+from bluetooth_sniffle.device.serial_port import check_device_usage, is_sniffle_device
 from bluetooth_sniffle.protocol.beacons import (
     build_altbeacon,
     build_eddystone_uid,
@@ -26,17 +26,19 @@ def discover_available_dongles() -> list[dict[str, Any]]:
     """Scan host system for attached USB serial devices and identify Sniffle CC2652P dongles.
 
     Returns:
-        List of dictionaries with device path, description, VID/PID, and is_sniffle flag.
+        List of dictionaries with device path, description, VID/PID, is_sniffle, and in_use flag.
     """
     discovered: list[dict[str, Any]] = []
     try:
         ports = serial.tools.list_ports.comports()
         for p in ports:
             is_sniffle = is_sniffle_device(p)
+            in_use = check_device_usage(p.device)
             discovered.append({
                 "device": p.device,
                 "description": getattr(p, "description", "") or "Serial Device",
                 "is_sniffle": is_sniffle,
+                "in_use": in_use,
                 "vid": getattr(p, "vid", None),
                 "pid": getattr(p, "pid", None),
                 "manufacturer": getattr(p, "manufacturer", "Unknown"),
@@ -274,11 +276,15 @@ def render_radio_controls(
 
     with top_col2:
         st.markdown("#### 📊 Hardware Status")
-        st.write(f"**State:** `{'ACTIVE' if status['running'] else 'IDLE'}`")
-        st.write(f"**Topology:** `{status['active_topology']}`")
-        st.write(f"**Primary Port:** `{status['port1']}`")
-        st.write(f"**Secondary Port:** `{status['port2']}`")
-        st.write(f"**Buffer Packets:** `{status['packets_captured']}`")
+        st.write(f"**State:** `{'ACTIVE' if status.get('running', False) else 'IDLE'}`")
+        st.write(f"**Topology:** `{status.get('active_topology', 'None')}`")
+        p1 = status.get("port1", "/dev/ttyUSB0")
+        p2 = status.get("port2", "/dev/ttyUSB1")
+        p1_used = check_device_usage(p1)
+        p2_used = check_device_usage(p2)
+        st.write(f"**Primary Port ({p1}):** `{'IN USE (open)' if p1_used else 'IDLE (not open)'}`")
+        st.write(f"**Secondary Port ({p2}):** `{'IN USE (open)' if p2_used else 'IDLE (not open)'}`")
+        st.write(f"**Buffer Packets:** `{status.get('packets_captured', 0)}`")
 
     st.divider()
 
@@ -308,7 +314,8 @@ def render_radio_controls(
             if discovered_dongles:
                 for d in discovered_dongles:
                     status_badge = "✅ Sniffle CC2652P" if d.get("is_sniffle") else "ℹ️ Other Serial"
-                    st.write(f"- `{d['device']}`: **{d['description']}** ({status_badge})")
+                    usage_badge = " [IN USE]" if d.get("in_use") else " [IDLE]"
+                    st.write(f"- `{d['device']}`: **{d['description']}** ({status_badge}{usage_badge})")
             else:
                 st.write("No active USB serial bridges currently enumerated.")
 

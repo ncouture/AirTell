@@ -159,6 +159,14 @@ def get_m3_layout_css() -> str:
   background-color: var(--md-sys-color-success);
   box-shadow: 0 0 6px var(--md-sys-color-success);
 }
+
+.m3-status-dot-idle {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #8E919A;
+  box-shadow: 0 0 4px rgba(142, 145, 154, 0.4);
+}
 </style>
 """.strip()
 
@@ -167,6 +175,8 @@ def get_top_app_bar_html(
     dongle1_status: str = "CC2652P #1: ACTIVE",
     dongle2_status: str = "CC2652P #2: ACTIVE",
     active_channels: str = "CH 37 / 38",
+    dongle1_active: bool | None = None,
+    dongle2_active: bool | None = None,
 ) -> str:
     """Generate HTML snippet for M3 Top App Bar.
 
@@ -174,10 +184,22 @@ def get_top_app_bar_html(
         dongle1_status: Primary Sniffle dongle status text.
         dongle2_status: Secondary Sniffle dongle status text.
         active_channels: Monitored BLE advertising channels text.
+        dongle1_active: Whether primary dongle is actively in use. If None,
+            inferred from status string (False if 'IDLE' or 'NOT OPEN' in status).
+        dongle2_active: Whether secondary dongle is actively in use. If None,
+            inferred from status string (False if 'IDLE' or 'NOT OPEN' in status).
 
     Returns:
         Renderable HTML string.
     """
+    if dongle1_active is None:
+        dongle1_active = not any(w in dongle1_status.upper() for w in ["IDLE", "NOT OPEN", "INACTIVE"])
+    if dongle2_active is None:
+        dongle2_active = not any(w in dongle2_status.upper() for w in ["IDLE", "NOT OPEN", "INACTIVE"])
+
+    dot1_class = "m3-status-dot" if dongle1_active else "m3-status-dot-idle"
+    dot2_class = "m3-status-dot" if dongle2_active else "m3-status-dot-idle"
+
     return f"""
 <div class="m3-top-bar" data-surface="#0F141C">
   <div class="m3-top-bar-title">
@@ -186,11 +208,11 @@ def get_top_app_bar_html(
   </div>
   <div class="m3-status-pills">
     <div class="m3-status-pill">
-      <span class="m3-status-dot"></span>
+      <span class="{dot1_class}"></span>
       <span>{dongle1_status}</span>
     </div>
     <div class="m3-status-pill">
-      <span class="m3-status-dot"></span>
+      <span class="{dot2_class}"></span>
       <span>{dongle2_status}</span>
     </div>
     <div class="m3-status-pill">
@@ -211,6 +233,8 @@ def render_top_app_bar(
     dongle1_status: str = "CC2652P #1: ACTIVE",
     dongle2_status: str = "CC2652P #2: ACTIVE",
     active_channels: str = "CH 37 / 38",
+    dongle1_active: bool | None = None,
+    dongle2_active: bool | None = None,
 ) -> None:
     """Render the M3 Top App Bar in the main content container."""
     st.html(
@@ -218,12 +242,21 @@ def render_top_app_bar(
             dongle1_status=dongle1_status,
             dongle2_status=dongle2_status,
             active_channels=active_channels,
+            dongle1_active=dongle1_active,
+            dongle2_active=dongle2_active,
         )
     )
 
 
-def render_navigation() -> str:
+def render_navigation(
+    dongle1_status: str | None = None,
+    dongle2_status: str | None = None,
+) -> str:
     """Render the M3 expanding Navigation Rail in the sidebar.
+
+    Args:
+        dongle1_status: Optional status string for Dongle 1 (e.g., '/dev/ttyUSB0: IN USE').
+        dongle2_status: Optional status string for Dongle 2 (e.g., '/dev/ttyUSB1: IDLE').
 
     Returns:
         The selected operational view key (e.g., 'telemetry', 'rssi', etc.).
@@ -259,12 +292,17 @@ def render_navigation() -> str:
 
     st.sidebar.divider()
 
+    d1_text = dongle1_status or "/dev/ttyUSB0: IDLE"
+    d2_text = dongle2_status or "/dev/ttyUSB1: IDLE"
+
     st.sidebar.markdown(
-        """
+        f"""
         <div style="padding: 0.5rem; font-size: 0.72rem; color: #8E919A; line-height: 1.4;">
           <b style="color: #E1E2E8;">PWA Status:</b> Standalone Ready<br>
           <b style="color: #E1E2E8;">Cache:</b> Cache-First Shell<br>
-          <b style="color: #E1E2E8;">Firmware:</b> Sniffle CC2652P
+          <b style="color: #E1E2E8;">Firmware:</b> Sniffle CC2652P<br>
+          <b style="color: #E1E2E8;">Device 1:</b> {d1_text}<br>
+          <b style="color: #E1E2E8;">Device 2:</b> {d2_text}
         </div>
         """,
         unsafe_allow_html=True,

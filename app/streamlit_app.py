@@ -20,6 +20,7 @@ from app.views.packet_inspector import render_packet_inspector
 from app.views.radio_controls import render_radio_controls
 from app.views.rssi_trends import render_rssi_trends
 from app.views.telemetry_overview import render_telemetry_overview
+from bluetooth_sniffle.device.serial_port import check_device_usage
 from scripts.ble_antistalking_tracker import BLETrackerDB
 
 # 1. Page Configuration (Must be first Streamlit call)
@@ -56,15 +57,27 @@ def main() -> None:
     conn = get_db_connection()
     event_queue = get_event_queue()
 
+    # Determine real-time device usage using lsof system command
+    dev0_in_use = check_device_usage("/dev/ttyUSB0")
+    dev1_in_use = check_device_usage("/dev/ttyUSB1")
+
+    dongle1_status = f"/dev/ttyUSB0: {'IN USE' if dev0_in_use else 'IDLE'}"
+    dongle2_status = f"/dev/ttyUSB1: {'IN USE' if dev1_in_use else 'IDLE'}"
+
     # M3 Top App Bar
     render_top_app_bar(
-        dongle1_status="CC2652P #1: ACTIVE",
-        dongle2_status="CC2652P #2: ACTIVE",
+        dongle1_status=dongle1_status,
+        dongle2_status=dongle2_status,
         active_channels="CH 37 / 38",
+        dongle1_active=dev0_in_use,
+        dongle2_active=dev1_in_use,
     )
 
     # Sidebar Navigation Rail
-    active_view = render_navigation()
+    active_view = render_navigation(
+        dongle1_status=dongle1_status,
+        dongle2_status=dongle2_status,
+    )
 
     # Auto-refresh controls in sidebar
     with st.sidebar:

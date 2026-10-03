@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import os
+import subprocess
 import time
 from typing import Any
 
@@ -239,3 +240,68 @@ def open_sniffle_serial(
         timeout=timeout,
     )
     return ser
+
+
+def check_device_usage(device_path: str | None = "/dev/ttyUSB0") -> bool:
+    """Determine if a serial device is currently open and in use via lsof.
+
+    Executes system command: `lsof <device_path>`.
+    If returncode is 0, the device is open and being used.
+    If returncode is non-zero, it is not being used / not open.
+
+    Args:
+        device_path: Filesystem path to the serial device (e.g. '/dev/ttyUSB0').
+
+    Returns:
+        True if the device is currently open/in use, False otherwise.
+    """
+    if not device_path or not str(device_path).strip():
+        return False
+
+    try:
+        res = subprocess.run(
+            ["lsof", str(device_path).strip()],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=2.0,
+        )
+        return res.returncode == 0
+    except (subprocess.SubprocessError, FileNotFoundError, PermissionError, OSError):
+        return False
+
+
+def get_device_status(device_path: str | None = "/dev/ttyUSB0") -> dict[str, Any]:
+    """Get status dictionary for a device path based on lsof check.
+
+    Args:
+        device_path: Filesystem path to the serial device.
+
+    Returns:
+        Dictionary with 'device', 'in_use', 'status', and 'label'.
+    """
+    path = str(device_path).strip() if device_path and str(device_path).strip() else "/dev/ttyUSB0"
+    in_use = check_device_usage(path)
+    return {
+        "device": path,
+        "in_use": in_use,
+        "status": "IN USE" if in_use else "IDLE",
+        "label": f"{path}: {'IN USE' if in_use else 'IDLE'}",
+    }
+
+
+def get_sniffle_devices_status(
+    ports: list[str] | None = None,
+) -> list[dict[str, Any]]:
+    """Determine usage status for multiple Sniffle device paths.
+
+    Args:
+        ports: Optional list of serial device paths. Defaults to
+            ['/dev/ttyUSB0', '/dev/ttyUSB1'].
+
+    Returns:
+        List of device status dictionaries.
+    """
+    if ports is None:
+        ports = ["/dev/ttyUSB0", "/dev/ttyUSB1"]
+    return [get_device_status(p) for p in ports]
+
