@@ -61,6 +61,42 @@ class EventQueue:
             self._deque.clear()
         return items
 
+    def get_recent(self, max_items: int = 500) -> list[dict[str, Any]]:
+        """Retrieve up to `max_items` most recent events from the queue without draining.
+
+        Args:
+            max_items: Maximum recent items to return.
+
+        Returns:
+            List of recent event dictionaries in chronological order.
+        """
+        with self._lock:
+            if not self._deque:
+                return []
+            items = list(self._deque)
+            return items[-max_items:]
+
+    def get_all(self) -> list[dict[str, Any]]:
+        """Return a snapshot list of all buffered events without modifying the queue.
+
+        Returns:
+            List of all queued event dictionaries.
+        """
+        with self._lock:
+            return list(self._deque)
+
+    def peek(self, count: int = 100) -> list[dict[str, Any]]:
+        """Peek at the oldest `count` buffered events without removing them.
+
+        Args:
+            count: Number of oldest items to inspect.
+
+        Returns:
+            List of peeked event dictionaries.
+        """
+        with self._lock:
+            return list(self._deque)[:count]
+
     def size(self) -> int:
         """Return current number of items in queue.
 

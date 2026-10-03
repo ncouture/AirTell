@@ -10,6 +10,7 @@ from typing import Any, Optional
 import pandas as pd
 import streamlit as st
 
+from app.queue_bridge import EventQueue
 from scripts.ble_antistalking_tracker import BLETrackerDB
 
 
@@ -68,6 +69,7 @@ def categorize_alert(alert: dict[str, Any]) -> CategorizedAlert:
 def render_alert_feed(
     conn: Optional[sqlite3.Connection],
     tracker_db: Optional[BLETrackerDB] = None,
+    event_queue: Optional[EventQueue] = None,
 ) -> None:
     """Render the Multi-Level Alert Feed view with analyst triage capabilities."""
     st.subheader("🚨 Anti-Stalking Threat Feed & Triage")
@@ -75,29 +77,69 @@ def render_alert_feed(
         "Categorized threat alerts with severity badges, analyst incident logging, and identifier whitelisting."
     )
 
-    if not conn:
-        st.warning("Database unavailable.")
-        return
+    # 1. Analyze live real-time packets from EventQueue for immediate proximity & persistent threats
+    live_threats: list[dict[str, Any]] = []
+    if event_queue is not None:
+        items = event_queue.get_recent(max_items=500) if hasattr(event_queue, "get_recent") else []
+        grouped: dict[str, list[dict[str, Any]]] = {}
+        for item in items:
+            net = item.get("network_type", "Unknown")
+            if net and net != "Unknown":
+                ident = str(item.get("ephemeral_key") or item.get("mac_address", "Unknown"))
+                grouped.setdefault(ident, []).append(item)
 
-    query = """
-    SELECT id, datetime_str, timestamp, identifier, network_type,
-           observation_count, first_seen, last_seen, max_rssi, alert_message
-    FROM alerts
-    ORDER BY id DESC
-    LIMIT 200
-    """
-    try:
-        alerts_df = pd.read_sql_query(query, conn)
-    except Exception as e:
-        st.error(f"Error loading alerts: {e}")
-        return
+        for idx, (ident, pkts) in enumerate(grouped.items(), start=1):
+            max_rssi = max(int(p.get("rssi", -100)) for p in pkts)
+            net_type = pkts[-1].get("network_type", "Unknown")
+            first_seen = min(float(p.get("timestamp", 0)) for p in pkts)
+            last_seen = max(float(p.get("timestamp", 0)) for p in pkts)
+            last_dt = pkts[-1].get("datetime_str", "")
+            count = len(pkts)
+            # Trigger live threat if high proximity or sustained persistence
+            if max_rssi > -55 or count >= 5:
+                live_threats.append({
+                    "id": -idx,
+                    "datetime_str": last_dt,
+                    "timestamp": last_seen,
+                    "identifier": ident,
+                    "network_type": net_type,
+                    "observation_count": count,
+                    "first_seen": first_seen,
+                    "last_seen": last_seen,
+                    "max_rssi": max_rssi,
+                    "alert_message": f"Real-time threat detected on live stream: {max_rssi} dBm peak signal across {count} observation(s).",
+                    "is_live": True,
+                })
 
-    if alerts_df.empty:
+    alerts_list: list[dict[str, Any]] = list(live_threats)
+    if conn:
+        query = """
+        SELECT id, datetime_str, timestamp, identifier, network_type,
+               observation_count, first_seen, last_seen, max_rssi, alert_message
+        FROM alerts
+        ORDER BY id DESC
+        LIMIT 200
+        """
+        try:
+            db_df = pd.read_sql_query(query, conn)
+            for _, r in db_df.iterrows():
+                d = r.to_dict()
+                d["is_live"] = False
+                alerts_list.append(d)
+        except Exception as e:
+            st.error(f"Error loading alerts from database: {e}")
+
+    if not alerts_list:
         st.success("No active anti-stalking threats logged in the current operational session.")
         return
 
+    alerts_df = pd.DataFrame(alerts_list)
+
     # Export Button in Top Row
     exp_col1, exp_col2 = st.columns([3, 1])
+    with exp_col1:
+        if live_threats:
+            st.caption(f"⚡ **Live Threat Monitor:** {len(live_threats)} active real-time threat(s) flagged from live radio stream.")
     with exp_col2:
         csv_data = alerts_df.to_csv(index=False)
         st.download_button(
@@ -115,6 +157,8 @@ def render_alert_feed(
         alert_id = int(row["id"])
         identifier = str(row["identifier"])
         net_type = str(row["network_type"])
+        is_live = bool(row.get("is_live", False))
+        badge_suffix = " [LIVE STREAM]" if is_live else ""
 
         with st.container():
             st.markdown(
@@ -122,7 +166,7 @@ def render_alert_feed(
                 <div style="border-left: 4px solid {cat.badge_color}; background-color: #1B2028; padding: 0.85rem 1.25rem; border-radius: 8px; margin-bottom: 0.75rem;">
                   <div style="display: flex; justify-content: space-between; align-items: center;">
                     <span style="font-weight: 700; color: {cat.badge_color}; font-size: 0.85rem; text-transform: uppercase;">
-                      ● {cat.label}
+                      ● {cat.label}{badge_suffix}
                     </span>
                     <span style="font-family: monospace; font-size: 0.75rem; color: #8E919A;">
                       {row['datetime_str']}

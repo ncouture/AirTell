@@ -31,6 +31,7 @@ def get_process_holding_port(port: str) -> str | None:
         Description string with process command line and PID, or None if not found.
     """
     my_pid = os.getpid()
+    parent_pid = os.getppid()
     proc_dir = "/proc"
     if not os.path.isdir(proc_dir):
         return None
@@ -40,29 +41,10 @@ def get_process_holding_port(port: str) -> str | None:
             if not entry.isdigit():
                 continue
             pid = int(entry)
-            if pid == my_pid:
+            if pid in (my_pid, parent_pid):
                 continue
 
-            # 1. Check process commandline
-            cmdline_path = os.path.join(proc_dir, entry, "cmdline")
-            try:
-                with open(cmdline_path, "rb") as f:
-                    content = f.read().decode("utf-8", errors="ignore").replace("\x00", " ")
-                    if port in content and any(
-                        sub in content
-                        for sub in (
-                            "ble_antistalking_tracker",
-                            "sniff_receiver",
-                            "tshark",
-                            "python",
-                            "sniffle",
-                        )
-                    ):
-                        return f"{content.strip()} (PID {pid})"
-            except (OSError, PermissionError):
-                pass
-
-            # 2. Check open file descriptors
+            # 1. Check open file descriptors first (authoritative proof of port hold)
             fd_dir = os.path.join(proc_dir, entry, "fd")
             try:
                 for fd in os.listdir(fd_dir):
@@ -70,11 +52,37 @@ def get_process_holding_port(port: str) -> str | None:
                     try:
                         target = os.readlink(fd_path)
                         if target == port:
-                            return f"Process PID {pid} holds open descriptor to {port}"
+                            cmdline = ""
+                            try:
+                                with open(os.path.join(proc_dir, entry, "cmdline"), "rb") as f:
+                                    cmdline = f.read().decode("utf-8", errors="ignore").replace("\x00", " ").strip()
+                            except Exception:
+                                pass
+                            desc = f"{cmdline} " if cmdline else ""
+                            return f"Process {desc}(PID {pid}) holds open descriptor to {port}"
                     except (OSError, PermissionError):
                         continue
             except (OSError, PermissionError):
-                continue
+                pass
+
+            # 2. Check process commandline for active sniffer tools
+            cmdline_path = os.path.join(proc_dir, entry, "cmdline")
+            try:
+                with open(cmdline_path, "rb") as f:
+                    content = f.read().decode("utf-8", errors="ignore").replace("\x00", " ")
+                    if port in content and any(
+                        sub in content
+                        for sub in (
+                            "ble_antistalking_tracker.py",
+                            "sniff_receiver.py",
+                            "sniffle_extcap.py",
+                            "sniff_pcap.py",
+                            "tshark",
+                        )
+                    ):
+                        return f"{content.strip()} (PID {pid})"
+            except (OSError, PermissionError):
+                pass
     except Exception as exc:
         logger.debug("Process inspection check error: %s", exc)
 

@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from unittest.mock import MagicMock, patch
+
 import pandas as pd
 import plotly.graph_objects as go
 
-from app.views.alert_feed import ThreatCategory, categorize_alert
-from app.views.packet_inspector import decode_ad_structures
-from app.views.rssi_trends import build_rssi_figure
+from app.queue_bridge import EventQueue
+from app.views.alert_feed import ThreatCategory, categorize_alert, render_alert_feed
+from app.views.packet_inspector import decode_ad_structures, render_packet_inspector
+from app.views.rssi_trends import build_rssi_figure, render_rssi_trends
 from app.views.telemetry_overview import compute_telemetry_metrics
 
 
@@ -155,4 +158,118 @@ def test_render_adversarial_evaluation_structure() -> None:
         patch("streamlit.button", return_value=False),
     ):
         render_adversarial_evaluation(mock_conn, mock_tracker_db, mock_event_queue)
+
+
+def test_render_rssi_trends_with_event_queue() -> None:
+    """Validate render_rssi_trends correctly incorporates live EventQueue observations."""
+    queue = EventQueue(maxsize=50)
+    queue.push({
+        "timestamp": 1727870400.0,
+        "datetime_str": "2026-10-02 12:00:00",
+        "mac_address": "40:11:22:33:44:55",
+        "channel": 37,
+        "rssi": -48,
+        "network_type": "Apple Find My",
+        "ephemeral_key": "aabbccddeeff001122334455",
+        "raw_payload": "020106",
+    })
+
+    def mock_columns(spec):
+        count = spec if isinstance(spec, int) else len(spec)
+        return [MagicMock() for _ in range(count)]
+
+    with (
+        patch("streamlit.subheader"),
+        patch("streamlit.markdown"),
+        patch("streamlit.caption") as mock_caption,
+        patch("streamlit.columns", side_effect=mock_columns),
+        patch("streamlit.multiselect", return_value=["Apple Find My"]),
+        patch("streamlit.slider", return_value=-95),
+        patch("streamlit.plotly_chart") as mock_chart,
+    ):
+        render_rssi_trends(conn=None, event_queue=queue)
+        mock_caption.assert_called()
+        caption_text = mock_caption.call_args[0][0]
+        assert "Live Stream Active" in caption_text
+        mock_chart.assert_called_once()
+        fig = mock_chart.call_args[0][0]
+        assert isinstance(fig, go.Figure)
+
+
+def test_render_packet_inspector_with_event_queue() -> None:
+    """Validate render_packet_inspector correctly displays live EventQueue packets."""
+    queue = EventQueue(maxsize=50)
+    queue.push({
+        "timestamp": 1727870400.0,
+        "datetime_str": "2026-10-02 12:00:00",
+        "mac_address": "40:11:22:33:44:55",
+        "channel": 37,
+        "rssi": -48,
+        "network_type": "Apple Find My",
+        "ephemeral_key": "aabbccddeeff001122334455",
+        "raw_payload": "020106",
+    })
+
+    def mock_columns(spec):
+        count = spec if isinstance(spec, int) else len(spec)
+        return [MagicMock() for _ in range(count)]
+
+    with (
+        patch("streamlit.subheader"),
+        patch("streamlit.markdown"),
+        patch("streamlit.columns", side_effect=mock_columns),
+        patch("streamlit.selectbox", side_effect=lambda label, options=None, **kwargs: options[0] if options else "All"),
+        patch("streamlit.text_input", return_value=""),
+        patch("streamlit.caption") as mock_caption,
+        patch("streamlit.write"),
+        patch("streamlit.dataframe") as mock_df,
+        patch("streamlit.code"),
+        patch("streamlit.expander", return_value=MagicMock()),
+    ):
+        render_packet_inspector(conn=None, event_queue=queue)
+        mock_caption.assert_called()
+        caption_text = mock_caption.call_args[0][0]
+        assert "Live Stream Active" in caption_text
+        mock_df.assert_called_once()
+        df_passed = mock_df.call_args[0][0]
+        assert "LIVE-001" in df_passed["id"].values
+
+
+def test_render_alert_feed_with_event_queue() -> None:
+    """Validate render_alert_feed detects real-time threats from live EventQueue packets."""
+    queue = EventQueue(maxsize=50)
+    queue.push({
+        "timestamp": 1727870400.0,
+        "datetime_str": "2026-10-02 12:00:00",
+        "mac_address": "40:11:22:33:44:55",
+        "channel": 37,
+        "rssi": -45,  # > -55 dBm threshold for proximity threat
+        "network_type": "Apple Find My",
+        "ephemeral_key": "aabbccddeeff001122334455",
+        "raw_payload": "020106",
+    })
+
+    def mock_columns(spec):
+        count = spec if isinstance(spec, int) else len(spec)
+        return [MagicMock() for _ in range(count)]
+
+    with (
+        patch("streamlit.subheader"),
+        patch("streamlit.markdown") as mock_markdown,
+        patch("streamlit.caption") as mock_caption,
+        patch("streamlit.columns", side_effect=mock_columns),
+        patch("streamlit.download_button"),
+        patch("streamlit.write"),
+        patch("streamlit.container", return_value=MagicMock()),
+        patch("streamlit.button", return_value=False),
+        patch("streamlit.expander", return_value=MagicMock()),
+    ):
+        render_alert_feed(conn=None, tracker_db=None, event_queue=queue)
+        mock_caption.assert_called()
+        caption_text = mock_caption.call_args[0][0]
+        assert "Live Threat Monitor" in caption_text
+        # Ensure markdown called with LIVE STREAM badge
+        calls = [c[0][0] for c in mock_markdown.call_args_list if c[0] and isinstance(c[0][0], str)]
+        assert any("[LIVE STREAM]" in c for c in calls)
+
 

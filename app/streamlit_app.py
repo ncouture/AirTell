@@ -17,7 +17,10 @@ from app.views.adversarial_evaluation import render_adversarial_evaluation
 from app.views.alert_feed import render_alert_feed
 from app.views.offline_replay import render_offline_replay
 from app.views.packet_inspector import render_packet_inspector
-from app.views.radio_controls import render_radio_controls
+from app.views.radio_controls import (
+    get_tshark_topology_manager,
+    render_radio_controls,
+)
 from app.views.rssi_trends import render_rssi_trends
 from app.views.telemetry_overview import render_telemetry_overview
 from scripts.ble_antistalking_tracker import BLETrackerDB
@@ -56,11 +59,23 @@ def main() -> None:
     conn = get_db_connection()
     event_queue = get_event_queue()
 
+    # Real-Time Dongle & Tshark Status for Top App Bar
+    tshark_mgr = get_tshark_topology_manager()
+    t_status = tshark_mgr.get_status()
+    if t_status["running"]:
+        d1 = f"RADIO 1: ACTIVE ({t_status['topology']})"
+        d2 = "RADIO 2: ACTIVE" if "Topology A" in t_status["topology"] else "RADIO 2: STANDBY"
+        chans = "LIVE TSHARK STREAM"
+    else:
+        d1 = "CC2652P #1: READY"
+        d2 = "CC2652P #2: READY"
+        chans = "CH 37 / 38 / 39"
+
     # M3 Top App Bar
     render_top_app_bar(
-        dongle1_status="CC2652P #1: ACTIVE",
-        dongle2_status="CC2652P #2: ACTIVE",
-        active_channels="CH 37 / 38",
+        dongle1_status=d1,
+        dongle2_status=d2,
+        active_channels=chans,
     )
 
     # Sidebar Navigation Rail
@@ -77,15 +92,15 @@ def main() -> None:
         with st.expander("📁 Offline Replay"):
             render_offline_replay(tracker_db=tracker_db, conn=conn)
 
-    # Route active operational view
+    # Route active operational view with live real-time event queue
     if active_view == "telemetry":
         render_telemetry_overview(conn=conn, event_queue=event_queue)
     elif active_view == "rssi":
-        render_rssi_trends(conn=conn)
+        render_rssi_trends(conn=conn, event_queue=event_queue)
     elif active_view == "alerts":
-        render_alert_feed(conn=conn, tracker_db=tracker_db)
+        render_alert_feed(conn=conn, tracker_db=tracker_db, event_queue=event_queue)
     elif active_view == "inspector":
-        render_packet_inspector(conn=conn)
+        render_packet_inspector(conn=conn, event_queue=event_queue)
     elif active_view == "controls":
         render_radio_controls(tracker_db=tracker_db, event_queue=event_queue)
     elif active_view == "adversarial":

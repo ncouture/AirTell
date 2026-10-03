@@ -97,3 +97,31 @@ def test_singleton_get_event_queue() -> None:
     q1 = get_event_queue()
     q2 = get_event_queue()
     assert q1 is q2
+
+
+def test_queue_non_destructive_reads() -> None:
+    """Validate that get_recent, get_all, and peek read queue items without removing them."""
+    q = EventQueue(maxsize=100)
+    for i in range(10):
+        q.push({"pkt": i})
+
+    assert q.size() == 10
+
+    # peek
+    oldest_3 = q.peek(3)
+    assert len(oldest_3) == 3
+    assert [p["pkt"] for p in oldest_3] == [0, 1, 2]
+    assert q.size() == 10
+
+    # get_recent
+    recent_4 = q.get_recent(4)
+    assert len(recent_4) == 4
+    assert [p["pkt"] for p in recent_4] == [6, 7, 8, 9]
+    assert q.size() == 10
+
+    # get_all
+    all_items = q.get_all()
+    assert len(all_items) == 10
+    assert [p["pkt"] for p in all_items] == list(range(10))
+    assert q.size() == 10
+
