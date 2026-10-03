@@ -1,0 +1,8 @@
+{
+  "track_id": "tshark_json_stream_20261002",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-10-02T22:44:00Z",
+  "updated_at": "2026-10-02T22:44:00Z",
+  "description": "Live Bluetooth JSON Streaming via Tshark and Sniffle Extcap"
+}
