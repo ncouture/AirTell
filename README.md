@@ -1,315 +1,164 @@
 # Bluetooth-Sniffle Testbed Framework
 
-A modular Python testbed framework that orchestrates dual Sniffle-enabled radio dongles for active beacon injection, link-layer probing, and multi-channel passive sniffing. Designed to evaluate the Bluetooth Low Energy (BLE) tracking and fingerprinting attack surfaces documented in **PoPETs 2025-0103**: *"Your Signal, Their Data: An Empirical Privacy Analysis of Wireless-scanning SDKs in Android"*.
+[![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
+[![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
+[![Status](https://img.shields.io/badge/status-active-brightgreen.svg)]()
+
+A modular Python testbed framework coordinating two Sniffle-enabled USB devices (simultaneously executing active beacon injection/replay and passive sniffing/fingerprinting) to exercise and evaluate the Bluetooth Low Energy (BLE) tracking and identification methods documented in **PoPETs 2025-0103**: *"Your Signal, Their Data: An Empirical Privacy Analysis of Wireless-scanning SDKs in Android"*.
 
 ---
 
 ## Table of Contents
-
-* [Key Features](https://www.google.com/search?q=%23key-features)
-* [Architecture](https://www.google.com/search?q=%23architecture)
-* [Operational Topologies](https://www.google.com/search?q=%23operational-topologies)
-* [Topology A: Stimulator + Observer](https://www.google.com/search?q=%23topology-a-stimulator--observer)
-* [Topology B: Dual-Channel Passive Observer](https://www.google.com/search?q=%23topology-b-dual-channel-passive-observer)
-
-
-* [Supported Hardware & Bridge Constraints](https://www.google.com/search?q=%23supported-hardware--bridge-constraints)
-* [Wire Protocol & Framing Specification](https://www.google.com/search?q=%23wire-protocol--framing-specification)
-* [Installation](https://www.google.com/search?q=%23installation)
-* [Quick Start & Usage](https://www.google.com/search?q=%23quick-start--usage)
-* [1. Port Auto-Discovery](https://www.google.com/search?q=%231-port-auto-discovery)
-* [2. Running Topology A (Stimulate & Observe)](https://www.google.com/search?q=%232-running-topology-a-stimulate--observe)
-* [3. Running Topology B (Continuous Multi-Channel Capture)](https://www.google.com/search?q=%233-running-topology-b-continuous-multi-channel-capture)
-
-
-* [In-Memory Mock Simulation (CI/CD)](https://www.google.com/search?q=%23in-memory-mock-simulation-cicd)
-* [Development & Testing](https://www.google.com/search?q=%23development--testing)
-* [Project Layout](https://www.google.com/search?q=%23project-layout)
-* [Citation](https://www.google.com/search?q=%23citation)
+- [Architecture Overview](#architecture-overview)
+- [Operational Topologies](#operational-topologies)
+  - [Topology A: Stimulator + Observer](#topology-a-stimulator--observer)
+  - [Topology B: Dual-Channel Passive Observer](#topology-b-dual-channel-passive-observer)
+- [Hardware Requirements](#hardware-requirements)
+  - [Supported Dongles & Bridge Limits](#supported-dongles--bridge-limits)
+  - [Port Auto-Discovery](#port-auto-discovery)
+- [Mock Simulation & Offline Harness](#mock-simulation--offline-harness)
+- [Wire Protocol & Line Framing](#wire-protocol--line-framing)
+- [Installation & Quick Start](#installation--quick-start)
+- [Running Tests](#running-tests)
+- [Project Layout](#project-layout)
 
 ---
 
-## Key Features
+## Architecture Overview
 
-* **Eliminate Channel-Hop Blindness:** Merges streams from two dedicated hardware sniffers locked to distinct primary advertising channels (37, 38, or 39), capturing connection requests (`CONNECT_IND`) and scan responses without hop-loss.
-* **Endianness-Invariant MAC Generation:** Synthetic palindromic address generators ($B_0..B_5 = B_5..B_0$) guarantee consistent byte-order representations across link-layer radio captures and upper-layer network logs.
-* **Bit-for-Bit AD Payload Synthesizers:** Ready-to-inject encoders for Apple iBeacon, AltBeacon, Google Eddystone (UID, URL, TLM), and COVID-19 Exposure Notification (GAEN `0xFD6F`).
-* **Hardware-Aware Serial Driver:** Dynamic port auto-discovery with auto-baud negotiation and automatic CP2102 baud-rate clamping to prevent serial buffer overflow.
-* **Zero-Hardware CI/CD Testing:** Full virtual radio bus and mock serial harness for deterministic, offline testing of link-layer logic and topologies.
-
----
-
-## Architecture
-
-The framework controls two hardware radios over high-speed UART or directs simulated frames through an in-memory virtual radio bus:
+The testbed coordinates two Sniffle radio dongles over UART or an in-memory virtual radio bus:
 
 ```
-                           ┌───────────────────────────┐
-                           │   Testbed Orchestration   │
-                           │   (Topology A / B / CLI)  │
-                           └──────┬─────────────┬──────┘
-                                  │             │
-                     ┌────────────┴───┐     ┌───┴────────────┐
-                     │ Device 1 Ctrl  │     │ Device 2 Ctrl  │
-                     └────────┬───────┘     └───┬────────────┘
-                              │                 │
-                ┌─────────────┴─────┐     ┌─────┴─────────────┐
-                │  SerialPort /     │     │  SerialPort /     │
-                │  MockSerial (Dev1)│     │  MockSerial (Dev2)│
-                └─────────────┬─────┘     └─────┬─────────────┘
-                              │                 │
-                      ▲       ▼                 ▲       ▼
-                ╔═════════════════════════════════════════════╗
-                ║    Physical BLE Air / VirtualRadioBus       ║
-                ║    (Channels 37, 38, 39, 1 µs Timestamps)   ║
-                ╚═════════════════════════════════════════════╝
-
+                          ┌───────────────────────────┐
+                          │   Testbed Orchestration   │
+                          │   (Topology A / B / CLI)  │
+                          └──────┬─────────────┬──────┘
+                                 │             │
+                    ┌────────────┴───┐     ┌───┴────────────┐
+                    │ Device 1 Ctrl  │     │ Device 2 Ctrl  │
+                    └────────┬───────┘     └───┬────────────┘
+                             │                 │
+               ┌─────────────┴─────┐     ┌─────┴─────────────┐
+               │  SerialPort /     │     │  SerialPort /     │
+               │  MockSerial (Dev1)│     │  MockSerial (Dev2)│
+               └─────────────┬─────┘     └─────┬─────────────┘
+                             │                 │
+                     ▲       ▼                 ▲       ▼
+                ╔════════════════════════════════════════════╗
+                ║   Physical BLE Air / VirtualRadioBus       ║
+                ║   (Channels 37, 38, 39, 1 µs Timestamps)   ║
+                ╚════════════════════════════════════════════╝
 ```
+
+Key subsystems include:
+1. **`protocol`**:
+   - `wire`: Base64+CRLF line framing with word-count prefix, command opcodes, and binary message parsing (`PacketMessage`, `MarkerMessage`, `StateMessage`, `MeasurementMessage`).
+   - `mac`: Synthetic palindromic MAC address generator ensuring endianness invariance ($B_0..B_5 = B_5..B_0$) across LE radio bytes and network logs, with full support for Static Random, NRPA, RPA, and Public address types.
+   - `beacons`: Standardized bit-for-bit AD encoders for Apple iBeacon, AltBeacon, Google Eddystone (UID, URL, TLM), and Google/Apple Exposure Notification (GAEN `0xFD6F`).
+   - `probing`: Active probe constructors (`SCAN_REQ`) and response frames (`SCAN_RSP`) eliciting Complete Local Names and service UUIDs.
+2. **`device`**:
+   - `serial_port`: Hardware autodetection (Sonoff Zigbee Dongle Plus, TI XDS110, CatSniffer), non-conflicting dual port allocation, CP2102 baud rate capping (921,600 baud), and serial synchronization (`mark_and_flush`).
+   - `mock`: In-memory `MockSerialInterface` and `VirtualRadioBus` for deterministic, offline testing without hardware dongles.
+   - `controller`: High-level controller (`SniffleDeviceController`) managing advertising injection, active scanning, passive sniffing, and queued packet retrieval.
+3. **`topology`**:
+   - `topology_a`: Stimulator (Device 1) broadcasts synthesized beacons or burst sequences while Observer (Device 2) captures over-the-air packets.
+   - `topology_b`: Dual-Channel Passive Observer locking Device 1 to Ch 37 and Device 2 to Ch 38, merging captures into a single timestamp-ordered stream to eliminate channel-hop blindness.
+   - `lifecycle`: Graceful shutdown coordinator handling `SIGINT`/`SIGTERM`, safely terminating reader threads, and releasing serial ports.
 
 ---
 
 ## Operational Topologies
 
 ### Topology A: Stimulator + Observer
-
-Evaluates how mobile operating systems and third-party scanning SDKs react to synthesized RF beacons and link-layer probes.
-
-```
- [Device 1: Stimulator]  ──(TX: iBeacon / Eddystone / SCAN_RSP)──▶  [Mobile Device / SDK Target]
-                                                                               │ (Scan / Connect)
- [Device 2: Observer]    ◀──(RX: SCAN_REQ / CONNECT_IND on Ch 37/38/39)────────┘
-
-```
-
-* **Device 1 (Stimulator):** Broadcasts configurable advertising profiles with parameterized advertising intervals (20 ms – 1000 ms), rotating or static palindromic MACs, and custom transmit powers.
-* **Device 2 (Observer):** Simultaneously monitors primary advertising channels to intercept probe requests (`SCAN_REQ`) and connection negotiations triggered by the stimulus.
+- **Device 1 (Stimulator)**: Configured as an active transmitter broadcasting parameterized beacon profiles (e.g. iBeacon, AltBeacon, Eddystone, GAEN) or replaying recorded advertisement sequences with custom transmission intervals (e.g., 20 ms to 1000 ms) and palindromic MAC addresses.
+- **Device 2 (Observer)**: Concurrently sniffs primary advertising channels (37, 38, 39) to capture peripheral advertisements, mobile device scan requests (`SCAN_REQ`), and connection attempts elicited by the stimulator.
 
 ### Topology B: Dual-Channel Passive Observer
-
-Standard single-radio sniffers hop between channels 37, 38, and 39, missing up to 66% of transient packets. Topology B locks two radios to separate channels to ensure uninterrupted coverage.
-
-```
- Channel 37 ──────▶ [Device 1 (Ch 37 Lock)] ──┐
-                                              ├──▶ [Timestamp-Ordered Real-Time Merge] ──▶ PCAP / Log
- Channel 38 ──────▶ [Device 2 (Ch 38 Lock)] ──┘
-
-```
-
-* **Device 1:** Locked to Channel 37 (`hop3=False`).
-* **Device 2:** Locked to Channel 38 or Channel 39 (`hop3=False`).
-* **Synchronizer:** Merges incoming packet queues using 1 µs hardware timestamps into a single, strictly chronological output stream.
+Standard single-dongle sniffers periodically hop across channels 37, 38, and 39, causing blind spots during channel transitions. Topology B coordinates two devices simultaneously locked to fixed primary advertising channels:
+- **Device 1**: Locked to Channel 37 (`hop3=False`).
+- **Device 2**: Locked to Channel 38 (`hop3=False`) or Channel 39.
+- Captured packets from both dongles are merged in real time into a strictly timestamp-ordered queue, providing continuous multi-channel visibility.
 
 ---
 
-## Supported Hardware & Bridge Constraints
+## Hardware Requirements
 
-| Hardware Target | MCU / Radio | USB VID:PID | Default Baud | Bridge Quirks & Capping |
-| --- | --- | --- | --- | --- |
-| **Sonoff Zigbee 3.0 Dongle Plus** | TI CC2652P | `0x10C4:0xEA60` | **921,600** or **2,000,000** | Early models feature CP2102 chips limited to 921,600 baud. The framework automatically detects CP2102 and caps baud rates. CP2102N revisions support 2M baud. |
-| **TI CC26x2 LaunchPad** | CC2652R / CC1352P | `0x0451:0xBEF3` | **2,000,000** | XDS110 Application/User UART. Native 2M baud support. |
-| **CatSniffer V3** | TI CC1352P + RP2040 | `0x2E8A:0x00C0` | **2,000,000** | Electronic Cats multi-protocol sniffer platform. |
+### Supported Dongles & Bridge Limits
+- **Sonoff Zigbee 3.0 USB Dongle Plus** (TI CC2652P, USB VID: `0x10C4`, PID: `0xEA60`).
+  - *Note*: Older Sonoff dongles use Silicon Labs CP2102 (non-N) bridge chips limited to **921,600 baud**. The framework automatically caps the baud rate to 921,600 baud when CP2102 bridges are detected. Newer CP2102N revisions operate at **2,000,000 baud**.
+- **Texas Instruments CC26x2 LaunchPad** (CC2652R / CC2652RB / CC1352P with XDS110 Debug Probe, VID: `0x0451`, PID: `0xBEF3`). Default: **2,000,000 baud**.
+- **Electronic Cats CatSniffer V3** (VID: `0x2E8A` / 11914, PID: `0x00C0` / 192).
 
-> **Flashing Note:** To install Sniffle on the Sonoff ZBDongle-P, put the board into bootloader mode (hold the internal `BOOT` button while plugging in USB) and flash the CC2652P Sniffle `.hex` firmware using `cc2538-bsl.py`.
-
----
-
-## Wire Protocol & Framing Specification
-
-Sniffle communicates over UART using Base64-encoded records terminated by standard CRLF (`\r\n`):
-
-$$\text{Wire Line} = \text{Base64}\Big(\big[\text{word\_count}, \text{command\_opcode}, \dots\big]\Big) + \texttt{"\textbackslash r\textbackslash n"}$$
-
-### PacketMessage Header Format (`0x10`)
-
-Every packet captured over the air returns a **10-byte binary header** prior to the raw Link Layer PDU payload:
-
-```
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                      ts (uint32_t, LE)                        |  Microsecond Timestamp
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|D|C|      length (14 bits)     |       event (uint16_t, LE)    |  Flags / PDU Len / Event
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|  rssi (int8)  |   chan/phy    |      ... Raw PDU Payload ...  |  Signal / RF Channel & PHY
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-```
-
-| Field | Type | Offset | Description |
-| --- | --- | --- | --- |
-| `ts` | `uint32` (LE) | 0..3 | Free-running hardware timer with 1 µs resolution. |
-| `flags_len` | `uint16` (LE) | 4..5 | **Bit 15:** Direction (`0` = Central $\to$ Peripheral, `1` = Peripheral $\to$ Central)<br>
-
-<br>**Bit 14:** CRC status (`0` = Valid, `1` = Error)<br>
-
-<br>**Bits 13..0:** Link Layer PDU length (bytes). |
-| `event` | `uint16` (LE) | 6..7 | Connection event counter. |
-| `rssi` | `int8` | 8 | Received signal strength in dBm (-128 to 0 dBm). |
-| `chan_phy` | `uint8` | 9 | **Bits 5..0:** RF Channel index (0–39)<br>
-
-<br>**Bits 7..6:** PHY Mode (`0`=1M, `1`=2M, `2`=Coded S8, `3`=Coded S2). |
+### Port Auto-Discovery
+The `discover_sniffle_ports()` and `allocate_dual_ports()` utilities automatically scan available serial interfaces, match hardware descriptors, and assign two distinct ports (`port1 != port2`) to Device 1 and Device 2 without manual configuration.
 
 ---
 
-## Installation
+## Mock Simulation & Offline Harness
 
-### Prerequisites
+The testbed includes a full in-memory simulation subsystem:
+- **`MockSerialInterface`**: Emulates PySerial `Serial` operations (`read`, `readline`, `write`, `cancel_read`, `close`, `in_waiting`) in pure Python with thread-safe non-blocking buffers.
+- **`VirtualRadioBus`**: Routes link-layer packets between simulated dongles. When Device 1 transmits an advertisement (`COMMAND_ADVERTISE`), the bus wraps the payload into a standard `PacketMessage` with microsecond timestamps, RF channel, RSSI (-60 dBm), and valid CRC, delivering it to any listening device locked to that channel.
+- Enables 100% automated test coverage in CI/CD environments without physical hardware dongles.
 
-* Python 3.10 or higher
-* Two compatible USB dongles flashed with NCC Group's Sniffle firmware
+---
+
+## Wire Protocol & Line Framing
+
+Sniffle communicates over UART using **Base64 ASCII records** terminated by `\r\n`:
+
+```
+Host to Dongle:
+  b0 = (len(cmd_bytes) + 3) // 3
+  wire_line = base64_encode(bytes([b0, *cmd_bytes])) + "\r\n"
+
+Dongle to Host:
+  data = base64_decode(raw_line)
+  word_cnt = data[0]
+  msg_type = data[1]
+  msg_body = data[2:]
+```
+
+### PacketMessage Header Format (Message Type `0x10`)
+Packets received by the radio unpack a 10-byte header:
+- `ts` (4 bytes, uint32 LE): Microsecond timestamp (1 µs resolution).
+- `l` (2 bytes, uint16 LE): Flags bitfield:
+  - Bit 15: Direction (`0` = Central -> Peripheral, `1` = Peripheral -> Central).
+  - Bit 14: CRC Error flag (`1` = CRC error, `0` = Valid CRC).
+  - Bits 13..0: Link Layer PDU length in bytes.
+- `event` (2 bytes, uint16 LE): Connection event counter.
+- `rssi` (1 byte, signed int8): Signal strength in dBm (-128 to 0 dBm).
+- `chan` (1 byte, uint8): Bits 5..0 = RF channel (0–39); Bits 7..6 = PHY mode (0=1M, 1=2M, 2=Coded S8, 3=Coded S2).
+- Followed by the raw Link Layer PDU body.
+
+---
+
+## Installation & Quick Start
 
 ```bash
 # Clone the repository
-git clone https://github.com/ncouture/bluetooth-sniffle.git
+git clone https://github.com/example/bluetooth-sniffle.git
 cd bluetooth-sniffle
 
-# Create and activate a virtual environment
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install in editable mode with development/test dependencies
-pip install -e ".[test]"
-
+# Install in editable mode with development dependencies
+pip install -e .[test]
 ```
 
 ---
 
-## Quick Start & Usage
+## Running Tests
 
-### 1. Port Auto-Discovery
-
-Scan and verify connected Sniffle hardware without opening device manager:
-
-```python
-from bluetooth_sniffle.device.serial_port import discover_sniffle_ports, allocate_dual_ports
-
-# Discover all connected Sniffle-compatible radios
-ports = discover_sniffle_ports()
-for p in ports:
-    print(f"Found: {p.device} | Description: {p.description} | Max Baud: {p.max_baud}")
-
-# Auto-allocate two distinct ports for Device 1 and Device 2
-port_dev1, port_dev2 = allocate_dual_ports()
-print(f"Allocated: Dev1={port_dev1.device}, Dev2={port_dev2.device}")
-
-```
-
-### 2. Running Topology A (Stimulate & Observe)
-
-Broadcast synthetic iBeacons with palindromic MACs on Device 1 while sniffing capture metrics on Device 2:
-
-```python
-import time
-from bluetooth_sniffle.topology.topology_a import TopologyA
-from bluetooth_sniffle.protocol.beacons import create_ibeacon_payload
-from bluetooth_sniffle.protocol.mac import generate_palindromic_mac, AddressType
-
-# Generate a synthetic palindromic address (endian-safe across all logs)
-sender_mac = generate_palindromic_mac(AddressType.RANDOM_STATIC)
-
-# Assemble an iBeacon advertisement payload
-adv_payload = create_ibeacon_payload(
-    uuid="FDA50693-A4E2-4FB1-AFCF-C6EB07647825",
-    major=1001,
-    minor=1,
-    tx_power=-59
-)
-
-# Initialize Topology A with auto-allocated hardware ports
-with TopologyA() as testbed:
-    # Configure Device 1 as an active beacon transmitter (100 ms interval)
-    testbed.stimulator.start_advertising(
-        payload=adv_payload,
-        adv_interval_ms=100,
-        mac_address=sender_mac
-    )
-
-    # Configure Device 2 to observe channels 37, 38, and 39
-    testbed.observer.start_sniffing()
-
-    print("Running stimulation & capture for 10 seconds...")
-    time.sleep(10)
-
-    # Retrieve captured link-layer frames
-    captured_packets = testbed.observer.get_captured_packets()
-    print(f"Captured {len(captured_packets)} packets.")
-
-```
-
-### 3. Running Topology B (Continuous Multi-Channel Capture)
-
-Capture across both Channel 37 and Channel 38 simultaneously to eliminate hop transitions:
-
-```python
-import time
-from bluetooth_sniffle.topology.topology_b import TopologyB
-
-# Initialize dual-channel observer
-with TopologyB(chan_primary=37, chan_secondary=38) as testbed:
-    testbed.start()
-    time.sleep(5)
-    testbed.stop()
-
-    # Stream merged packets ordered by microsecond hardware timestamps
-    for pkt in testbed.get_merged_stream():
-        print(f"[{pkt.timestamp_us} µs] Ch:{pkt.channel} RSSI:{pkt.rssi}dBm Len:{pkt.length}")
-
-```
-
----
-
-## In-Memory Mock Simulation (CI/CD)
-
-The framework can run completely decoupled from physical USB hardware using the built-in virtual radio bus:
-
-```python
-from bluetooth_sniffle.device.mock import MockSerialInterface, VirtualRadioBus
-from bluetooth_sniffle.device.controller import SniffleDeviceController
-
-# Instantiate a shared virtual 2.4 GHz RF medium
-radio_bus = VirtualRadioBus()
-
-# Create two mock serial interfaces bound to the bus
-dev1_serial = MockSerialInterface(name="VDev1", bus=radio_bus)
-dev2_serial = MockSerialInterface(name="VDev2", bus=radio_bus)
-
-ctrl_stim = SniffleDeviceController(serial_interface=dev1_serial)
-ctrl_obs = SniffleDeviceController(serial_interface=dev2_serial)
-
-# Lock observer to Channel 37
-ctrl_obs.set_channel(37)
-ctrl_obs.start_sniffing()
-
-# Transmit simulated packet on Channel 37
-ctrl_stim.transmit_raw(channel=37, pdu=b"\x02\x01\x06\x03\x03\xAA\xFE")
-
-# Observer receives frame with valid CRC, RSSI (-60 dBm), and 1 µs timestamp
-rx_pkt = ctrl_obs.read_packet(timeout=1.0)
-assert rx_pkt is not None
-assert rx_pkt.channel == 37
-
-```
-
----
-
-## Development & Testing
-
-Run the test suite under strict error checking (ensuring deprecation and runtime warnings fail the build):
+Execute the automated test suite with strict warning trapping:
 
 ```bash
-# Execute unit and topology integration tests
+# Run all unit tests
 pytest -v -W error tests/
 
-# Generate terminal code coverage report
+# Run with coverage report
 pytest --cov=bluetooth_sniffle --cov-report=term-missing tests/
 
-# Execute static code analysis and linting
+# Run linter
 ruff check src tests
-
-# Check PEP 484 type annotations
-mypy src
-
 ```
 
 ---
@@ -325,21 +174,21 @@ bluetooth-sniffle/
 │       ├── __init__.py
 │       ├── protocol/
 │       │   ├── __init__.py
-│       │   ├── wire.py          # Sniffle Base64 line framing & opcode parsing
-│       │   ├── mac.py           # Palindromic MAC address generators
-│       │   ├── beacons.py       # iBeacon, AltBeacon, Eddystone, GAEN AD encoders
-│       │   └── probing.py       # SCAN_REQ and SCAN_RSP frame builders
+│       │   ├── wire.py          # Sniffle Base64 line framing & opcodes
+│       │   ├── mac.py           # Palindromic MAC address generator
+│       │   ├── beacons.py       # iBeacon, AltBeacon, Eddystone, GAEN
+│       │   └── probing.py       # SCAN_REQ / SCAN_RSP builders
 │       ├── device/
 │       │   ├── __init__.py
-│       │   ├── serial_port.py   # Port discovery, auto-baud, and CP2102 rate clamping
-│       │   ├── mock.py          # MockSerialInterface & VirtualRadioBus simulator
-│       │   └── controller.py    # SniffleDeviceController command engine
+│       │   ├── serial_port.py   # Port discovery, auto-baud, lifecycle
+│       │   ├── mock.py          # MockSerialInterface & VirtualRadioBus
+│       │   └── controller.py    # SniffleDeviceController
 │       └── topology/
 │           ├── __init__.py
-│           ├── base.py          # Abstract Base Topology interface
-│           ├── topology_a.py    # Stimulator + Observer dual-dongle runner
-│           ├── topology_b.py    # Dual-Channel continuous passive capture
-│           └── lifecycle.py     # Signal coordinator (SIGINT/SIGTERM teardown)
+│           ├── base.py          # BaseTopology ABC
+│           ├── topology_a.py    # Stimulator + Observer
+│           ├── topology_b.py    # Dual-Channel Passive Observer
+│           └── lifecycle.py     # Graceful shutdown coordinator
 └── tests/
     ├── conftest.py
     ├── test_beacons.py
@@ -348,30 +197,4 @@ bluetooth-sniffle/
     ├── test_wire_protocol.py
     ├── test_mock_device.py
     └── test_topologies.py
-
 ```
-
----
-
-## Citation
-
-If you use this framework in academic research or privacy benchmarking, please cite the underlying study:
-
-```bibtex
-@article{popets2025_wireless_scanning_sdk,
-  title     = {Your Signal, Their Data: An Empirical Privacy Analysis of Wireless-scanning SDKs in Android},
-  author    = {PoPETs Research Collective},
-  journal   = {Proceedings on Privacy Enhancing Technologies (PoPETs)},
-  volume    = {2025},
-  number    = {1},
-  pages     = {103},
-  year      = {2025}
-}
-
-```
-
----
-
-## License
-
-This project is licensed under the Apache 2.0 License. See [LICENSE](https://www.google.com/search?q=LICENSE) for details.
