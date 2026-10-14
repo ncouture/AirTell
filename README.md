@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/status-active-brightgreen.svg)]()
 
-A modular Python testbed framework coordinating two Sniffle-enabled USB devices (simultaneously executing active beacon injection/replay and passive sniffing/fingerprinting) to exercise and evaluate the Bluetooth Low Energy (BLE) tracking and identification methods documented in **PoPETs 2025-0103**: *"Your Signal, Their Data: An Empirical Privacy Analysis of Wireless-scanning SDKs in Android"*.
+A modular Python testbed framework coordinating two [Sniffle-enabled USB devices](https://www.nccgroup.com/research-blog/sniffle-a-sniffer-for-bluetooth-5/) (simultaneously executing active beacon injection/replay and passive sniffing/fingerprinting) to exercise and evaluate the Bluetooth Low Energy (BLE) tracking and identification methods documented in **PoPETs 2025-0103**: *"Your Signal, Their Data: An Empirical Privacy Analysis of Wireless-scanning SDKs in Android"*.
 
 ---
 
