@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import csv
 import json
+import shutil
+import subprocess
 from pathlib import Path
 from unittest.mock import patch
 
@@ -194,6 +196,20 @@ class TestTopologyBCli:
             channels_seen = {pkt.ble_chan for pkt in packets}
             assert channels_seen.issubset({37, 38})
 
+        # Verify tshark clean dissection when available
+        tshark_bin = shutil.which("tshark")
+        if tshark_bin is not None:
+            proc = subprocess.run(
+                [tshark_bin, "-r", str(pcap_file), "-V"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            assert proc.returncode == 0
+            assert "[Malformed Packet" not in proc.stdout
+            assert "[Malformed Packet: BT Common]" not in proc.stdout
+            assert "Bluetooth Low Energy Link Layer" in proc.stdout
+
         # Verify JSON output
         assert json_file.exists()
         data = json.loads(json_file.read_text(encoding="utf-8"))
@@ -205,6 +221,38 @@ class TestTopologyBCli:
         with open(csv_file, newline="", encoding="utf-8") as f:
             rows = list(csv.DictReader(f))
             assert len(rows) >= 1
+
+    @pytest.mark.skipif(shutil.which("tshark") is None, reason="tshark not installed")
+    def test_topology_b_mock_pcap_tshark_clean_dissection(self, tmp_path: Path) -> None:
+        """Verify topology-b --mock PCAP parses cleanly without [Malformed Packet: BT Common]."""
+        pcap_file = tmp_path / "topo_b_clean.pcap"
+        rc = main([
+            "topology-b",
+            "--mock",
+            "--chan1",
+            "37",
+            "--chan2",
+            "38",
+            "--duration-sec",
+            "0.2",
+            "--pcap",
+            str(pcap_file),
+        ])
+        assert rc == 0
+        assert pcap_file.exists()
+
+        tshark_bin = shutil.which("tshark")
+        assert tshark_bin is not None
+        proc = subprocess.run(
+            [tshark_bin, "-r", str(pcap_file), "-V"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert proc.returncode == 0
+        assert "[Malformed Packet" not in proc.stdout
+        assert "[Malformed Packet: BT Common]" not in proc.stdout
+        assert "Bluetooth Low Energy Link Layer" in proc.stdout
 
 
 class TestMockSimulateCli:

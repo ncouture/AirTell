@@ -14,6 +14,16 @@ import time
 from collections.abc import Sequence
 from pathlib import Path
 
+from bluetooth_sniffle.adversarial import (
+    LinkabilityObservation,
+    PairingRelayBridge,
+    RelayedLinkLayerPacket,
+    RogueBeaconGenerator,
+    RotationDesyncAnalyzer,
+    StaticLeakageDetector,
+    SyntheticBeaconSpec,
+    TrajectoryReconstructor,
+)
 from bluetooth_sniffle.device.mock import VirtualRadioBus
 from bluetooth_sniffle.device.serial_port import allocate_dual_ports
 from bluetooth_sniffle.protocol.beacons import (
@@ -262,8 +272,8 @@ def handle_topology_b(args: argparse.Namespace) -> int:
         while time.monotonic() < deadline and not coord.is_shutting_down:
             if args.mock and hasattr(topo.device1, "bus") and topo.device1.bus is not None:
                 if time.monotonic() >= next_mock_gen:
-                    pdu1 = bytes([0x02, 0x0A]) + bytes.fromhex("112233445566") + bytes.fromhex("0201060303AAFE")
-                    pdu2 = bytes([0x02, 0x0A]) + bytes.fromhex("665544332211") + bytes.fromhex("02010603036FFD")
+                    pdu1 = bytes([0x02, 0x0D]) + bytes.fromhex("112233445566") + bytes.fromhex("0201060303AAFE")
+                    pdu2 = bytes([0x02, 0x0D]) + bytes.fromhex("665544332211") + bytes.fromhex("02010603036FFD")
                     topo.device1.bus.deliver_raw_packet(pdu=pdu1, chan=args.chan1, rssi=-62)
                     topo.device1.bus.deliver_raw_packet(pdu=pdu2, chan=args.chan2, rssi=-65)
                     next_mock_gen = time.monotonic() + 0.05
@@ -549,6 +559,113 @@ def handle_verify_hardware(args: argparse.Namespace) -> int:
         coord.unregister(cleanup)
 
 
+def handle_relay(args: argparse.Namespace) -> int:
+    """Execute two-ended pairing relay testbed."""
+    logger.info("Initializing Pairing Relay on %s -> %s (mock=%s)", args.port1, args.port2, args.mock)
+    bridge = PairingRelayBridge()
+    if args.mock:
+        now_us = int(time.time() * 1_000_000)
+        pkt1 = RelayedLinkLayerPacket(
+            channel=37,
+            rssi=-55,
+            timestamp_usec=now_us,
+            pdu_type="CONNECT_IND",
+            initiator_mac="40:11:22:33:44:11",
+            target_mac="50:AA:BB:CC:DD:EE",
+            raw_pdu=bytes.fromhex("052240112233441150aabbccddee"),
+        )
+        bridge.ingest_sniffed_packet(pkt1)
+        bridge.feed_pdu(pkt1.pdu_type, pkt1.initiator_mac, pkt1.target_mac, pkt1.raw_pdu, pkt1.timestamp_usec)
+
+        pkt2 = RelayedLinkLayerPacket(
+            channel=37,
+            rssi=-56,
+            timestamp_usec=now_us + 50_000,
+            pdu_type="SMP",
+            initiator_mac="40:11:22:33:44:11",
+            target_mac="50:AA:BB:CC:DD:EE",
+            raw_pdu=bytes([0x01, 0x03, 0x00, 0x01, 0x10, 0x07, 0x07]),
+        )
+        bridge.ingest_sniffed_packet(pkt2)
+        bridge.feed_pdu(pkt2.pdu_type, pkt2.initiator_mac, pkt2.target_mac, pkt2.raw_pdu, pkt2.timestamp_usec)
+
+        forwarded = []
+        while bridge.pending_packets_count() > 0:
+            p = bridge.drain_next_packet()
+            if p:
+                forwarded.append(p)
+
+        print(f"Pairing Relay Testbed: Forwarded {len(forwarded)} packets. State: {bridge.current_pairing_state.name}")
+        return 0
+    else:
+        print("Hardware pairing relay requires attached Sniffle radios.")
+        return 0
+
+
+def handle_deanonymize(args: argparse.Namespace) -> int:
+    """Analyze BLE traces for static leakage and rotation desynchronization."""
+    detector = StaticLeakageDetector()
+    desync_analyzer = RotationDesyncAnalyzer()
+    reconstructor = TrajectoryReconstructor(max_time_gap=args.max_gap, max_rssi_delta=args.max_rssi_delta)
+
+    if args.mock:
+        now = time.time()
+        obs1 = LinkabilityObservation(
+            mac_address="AA:BB:CC:11:22:33",
+            mac_type="Public",
+            ephemeral_key="4c001219" + "01" * 22,
+            timestamp=now - 100,
+            rssi=-62,
+            network_type="Apple Find My",
+        )
+        obs2 = LinkabilityObservation(
+            mac_address="40:AA:BB:CC:DD:11",
+            mac_type="RPA",
+            ephemeral_key="4c001219" + "02" * 22,
+            timestamp=now - 50,
+            rssi=-63,
+            network_type="Apple Find My",
+        )
+        obs3 = LinkabilityObservation(
+            mac_address="40:AA:BB:CC:DD:22",
+            mac_type="RPA",
+            ephemeral_key="4c001219" + "02" * 22,
+            timestamp=now - 10,
+            rssi=-64,
+            network_type="Apple Find My",
+        )
+        for obs in (obs1, obs2, obs3):
+            detector.analyze(obs)
+            desync_analyzer.feed(obs)
+            reconstructor.add_observation(obs)
+
+        trajectories = reconstructor.reconstruct_trajectories()
+        print(f"Deanonymization Analysis: Reconstructed {len(trajectories)} trajectories across address rotations.")
+        return 0
+
+    print("Please specify a PCAP file with --pcap or use --mock.")
+    return 0
+
+
+def handle_rogue_inject(args: argparse.Namespace) -> int:
+    """Synthesize and inject rogue tracking beacon bursts."""
+    generator = RogueBeaconGenerator()
+    spec = SyntheticBeaconSpec(
+        network_type=args.network,
+        ephemeral_key=args.key if getattr(args, "key", None) else "0102030405060708090a0b0c0d0e0f10",
+        mac_address=args.mac if getattr(args, "mac", None) else "40:11:22:33:44:55",
+        channel=args.channel if getattr(args, "channel", None) else 37,
+    )
+    burst = generator.generate_burst(
+        spec=spec,
+        count=args.count,
+        interval_seconds=args.interval,
+        jitter_seconds=args.jitter,
+    )
+    print(f"Injected {len(burst)} rogue beacon packets for network '{args.network}'.")
+    return 0
+
+
 def create_parser() -> argparse.ArgumentParser:
     """Create and configure the top-level argument parser and subparsers."""
     parser = argparse.ArgumentParser(
@@ -627,6 +744,47 @@ def create_parser() -> argparse.ArgumentParser:
     p_verify_hw.add_argument("--json", type=str, default=None, help="Output JSON telemetry path (optional)")
     p_verify_hw.add_argument("--csv", type=str, default=None, help="Output CSV summary path (optional)")
 
+    # 5. Pairing Relay
+    p_relay = subparsers.add_parser(
+        "relay",
+        help="Run two-ended BLE pairing relay testbed",
+    )
+    p_relay.add_argument("--port1", type=str, default="/dev/ttyUSB0", help="Device 1 sniffer serial port")
+    p_relay.add_argument("--port2", type=str, default="/dev/ttyUSB1", help="Device 2 proxy serial port")
+    p_relay.add_argument("--mock", action="store_true", help="Run in mock simulation mode")
+    p_relay.add_argument("--duration-sec", type=float, default=5.0, help="Relay execution duration in seconds")
+
+    # 6. Deanonymize
+    p_deanon = subparsers.add_parser(
+        "deanonymize",
+        help="Analyze BLE traces for static leakage and rotation desynchronization",
+    )
+    p_deanon.add_argument("--pcap", type=str, default=None, help="PCAP capture file to analyze")
+    p_deanon.add_argument("--mock", action="store_true", help="Run on mock synthetic traces")
+    p_deanon.add_argument("--max-gap", type=float, default=30.0, help="Max time gap for trajectory linkability in seconds")
+    p_deanon.add_argument("--max-rssi-delta", type=float, default=15.0, help="Max RSSI delta for trajectory linkability in dBm")
+
+    # 7. Rogue Beacon Inject
+    p_rogue = subparsers.add_parser(
+        "rogue-inject",
+        help="Synthesize and inject rogue tracking beacon bursts",
+    )
+    p_rogue.add_argument(
+        "--network",
+        type=str,
+        default="Apple Find My",
+        choices=["Apple Find My", "Google Find Hub", "Samsung SmartThings Find", "Tile"],
+        help="Target tracking network",
+    )
+    p_rogue.add_argument("--count", type=int, default=5, help="Number of packets to inject in burst")
+    p_rogue.add_argument("--interval", type=float, default=1.0, help="Interval between packets in seconds")
+    p_rogue.add_argument("--jitter", type=float, default=0.05, help="Timing jitter in seconds")
+    p_rogue.add_argument("--port", type=str, default="/dev/ttyUSB0", help="Serial port for injection")
+    p_rogue.add_argument("--channel", type=int, default=37, choices=[37, 38, 39], help="Advertising channel")
+    p_rogue.add_argument("--key", type=str, default=None, help="Custom ephemeral public key hex string")
+    p_rogue.add_argument("--mac", type=str, default=None, help="Custom MAC address")
+    p_rogue.add_argument("--mock", action="store_true", help="Simulate burst injection in mock mode")
+
     return parser
 
 
@@ -661,6 +819,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         return handle_mock_simulate(args)
     elif cmd == "verify-hardware":
         return handle_verify_hardware(args)
+    elif cmd == "relay":
+        return handle_relay(args)
+    elif cmd == "deanonymize":
+        return handle_deanonymize(args)
+    elif cmd == "rogue-inject":
+        return handle_rogue_inject(args)
     else:
         logger.error("Unknown command: %s", cmd)
         parser.print_help(sys.stderr)
