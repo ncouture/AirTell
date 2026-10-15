@@ -1,5 +1,5 @@
-/* Service Worker for Bluetooth-Sniffle Tactical Dashboard */
-const CACHE_NAME = 'bluetooth-sniffle-v1';
+/* Service Worker for AirTell Tactical Dashboard */
+const CACHE_NAME = 'airtell-v1';
 const STATIC_ASSETS = [
   '/',
   'static/manifest.json',

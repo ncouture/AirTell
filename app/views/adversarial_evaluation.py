@@ -9,22 +9,26 @@ from typing import Optional
 import pandas as pd
 import streamlit as st
 
-from app.queue_bridge import EventQueue
-from bluetooth_sniffle.adversarial.deanonymizer import (
+from airtell.adversarial.deanonymizer import (
     LinkabilityObservation,
     RotationDesyncAnalyzer,
     StaticLeakageDetector,
     TrajectoryReconstructor,
 )
-from bluetooth_sniffle.adversarial.relay import (
+from airtell.adversarial.relay import (
     PairingRelayBridge,
     RelayedLinkLayerPacket,
 )
-from bluetooth_sniffle.adversarial.rogue_beacon import (
+from airtell.adversarial.rogue_beacon import (
     AntiStalkingEvasionEvaluator,
 )
-from bluetooth_sniffle.device.serial_port import check_device_usage
-from scripts.ble_antistalking_tracker import BLETrackerDB
+from airtell.device.serial_port import check_device_usage
+from app.queue_bridge import EventQueue
+
+try:
+    from airtell.scripts.ble_antistalking_tracker import BLETrackerDB
+except ImportError:
+    from scripts.ble_antistalking_tracker import BLETrackerDB
 
 
 def render_adversarial_evaluation(

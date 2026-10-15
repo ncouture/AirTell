@@ -11,7 +11,11 @@ import pandas as pd
 import streamlit as st
 
 from app.queue_bridge import EventQueue
-from scripts.ble_antistalking_tracker import BLETrackerDB
+
+try:
+    from airtell.scripts.ble_antistalking_tracker import BLETrackerDB
+except ImportError:
+    from scripts.ble_antistalking_tracker import BLETrackerDB
 
 
 class ThreatCategory(str, enum.Enum):

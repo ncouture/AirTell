@@ -1,1 +1,1 @@
-"""Operational view modules for the Bluetooth-Sniffle Tactical Dashboard."""
+"""Operational view modules for the AirTell Tactical Dashboard."""
