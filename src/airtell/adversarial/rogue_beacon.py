@@ -7,7 +7,10 @@ import time
 from dataclasses import dataclass
 from typing import Any, Optional
 
-from scripts.ble_antistalking_tracker import BLETrackerDB, classify_payload
+try:
+    from airtell.scripts.ble_antistalking_tracker import BLETrackerDB, classify_payload
+except ImportError:
+    from scripts.ble_antistalking_tracker import BLETrackerDB, classify_payload
 
 
 @dataclass

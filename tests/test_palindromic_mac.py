@@ -11,7 +11,7 @@ Asserts:
 
 import pytest
 
-from bluetooth_sniffle.protocol.mac import (
+from airtell.protocol.mac import (
     classify_mac_address,
     generate_palindromic_mac,
     is_palindromic_mac,

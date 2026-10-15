@@ -16,11 +16,11 @@ from unittest.mock import patch
 
 import pytest
 
-from bluetooth_sniffle.cli import create_parser, main
-from bluetooth_sniffle.sniff.pcap import PcapBleReader
-from bluetooth_sniffle.topology.lifecycle import ShutdownCoordinator
-from bluetooth_sniffle.topology.topology_a import TopologyAOrchestrator
-from bluetooth_sniffle.topology.topology_b import TopologyBOrchestrator
+from airtell.cli import create_parser, main
+from airtell.sniff.pcap import PcapBleReader
+from airtell.topology.lifecycle import ShutdownCoordinator
+from airtell.topology.topology_a import TopologyAOrchestrator
+from airtell.topology.topology_b import TopologyBOrchestrator
 
 
 @pytest.fixture(autouse=True)
@@ -37,7 +37,9 @@ class TestCliArgumentParsing:
 
     def test_parser_creation(self) -> None:
         parser = create_parser()
-        assert parser.prog == "bluetooth-sniffle"
+        assert parser.prog == "airtell"
+        compat_parser = create_parser(prog="bluetooth-sniffle")
+        assert compat_parser.prog == "bluetooth-sniffle"
 
     def test_help_flag_returns_zero(self, capsys: pytest.CaptureFixture[str]) -> None:
         rc = main(["--help"])
@@ -59,7 +61,7 @@ class TestCliArgumentParsing:
         rc = main(["--version"])
         assert rc == 0
         captured = capsys.readouterr()
-        assert "bluetooth-sniffle 0.1.0" in captured.out
+        assert "airtell 0.1.0" in captured.out
 
     def test_empty_arguments_returns_error(self, capsys: pytest.CaptureFixture[str]) -> None:
         rc = main([])
@@ -68,7 +70,7 @@ class TestCliArgumentParsing:
         assert "usage:" in captured.err
 
     def test_default_argv_uses_sys_argv(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr("sys.argv", ["bluetooth-sniffle", "--help"])
+        monkeypatch.setattr("sys.argv", ["airtell", "--help"])
         rc = main()
         assert rc == 0
 
@@ -315,7 +317,24 @@ class TestMockSimulateCli:
         # Verify CSV
         assert csv_path.exists()
         with open(csv_path, newline="", encoding="utf-8") as f:
-            rows = list(csv.DictReader(f))
+            reader = csv.reader(f)
+            header = next(reader)
+            assert header == [
+                "mac_address",
+                "address_type",
+                "packet_count",
+                "rssi_min",
+                "rssi_max",
+                "rssi_avg",
+                "first_seen_iso",
+                "last_seen_iso",
+                "duration_sec",
+                "observed_names",
+                "service_uuids",
+                "beacon_types",
+                "channels",
+            ]
+            rows = list(reader)
             assert len(rows) >= 1
 
 
@@ -404,19 +423,81 @@ class TestCliErrorHandling:
         assert rc == 2
 
     def test_verify_hardware_missing_dongles(self) -> None:
-        with patch("bluetooth_sniffle.cli.allocate_dual_ports", side_effect=RuntimeError("No devices found")):
+        with patch("airtell.cli.allocate_dual_ports", side_effect=RuntimeError("No devices found")):
             rc = main(["verify-hardware"])
             assert rc == 1
 
     def test_topology_a_hardware_allocation_failure(self) -> None:
-        with patch("bluetooth_sniffle.topology.topology_a.allocate_dual_ports", side_effect=RuntimeError("Allocation failed")):
+        with patch("airtell.topology.topology_a.allocate_dual_ports", side_effect=RuntimeError("Allocation failed")):
             rc = main(["topology-a"])
             assert rc == 1
 
     def test_topology_b_hardware_allocation_failure(self) -> None:
-        with patch("bluetooth_sniffle.topology.topology_b.allocate_dual_ports", side_effect=RuntimeError("Allocation failed")):
+        with patch("airtell.topology.topology_b.allocate_dual_ports", side_effect=RuntimeError("Allocation failed")):
             rc = main(["topology-b"])
             assert rc == 1
+
+    def test_topology_a_inaccessible_serial_port(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """Assert topology-a with inaccessible ports exits with code 1 without unhandled traceback."""
+        rc = main([
+            "topology-a",
+            "--dev1", "/dev/ttyNONEXISTENT1",
+            "--dev2", "/dev/ttyNONEXISTENT2",
+            "--duration-sec", "0.1",
+        ])
+        assert rc == 1
+        captured = capsys.readouterr()
+        assert "ERROR:" in captured.err
+
+    def test_topology_b_inaccessible_serial_port(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """Assert topology-b with inaccessible ports exits with code 1 without unhandled traceback."""
+        rc = main([
+            "topology-b",
+            "--dev1", "/dev/ttyNONEXISTENT1",
+            "--dev2", "/dev/ttyNONEXISTENT2",
+            "--duration-sec", "0.1",
+        ])
+        assert rc == 1
+        captured = capsys.readouterr()
+        assert "ERROR:" in captured.err
+
+    def test_verify_hardware_inaccessible_serial_port(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """Assert verify-hardware with inaccessible ports exits with code 1 without unhandled traceback."""
+        rc = main([
+            "verify-hardware",
+            "--dev1", "/dev/ttyNONEXISTENT1",
+            "--dev2", "/dev/ttyNONEXISTENT2",
+        ])
+        assert rc == 1
+        captured = capsys.readouterr()
+        assert "ERROR:" in captured.err
+
+    @pytest.mark.parametrize(
+        ("subcmd", "extra_args"),
+        [
+            ("topology-a", ["--duration-sec", "0.1"]),
+            ("topology-b", ["--duration-sec", "0.1"]),
+            ("verify-hardware", []),
+        ],
+    )
+    def test_hardware_commands_handle_serial_exception_gracefully(
+        self,
+        subcmd: str,
+        extra_args: list[str],
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Assert that SerialException during port opening is caught cleanly across all hardware commands."""
+        import serial
+
+        with patch(
+            "airtell.device.controller.open_sniffle_serial",
+            side_effect=serial.SerialException("could not open port /dev/ttyUSB0: [Errno 13] Permission denied"),
+        ):
+            rc = main([subcmd, "--dev1", "/dev/ttyUSB0", "--dev2", "/dev/ttyUSB1", *extra_args])
+            assert rc == 1
+            captured = capsys.readouterr()
+            assert "ERROR:" in captured.err
+            assert "could not open port" in captured.err or "Permission denied" in captured.err
 
 
 class TestCliLifecycleAndSigint:

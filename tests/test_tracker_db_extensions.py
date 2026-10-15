@@ -7,7 +7,10 @@ from pathlib import Path
 
 import pytest
 
-from scripts.ble_antistalking_tracker import BLETrackerDB
+try:
+    from airtell.scripts.ble_antistalking_tracker import BLETrackerDB
+except ImportError:
+    from scripts.ble_antistalking_tracker import BLETrackerDB
 
 
 @pytest.fixture

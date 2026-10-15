@@ -40,8 +40,8 @@ from uuid import UUID
 
 import pytest
 
-from bluetooth_sniffle.device.mock import VirtualRadioBus
-from bluetooth_sniffle.protocol.beacons import (
+from airtell.device.mock import VirtualRadioBus
+from airtell.protocol.beacons import (
     build_altbeacon,
     build_eddystone_tlm,
     build_eddystone_uid,
@@ -49,26 +49,26 @@ from bluetooth_sniffle.protocol.beacons import (
     build_gaen,
     build_ibeacon,
 )
-from bluetooth_sniffle.protocol.mac import (
+from airtell.protocol.mac import (
     generate_palindromic_mac,
     is_palindromic_mac,
     mac_to_str,
 )
-from bluetooth_sniffle.protocol.probing import (
+from airtell.protocol.probing import (
     build_scan_req,
     build_scan_rsp,
 )
-from bluetooth_sniffle.sniff.correlation import StimulusResponseCorrelator
-from bluetooth_sniffle.sniff.dissector import (
+from airtell.sniff.correlation import StimulusResponseCorrelator
+from airtell.sniff.dissector import (
     BleAddressType,
     GaenInfo,
     classify_address,
     dissect_advertising_pdu,
 )
-from bluetooth_sniffle.sniff.pcap import PcapBleReader, PcapBleWriter
-from bluetooth_sniffle.sniff.telemetry import TelemetrySession
-from bluetooth_sniffle.topology.topology_a import TopologyAOrchestrator
-from bluetooth_sniffle.topology.topology_b import TopologyBOrchestrator
+from airtell.sniff.pcap import PcapBleReader, PcapBleWriter
+from airtell.sniff.telemetry import TelemetrySession
+from airtell.topology.topology_a import TopologyAOrchestrator
+from airtell.topology.topology_b import TopologyBOrchestrator
 
 
 def _make_adv_pdu(mac: bytes, payload: bytes, pdu_type: int = 0x02) -> bytes:

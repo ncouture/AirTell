@@ -14,7 +14,10 @@ import subprocess
 import sys
 import os
 
-from ble_antistalking_tracker import SniffleLineParser
+try:
+    from airtell.scripts.ble_antistalking_tracker import SniffleLineParser
+except ImportError:
+    from ble_antistalking_tracker import SniffleLineParser
 
 # Module-level parser instance
 _parser = SniffleLineParser()

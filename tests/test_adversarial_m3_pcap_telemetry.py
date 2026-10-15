@@ -26,7 +26,7 @@ from pathlib import Path
 
 import pytest
 
-from bluetooth_sniffle.protocol.beacons import (
+from airtell.protocol.beacons import (
     build_altbeacon,
     build_eddystone_tlm,
     build_eddystone_uid,
@@ -34,13 +34,13 @@ from bluetooth_sniffle.protocol.beacons import (
     build_gaen,
     build_ibeacon,
 )
-from bluetooth_sniffle.protocol.probing import build_scan_req, build_scan_rsp
-from bluetooth_sniffle.sniff.dissector import DissectedBleFrame
-from bluetooth_sniffle.sniff.pcap import (
+from airtell.protocol.probing import build_scan_req, build_scan_rsp
+from airtell.sniff.dissector import DissectedBleFrame
+from airtell.sniff.pcap import (
     PcapBleReader,
     PcapBleWriter,
 )
-from bluetooth_sniffle.sniff.telemetry import (
+from airtell.sniff.telemetry import (
     TelemetrySession,
     _ts_to_iso,
 )

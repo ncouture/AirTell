@@ -32,20 +32,20 @@ from pathlib import Path
 
 import pytest
 
-from bluetooth_sniffle.device.controller import SniffleDeviceController
-from bluetooth_sniffle.device.mock import MockSerialInterface, VirtualRadioBus
-from bluetooth_sniffle.protocol.wire import (
+from airtell.device.controller import SniffleDeviceController
+from airtell.device.mock import MockSerialInterface, VirtualRadioBus
+from airtell.protocol.wire import (
     MESSAGE_BLEFRAME,
     PacketMessage,
     decode_msg,
     encode_msg,
     parse_sniffle_message,
 )
-from bluetooth_sniffle.sniff.dissector import (
+from airtell.sniff.dissector import (
     dissect_advertising_pdu,
 )
-from bluetooth_sniffle.sniff.pcap import PcapBleReader, PcapBleWriter
-from bluetooth_sniffle.sniff.telemetry import TelemetrySession
+from airtell.sniff.pcap import PcapBleReader, PcapBleWriter
+from airtell.sniff.telemetry import TelemetrySession
 
 
 # ==============================================================================

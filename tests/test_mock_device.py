@@ -6,9 +6,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from bluetooth_sniffle.device.controller import SniffleDeviceController
-from bluetooth_sniffle.device.mock import MockSerialInterface, VirtualRadioBus
-from bluetooth_sniffle.device.serial_port import (
+from airtell.device.controller import SniffleDeviceController
+from airtell.device.mock import MockSerialInterface, VirtualRadioBus
+from airtell.device.serial_port import (
     CATSNIFFER_PID,
     CATSNIFFER_VID,
     SONOFF_PID,
@@ -19,7 +19,7 @@ from bluetooth_sniffle.device.serial_port import (
     is_cp2102_non_n,
     is_sniffle_device,
 )
-from bluetooth_sniffle.protocol.wire import (
+from airtell.protocol.wire import (
     COMMAND_MARKER,
     COMMAND_SETCHANAAPHY,
     COMMAND_VERSION,
@@ -326,14 +326,14 @@ class TestHardwareSerialPortDiscovery:
         with pytest.raises(ValueError, match="Conflicting port allocation"):
             allocate_dual_ports("/dev/ttyUSB0", "/dev/ttyUSB0")
 
-    @patch("bluetooth_sniffle.device.serial_port.discover_sniffle_ports")
+    @patch("airtell.device.serial_port.discover_sniffle_ports")
     def test_allocate_dual_ports_auto_discovery(self, mock_discover: MagicMock) -> None:
         mock_discover.return_value = ["/dev/ttyUSB0", "/dev/ttyUSB1", "/dev/ttyUSB2"]
         p1, p2 = allocate_dual_ports()
         assert p1 == "/dev/ttyUSB0"
         assert p2 == "/dev/ttyUSB1"
 
-    @patch("bluetooth_sniffle.device.serial_port.discover_sniffle_ports")
+    @patch("airtell.device.serial_port.discover_sniffle_ports")
     def test_allocate_dual_ports_insufficient_raises(self, mock_discover: MagicMock) -> None:
         mock_discover.return_value = ["/dev/ttyUSB0"]
         with pytest.raises(RuntimeError, match="requires 2 Sniffle dongles"):

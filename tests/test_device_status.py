@@ -6,12 +6,12 @@ import subprocess
 import tempfile
 from unittest.mock import MagicMock, patch
 
-from app.components.navigation import get_top_app_bar_html
-from bluetooth_sniffle.device.serial_port import (
+from airtell.device.serial_port import (
     check_device_usage,
     get_device_status,
     get_sniffle_devices_status,
 )
+from app.components.navigation import get_top_app_bar_html
 
 
 def test_check_device_usage_in_use() -> None:
@@ -63,14 +63,14 @@ def test_check_device_usage_real_lsof_invocation() -> None:
 
 def test_get_device_status_formatting() -> None:
     """Validate get_device_status returns proper dictionary schema."""
-    with patch("bluetooth_sniffle.device.serial_port.check_device_usage", return_value=True):
+    with patch("airtell.device.serial_port.check_device_usage", return_value=True):
         status = get_device_status("/dev/ttyUSB0")
         assert status["device"] == "/dev/ttyUSB0"
         assert status["in_use"] is True
         assert status["status"] == "IN USE"
         assert "/dev/ttyUSB0: IN USE" in status["label"]
 
-    with patch("bluetooth_sniffle.device.serial_port.check_device_usage", return_value=False):
+    with patch("airtell.device.serial_port.check_device_usage", return_value=False):
         status = get_device_status("/dev/ttyUSB1")
         assert status["device"] == "/dev/ttyUSB1"
         assert status["in_use"] is False
@@ -81,7 +81,7 @@ def test_get_device_status_formatting() -> None:
 def test_get_sniffle_devices_status() -> None:
     """Validate get_sniffle_devices_status across default and custom port lists."""
     with patch(
-        "bluetooth_sniffle.device.serial_port.check_device_usage",
+        "airtell.device.serial_port.check_device_usage",
         side_effect=lambda dev: dev == "/dev/ttyUSB0",
     ):
         statuses = get_sniffle_devices_status()
@@ -144,7 +144,7 @@ def test_check_device_usage_whitespace_stripping() -> None:
 
 def test_get_device_status_none_input() -> None:
     """Validate get_device_status with None defaults safely to /dev/ttyUSB0."""
-    with patch("bluetooth_sniffle.device.serial_port.check_device_usage", return_value=False):
+    with patch("airtell.device.serial_port.check_device_usage", return_value=False):
         status = get_device_status(None)
         assert status["device"] == "/dev/ttyUSB0"
         assert status["in_use"] is False

@@ -14,10 +14,10 @@ from uuid import UUID
 
 import pytest
 
-from bluetooth_sniffle.cli import create_parser, main
-from bluetooth_sniffle.device.controller import SniffleDeviceController
-from bluetooth_sniffle.device.mock import MockSerialInterface, VirtualRadioBus
-from bluetooth_sniffle.protocol.beacons import (
+from airtell.cli import create_parser, main
+from airtell.device.controller import SniffleDeviceController
+from airtell.device.mock import MockSerialInterface, VirtualRadioBus
+from airtell.protocol.beacons import (
     ALTBEACON_CODE,
     APPLE_COMPANY_ID,
     RADIUS_NETWORKS_ID,
@@ -30,15 +30,15 @@ from bluetooth_sniffle.protocol.beacons import (
     build_gaen,
     build_ibeacon,
 )
-from bluetooth_sniffle.protocol.mac import (
+from airtell.protocol.mac import (
     generate_palindromic_mac,
     is_palindromic_mac,
 )
-from bluetooth_sniffle.protocol.probing import (
+from airtell.protocol.probing import (
     build_scan_req,
     build_scan_rsp,
 )
-from bluetooth_sniffle.protocol.wire import (
+from airtell.protocol.wire import (
     COMMAND_SETCHANAAPHY,
     MEASUREMENT_VERSION,
     MESSAGE_BLEFRAME,
@@ -50,11 +50,11 @@ from bluetooth_sniffle.protocol.wire import (
     encode_cmd,
     encode_msg,
 )
-from bluetooth_sniffle.sniff.correlation import (
+from airtell.sniff.correlation import (
     CorrelationMatch,
     StimulusResponseCorrelator,
 )
-from bluetooth_sniffle.sniff.dissector import (
+from airtell.sniff.dissector import (
     BleAddressType,
     EddystoneTlmInfo,
     EddystoneUidInfo,
@@ -63,16 +63,16 @@ from bluetooth_sniffle.sniff.dissector import (
     classify_address,
     dissect_advertising_pdu,
 )
-from bluetooth_sniffle.sniff.pcap import (
+from airtell.sniff.pcap import (
     DLT_BLUETOOTH_LE_LL_WITH_PHDR,
     PCAP_MAGIC_USEC,
     PcapBleReader,
     PcapBleWriter,
     crc_ble_reverse,
 )
-from bluetooth_sniffle.sniff.telemetry import TelemetrySession
-from bluetooth_sniffle.topology.topology_a import TopologyAOrchestrator
-from bluetooth_sniffle.topology.topology_b import TopologyBOrchestrator
+from airtell.sniff.telemetry import TelemetrySession
+from airtell.topology.topology_a import TopologyAOrchestrator
+from airtell.topology.topology_b import TopologyBOrchestrator
 
 # ==============================================================================
 # Feature 1: Apple iBeacon Encoder (5 tests)

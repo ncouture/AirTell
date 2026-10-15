@@ -5,8 +5,8 @@ import json
 import threading
 from pathlib import Path
 
-from bluetooth_sniffle.sniff.dissector import DissectedBleFrame
-from bluetooth_sniffle.sniff.telemetry import (
+from airtell.sniff.dissector import DissectedBleFrame
+from airtell.sniff.telemetry import (
     StimulusResponseEvent,
     TelemetrySession,
 )

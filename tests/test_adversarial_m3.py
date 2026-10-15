@@ -35,14 +35,14 @@ from uuid import UUID
 
 import pytest
 
-from bluetooth_sniffle.protocol.mac import (
+from airtell.protocol.mac import (
     generate_palindromic_mac,
 )
-from bluetooth_sniffle.protocol.wire import PacketMessage
-from bluetooth_sniffle.sniff.correlation import (
+from airtell.protocol.wire import PacketMessage
+from airtell.sniff.correlation import (
     StimulusResponseCorrelator,
 )
-from bluetooth_sniffle.sniff.dissector import (
+from airtell.sniff.dissector import (
     BleAddressType,
     DissectedBleFrame,
     classify_address,

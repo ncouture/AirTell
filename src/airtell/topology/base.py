@@ -12,7 +12,7 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
-from bluetooth_sniffle.device.controller import SniffleDeviceController
+from airtell.device.controller import SniffleDeviceController
 
 
 class BaseTopology(abc.ABC):

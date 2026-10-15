@@ -6,11 +6,11 @@ import io
 import json
 import time
 
+from airtell.protocol.beacons import build_ibeacon
+from airtell.sniff.pcap import PcapBleWriter
 from app.queue_bridge import EventQueue
 from app.views.offline_replay import parse_session_json, parse_uploaded_pcap
 from app.views.radio_controls import RadioOrchestrator
-from bluetooth_sniffle.protocol.beacons import build_ibeacon
-from bluetooth_sniffle.sniff.pcap import PcapBleWriter
 
 
 def test_radio_orchestrator_beacon_burst_injection() -> None:

@@ -14,9 +14,9 @@ import threading
 import time
 from typing import Any, Optional
 
+from airtell.extcap.parser import TsharkBleJsonParser
+from airtell.extcap.runner import TsharkConfig, TsharkExtcapRunner
 from app.queue_bridge import EventQueue, get_event_queue
-from bluetooth_sniffle.extcap.parser import TsharkBleJsonParser
-from bluetooth_sniffle.extcap.runner import TsharkConfig, TsharkExtcapRunner
 
 logger = logging.getLogger(__name__)
 

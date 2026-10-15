@@ -3,7 +3,7 @@
 Encoders, decoders, and utilities for Bluetooth Low Energy link layer and beacon protocols.
 """
 
-from bluetooth_sniffle.protocol.beacons import (
+from airtell.protocol.beacons import (
     BurstCycleHelper,
     BurstProfile,
     build_altbeacon,
@@ -14,18 +14,18 @@ from bluetooth_sniffle.protocol.beacons import (
     build_gaen,
     build_ibeacon,
 )
-from bluetooth_sniffle.protocol.mac import (
+from airtell.protocol.mac import (
     classify_mac_address,
     generate_palindromic_mac,
     is_palindromic_mac,
     mac_to_str,
     str_to_mac,
 )
-from bluetooth_sniffle.protocol.probing import (
+from airtell.protocol.probing import (
     build_scan_req,
     build_scan_rsp,
 )
-from bluetooth_sniffle.protocol.wire import (
+from airtell.protocol.wire import (
     BLE_ADV_AA,
     BLE_ADV_CRC_INIT,
     COMMAND_ADVERTISE,

@@ -12,7 +12,7 @@ from uuid import UUID
 
 import pytest
 
-from bluetooth_sniffle.protocol.beacons import (
+from airtell.protocol.beacons import (
     AD_TYPE_FLAGS,
     BurstCycleHelper,
     BurstProfile,

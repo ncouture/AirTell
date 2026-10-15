@@ -3,14 +3,15 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "bluetooth-sniffle"
+name = "airtell"
 version = "0.2.0"
-description = "Python testbed framework coordinating Sniffle-enabled USB devices for BLE tracking research"
+description = "AirTell: Python testbed framework coordinating Sniffle-enabled USB devices for BLE tracking research"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [
-    { name = "Bluetooth Sniffle Team" },
+    { name = "AirTell Team" },
 ]
+urls = { Repository = "https://github.com/ncouture/airdrop" }
 dependencies = [
     "pyserial>=3.5",
     "cryptography>=40.0.0",
@@ -24,7 +25,8 @@ dependencies = [
 ]
 
 [project.scripts]
-bluetooth-sniffle = "bluetooth_sniffle.cli:main"
+airtell = "airtell.cli:main"
+bluetooth-sniffle = "airtell.cli:main"
 
 [project.optional-dependencies]
 test = [

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from bluetooth_sniffle.adversarial.deanonymizer import (
+from airtell.adversarial.deanonymizer import (
     LinkabilityObservation,
     RotationDesyncAnalyzer,
     RotationDesyncEvent,
@@ -11,7 +11,7 @@ from bluetooth_sniffle.adversarial.deanonymizer import (
     Trajectory,
     TrajectoryReconstructor,
 )
-from bluetooth_sniffle.adversarial.relay import (
+from airtell.adversarial.relay import (
     PairingFailureCode,
     PairingHandshakeEvent,
     PairingRelayBridge,
@@ -19,7 +19,7 @@ from bluetooth_sniffle.adversarial.relay import (
     RelayedLinkLayerPacket,
     SMPPairingState,
 )
-from bluetooth_sniffle.adversarial.rogue_beacon import (
+from airtell.adversarial.rogue_beacon import (
     AntiStalkingEvasionEvaluator,
     EvasionBenchmarkResult,
     RogueBeaconGenerator,

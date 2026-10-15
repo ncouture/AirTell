@@ -12,7 +12,7 @@ from uuid import UUID
 
 import pytest
 
-from bluetooth_sniffle.protocol.probing import (
+from airtell.protocol.probing import (
     build_scan_req,
     build_scan_rsp,
 )

@@ -33,20 +33,20 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from bluetooth_sniffle.device.controller import SniffleDeviceController
-from bluetooth_sniffle.device.mock import VirtualRadioBus
-from bluetooth_sniffle.device.serial_port import (
+from airtell.device.controller import SniffleDeviceController
+from airtell.device.mock import VirtualRadioBus
+from airtell.device.serial_port import (
     allocate_dual_ports,
     discover_sniffle_ports,
 )
-from bluetooth_sniffle.protocol.mac import generate_palindromic_mac
-from bluetooth_sniffle.protocol.wire import (
+from airtell.protocol.mac import generate_palindromic_mac
+from airtell.protocol.wire import (
     MESSAGE_BLEFRAME,
     PacketMessage,
 )
-from bluetooth_sniffle.topology.lifecycle import ShutdownCoordinator
-from bluetooth_sniffle.topology.topology_a import TopologyAOrchestrator
-from bluetooth_sniffle.topology.topology_b import TopologyBOrchestrator
+from airtell.topology.lifecycle import ShutdownCoordinator
+from airtell.topology.topology_a import TopologyAOrchestrator
+from airtell.topology.topology_b import TopologyBOrchestrator
 
 
 class TestTopologyAAdversarial:

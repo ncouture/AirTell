@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import json
 
+from airtell.extcap.parser import TsharkBleJsonParser
 from app.queue_bridge import EventQueue
-from bluetooth_sniffle.extcap.parser import TsharkBleJsonParser
 
 
 class TestTsharkBleJsonParser:
