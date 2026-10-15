@@ -12,11 +12,11 @@ import time
 from collections.abc import Sequence
 from typing import Any
 
-from bluetooth_sniffle.device.controller import SniffleDeviceController
-from bluetooth_sniffle.device.mock import VirtualRadioBus
-from bluetooth_sniffle.device.serial_port import allocate_dual_ports
-from bluetooth_sniffle.protocol.wire import PacketMessage
-from bluetooth_sniffle.topology.base import BaseTopology
+from airtell.device.controller import SniffleDeviceController
+from airtell.device.mock import VirtualRadioBus
+from airtell.device.serial_port import allocate_dual_ports
+from airtell.protocol.wire import PacketMessage
+from airtell.topology.base import BaseTopology
 
 logger = logging.getLogger(__name__)
 

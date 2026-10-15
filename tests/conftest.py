@@ -1,4 +1,4 @@
-"""Pytest configuration and shared fixtures for bluetooth_sniffle tests."""
+"""Pytest configuration and shared fixtures for airtell tests."""
 
 import sys
 from pathlib import Path

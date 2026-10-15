@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from bluetooth_sniffle.cli import main
+from airtell.cli import main
 
 
 def test_cli_relay_help_command(capsys: pytest.CaptureFixture[str]) -> None:

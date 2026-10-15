@@ -12,10 +12,10 @@ from pathlib import Path
 
 import pytest
 
-from bluetooth_sniffle.cli import main
-from bluetooth_sniffle.device.controller import SniffleDeviceController
-from bluetooth_sniffle.device.mock import MockSerialInterface, VirtualRadioBus
-from bluetooth_sniffle.protocol.beacons import (
+from airtell.cli import main
+from airtell.device.controller import SniffleDeviceController
+from airtell.device.mock import MockSerialInterface, VirtualRadioBus
+from airtell.protocol.beacons import (
     BurstCycleHelper,
     build_altbeacon,
     build_eddystone_tlm,
@@ -24,37 +24,37 @@ from bluetooth_sniffle.protocol.beacons import (
     build_gaen,
     build_ibeacon,
 )
-from bluetooth_sniffle.protocol.mac import (
+from airtell.protocol.mac import (
     generate_palindromic_mac,
     is_palindromic_mac,
     mac_to_str,
     str_to_mac,
 )
-from bluetooth_sniffle.protocol.probing import (
+from airtell.protocol.probing import (
     build_scan_req,
     build_scan_rsp,
 )
-from bluetooth_sniffle.protocol.wire import (
+from airtell.protocol.wire import (
     PacketMessage,
     StateMessage,
     decode_msg,
 )
-from bluetooth_sniffle.sniff.correlation import (
+from airtell.sniff.correlation import (
     StimulusResponseCorrelator,
 )
-from bluetooth_sniffle.sniff.dissector import (
+from airtell.sniff.dissector import (
     BleAddressType,
     classify_address,
     dissect_advertising_pdu,
 )
-from bluetooth_sniffle.sniff.pcap import (
+from airtell.sniff.pcap import (
     PcapBleReader,
     PcapBleWriter,
     normalize_rssi,
 )
-from bluetooth_sniffle.sniff.telemetry import TelemetrySession
-from bluetooth_sniffle.topology.topology_a import TopologyAOrchestrator
-from bluetooth_sniffle.topology.topology_b import TopologyBOrchestrator
+from airtell.sniff.telemetry import TelemetrySession
+from airtell.topology.topology_a import TopologyAOrchestrator
+from airtell.topology.topology_b import TopologyBOrchestrator
 
 # ==============================================================================
 # Feature 1: Apple iBeacon Boundaries (5 tests)

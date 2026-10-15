@@ -14,7 +14,7 @@ import time
 from collections.abc import Sequence
 from pathlib import Path
 
-from bluetooth_sniffle.adversarial import (
+from airtell.adversarial import (
     LinkabilityObservation,
     PairingRelayBridge,
     RelayedLinkLayerPacket,
@@ -24,9 +24,9 @@ from bluetooth_sniffle.adversarial import (
     SyntheticBeaconSpec,
     TrajectoryReconstructor,
 )
-from bluetooth_sniffle.device.mock import VirtualRadioBus
-from bluetooth_sniffle.device.serial_port import allocate_dual_ports
-from bluetooth_sniffle.protocol.beacons import (
+from airtell.device.mock import VirtualRadioBus
+from airtell.device.serial_port import allocate_dual_ports
+from airtell.protocol.beacons import (
     build_altbeacon,
     build_eddystone_tlm,
     build_eddystone_uid,
@@ -34,14 +34,14 @@ from bluetooth_sniffle.protocol.beacons import (
     build_gaen,
     build_ibeacon,
 )
-from bluetooth_sniffle.protocol.mac import generate_palindromic_mac
-from bluetooth_sniffle.sniff.correlation import StimulusResponseCorrelator
-from bluetooth_sniffle.sniff.dissector import dissect_advertising_pdu
-from bluetooth_sniffle.sniff.pcap import PcapBleReader, PcapBleWriter
-from bluetooth_sniffle.sniff.telemetry import TelemetrySession
-from bluetooth_sniffle.topology.lifecycle import ShutdownCoordinator
-from bluetooth_sniffle.topology.topology_a import TopologyAOrchestrator
-from bluetooth_sniffle.topology.topology_b import TopologyBOrchestrator
+from airtell.protocol.mac import generate_palindromic_mac
+from airtell.sniff.correlation import StimulusResponseCorrelator
+from airtell.sniff.dissector import dissect_advertising_pdu
+from airtell.sniff.pcap import PcapBleReader, PcapBleWriter
+from airtell.sniff.telemetry import TelemetrySession
+from airtell.topology.lifecycle import ShutdownCoordinator
+from airtell.topology.topology_a import TopologyAOrchestrator
+from airtell.topology.topology_b import TopologyBOrchestrator
 
 logger = logging.getLogger(__name__)
 
@@ -135,7 +135,12 @@ def handle_topology_a(args: argparse.Namespace) -> int:
                 return 1
 
         coord.register(cleanup)
-        topo.start()
+        try:
+            topo.start()
+        except Exception as exc:
+            logger.error("Hardware startup failed: %s", exc)
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
 
         pal_mac = generate_palindromic_mac("static", seed=b"topo-a-static")
         topo.set_stimulus_mac(pal_mac, is_random=True)
@@ -263,8 +268,12 @@ def handle_topology_b(args: argparse.Namespace) -> int:
             telemetry_session = TelemetrySession(topology="Topology B")
 
         coord.register(cleanup)
-
-        topo.start()
+        try:
+            topo.start()
+        except Exception as exc:
+            logger.error("Hardware startup failed: %s", exc)
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
 
         deadline = time.monotonic() + args.duration_sec
         next_mock_gen = time.monotonic()
@@ -467,7 +476,13 @@ def handle_verify_hardware(args: argparse.Namespace) -> int:
                 print(f"ERROR: {exc}", file=sys.stderr)
                 return 1
 
-        topo.start()
+        try:
+            topo.start()
+        except Exception as exc:
+            logger.error("Hardware startup failed: %s", exc)
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+
         pal_mac = generate_palindromic_mac("static", seed=b"verify-hw-pal-mac")
         topo.set_stimulus_mac(pal_mac, is_random=True)
 
@@ -666,14 +681,15 @@ def handle_rogue_inject(args: argparse.Namespace) -> int:
     return 0
 
 
-def create_parser() -> argparse.ArgumentParser:
+def create_parser(prog: str = "airtell") -> argparse.ArgumentParser:
     """Create and configure the top-level argument parser and subparsers."""
     parser = argparse.ArgumentParser(
-        prog="bluetooth-sniffle",
-        description="Dual-Device Bluetooth Low Energy Sniffle Testbed Framework (PoPETs 2025-0103)",
+        prog=prog,
+        description="AirTell: Dual-Device Bluetooth Low Energy Sniffle Testbed Framework (PoPETs 2025-0103)",
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose debug logging")
-    parser.add_argument("--version", action="version", version="bluetooth-sniffle 0.1.0")
+    ver_str = f"{prog} 0.1.0 (bluetooth-sniffle 0.1.0)" if prog != "bluetooth-sniffle" else "bluetooth-sniffle 0.1.0 (airtell 0.1.0)"
+    parser.add_argument("--version", action="version", version=ver_str)
 
     subparsers = parser.add_subparsers(dest="command", help="Available subcommands")
 
@@ -789,11 +805,15 @@ def create_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Main CLI entrypoint for bluetooth-sniffle."""
+    """Main CLI entrypoint for AirTell."""
+    prog = "airtell"
+    if sys.argv and "bluetooth-sniffle" in Path(sys.argv[0]).name:
+        prog = "bluetooth-sniffle"
+
     if argv is None:
         argv = sys.argv[1:]
 
-    parser = create_parser()
+    parser = create_parser(prog=prog)
 
     try:
         args = parser.parse_args(argv)

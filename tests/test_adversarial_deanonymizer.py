@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from bluetooth_sniffle.adversarial.deanonymizer import (
+from airtell.adversarial.deanonymizer import (
     LinkabilityObservation,
     RotationDesyncAnalyzer,
     StaticLeakageDetector,

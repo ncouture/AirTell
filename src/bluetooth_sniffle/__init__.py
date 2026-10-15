@@ -1,29 +1,14 @@
-"""Bluetooth Sniffle Testbed Framework
+"""Backward-compatibility shim for bluetooth_sniffle -> airtell."""
 
-Dual-device Sniffle orchestration, active beacon synthesis, passive sniffing,
-and protocol analysis for Bluetooth Low Energy tracking research (PoPETs 2025-0103).
-"""
+from __future__ import annotations
 
-from bluetooth_sniffle.device import (
-    MockSerialInterface,
-    SniffleDeviceController,
-    VirtualRadioBus,
-)
-from bluetooth_sniffle.topology import (
-    ShutdownCoordinator,
-    TopologyAOrchestrator,
-    TopologyBOrchestrator,
-)
+import airtell
+from airtell import *  # noqa: F401, F403
 
-__version__ = "0.1.0"
+__version__ = getattr(airtell, "__version__", "0.1.0")
+__all__ = getattr(airtell, "__all__", [])
+__path__ = airtell.__path__
 
-__all__ = [
-    "MockSerialInterface",
-    "ShutdownCoordinator",
-    "SniffleDeviceController",
-    "TopologyAOrchestrator",
-    "TopologyBOrchestrator",
-    "VirtualRadioBus",
-    "__version__",
-]
 
+def __getattr__(name: str):
+    return getattr(airtell, name)

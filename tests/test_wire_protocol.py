@@ -5,7 +5,7 @@ from struct import pack
 
 import pytest
 
-from bluetooth_sniffle.protocol.wire import (
+from airtell.protocol.wire import (
     COMMAND_RESET,
     MEASUREMENT_VERSION,
     MESSAGE_BLEFRAME,

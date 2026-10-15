@@ -11,8 +11,8 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
-from bluetooth_sniffle.protocol.mac import mac_to_str, str_to_mac
-from bluetooth_sniffle.sniff.dissector import DissectedBleFrame
+from airtell.protocol.mac import mac_to_str, str_to_mac
+from airtell.sniff.dissector import DissectedBleFrame
 
 
 @dataclass

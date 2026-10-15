@@ -15,7 +15,7 @@ from typing import Any
 import serial
 import serial.tools.list_ports
 
-from bluetooth_sniffle.protocol.wire import (
+from airtell.protocol.wire import (
     COMMAND_MARKER,
     MESSAGE_MARKER,
     MarkerMessage,

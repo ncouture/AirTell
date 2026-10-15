@@ -8,12 +8,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.queue_bridge import EventQueue
-from bluetooth_sniffle.extcap.topology import (
+from airtell.extcap.topology import (
     TsharkTopologyManager,
     check_port_availability,
     get_process_holding_port,
 )
+from app.queue_bridge import EventQueue
 
 
 class TestPortAvailabilityGuard:
@@ -27,7 +27,7 @@ class TestPortAvailabilityGuard:
     ) -> None:
         """Port should report available when open succeeds with no conflicting processes."""
         mock_open.return_value = 42
-        with patch("bluetooth_sniffle.extcap.topology.get_process_holding_port", return_value=None):
+        with patch("airtell.extcap.topology.get_process_holding_port", return_value=None):
             avail, reason = check_port_availability("/dev/ttyUSB0")
             assert avail is True
             assert "Available" in reason
@@ -37,7 +37,7 @@ class TestPortAvailabilityGuard:
     def test_port_busy_when_process_holding(self, mock_exists: MagicMock) -> None:
         """Port should report busy if an active Sniffle or tracker process holds it."""
         with patch(
-            "bluetooth_sniffle.extcap.topology.get_process_holding_port",
+            "airtell.extcap.topology.get_process_holding_port",
             return_value="python3 scripts/ble_antistalking_tracker.py (PID 1001)",
         ):
             avail, reason = check_port_availability("/dev/ttyUSB0")
@@ -52,7 +52,7 @@ class TestPortAvailabilityGuard:
     ) -> None:
         """Port should report busy if OS returns EBUSY on open."""
         mock_open.side_effect = OSError(errno.EBUSY, "Device or resource busy")
-        with patch("bluetooth_sniffle.extcap.topology.get_process_holding_port", return_value=None):
+        with patch("airtell.extcap.topology.get_process_holding_port", return_value=None):
             avail, reason = check_port_availability("/dev/ttyUSB1")
             assert avail is False
             assert "busy" in reason.lower() or "locked" in reason.lower()
@@ -127,7 +127,7 @@ class TestTsharkTopologyManager:
         with pytest.raises(ValueError, match="cannot share the same serial port"):
             manager.start_topology_a(port1="/dev/ttyUSB0", port2="/dev/ttyUSB0")
 
-    @patch("bluetooth_sniffle.extcap.topology.check_port_availability")
+    @patch("airtell.extcap.topology.check_port_availability")
     def test_topology_a_aborts_on_busy_port(self, mock_check: MagicMock) -> None:
         """Topology A should refuse to start if either port is busy."""
         mock_check.side_effect = [
@@ -141,9 +141,9 @@ class TestTsharkTopologyManager:
         assert status["running"] is False
         assert "Held by ble_antistalking_tracker.py" in status.get("error", "")
 
-    @patch("bluetooth_sniffle.extcap.topology.check_port_availability", return_value=(True, "Available"))
-    @patch("bluetooth_sniffle.extcap.runner.TsharkExtcapRunner.is_running", return_value=True)
-    @patch("bluetooth_sniffle.extcap.runner.TsharkExtcapRunner.start", return_value=True)
+    @patch("airtell.extcap.topology.check_port_availability", return_value=(True, "Available"))
+    @patch("airtell.extcap.runner.TsharkExtcapRunner.is_running", return_value=True)
+    @patch("airtell.extcap.runner.TsharkExtcapRunner.start", return_value=True)
     def test_topology_a_dual_channel_aggregation(
         self, mock_runner_start: MagicMock, mock_is_running: MagicMock, mock_check: MagicMock
     ) -> None:
@@ -196,9 +196,9 @@ class TestTsharkTopologyManager:
         manager.stop()
         assert manager.get_status()["running"] is False
 
-    @patch("bluetooth_sniffle.extcap.topology.check_port_availability", return_value=(True, "Available"))
-    @patch("bluetooth_sniffle.extcap.runner.TsharkExtcapRunner.is_running", return_value=True)
-    @patch("bluetooth_sniffle.extcap.runner.TsharkExtcapRunner.start", return_value=True)
+    @patch("airtell.extcap.topology.check_port_availability", return_value=(True, "Available"))
+    @patch("airtell.extcap.runner.TsharkExtcapRunner.is_running", return_value=True)
+    @patch("airtell.extcap.runner.TsharkExtcapRunner.start", return_value=True)
     def test_topology_b_single_channel_orchestration(
         self, mock_runner_start: MagicMock, mock_is_running: MagicMock, mock_check: MagicMock
     ) -> None:

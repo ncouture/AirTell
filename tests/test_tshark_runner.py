@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from bluetooth_sniffle.extcap.runner import (
+from airtell.extcap.runner import (
     TsharkConfig,
     TsharkExtcapRunner,
 )

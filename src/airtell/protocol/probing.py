@@ -10,7 +10,7 @@ from __future__ import annotations
 import struct
 from uuid import UUID
 
-from bluetooth_sniffle.protocol.mac import str_to_mac
+from airtell.protocol.mac import str_to_mac
 
 # BLE Link Layer PDU Types
 PDU_TYPE_SCAN_REQ = 0x03

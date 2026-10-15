@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from bluetooth_sniffle.sniff.correlation import (
+from airtell.sniff.correlation import (
     CorrelationMatch,
     CorrelationSummary,
     StimulusRecord,
     StimulusResponseCorrelator,
 )
-from bluetooth_sniffle.sniff.dissector import (
+from airtell.sniff.dissector import (
     AdStructure,
     AltBeaconInfo,
     AppleContinuityMessage,
@@ -34,7 +34,7 @@ from bluetooth_sniffle.sniff.dissector import (
     dissect_packet,
     parse_ad_structures,
 )
-from bluetooth_sniffle.sniff.pcap import (
+from airtell.sniff.pcap import (
     CapturedBlePacket,
     PcapBleReader,
     PcapBleWriter,
@@ -43,7 +43,7 @@ from bluetooth_sniffle.sniff.pcap import (
     normalize_rssi,
     rf_to_ble_chan,
 )
-from bluetooth_sniffle.sniff.telemetry import (
+from airtell.sniff.telemetry import (
     DeviceTelemetrySummary,
     StimulusResponseEvent,
     TelemetrySession,

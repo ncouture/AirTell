@@ -2,17 +2,17 @@
 
 import time
 
-from bluetooth_sniffle.device.mock import VirtualRadioBus
-from bluetooth_sniffle.protocol.beacons import (
+from airtell.device.mock import VirtualRadioBus
+from airtell.protocol.beacons import (
     build_altbeacon,
     build_eddystone_uid,
     build_ibeacon,
 )
-from bluetooth_sniffle.protocol.mac import generate_palindromic_mac
-from bluetooth_sniffle.protocol.wire import PacketMessage
-from bluetooth_sniffle.topology.lifecycle import ShutdownCoordinator
-from bluetooth_sniffle.topology.topology_a import TopologyAOrchestrator
-from bluetooth_sniffle.topology.topology_b import TopologyBOrchestrator
+from airtell.protocol.mac import generate_palindromic_mac
+from airtell.protocol.wire import PacketMessage
+from airtell.topology.lifecycle import ShutdownCoordinator
+from airtell.topology.topology_a import TopologyAOrchestrator
+from airtell.topology.topology_b import TopologyBOrchestrator
 
 
 class TestTopologyA:

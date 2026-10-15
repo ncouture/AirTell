@@ -16,9 +16,46 @@ resolution-markers = [
 
 [manifest]
 members = [
-    "bluetooth-sniffle",
+    "airtell",
     "sniffle",
 ]
+
+[[package]]
+name = "airtell"
+version = "0.2.0"
+source = { editable = "." }
+dependencies = [
+    { name = "cryptography" },
+    { name = "matplotlib", version = "3.10.9", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "matplotlib", version = "3.11.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "plotly" },
+    { name = "pydantic" },
+    { name = "pyserial" },
+    { name = "pytest" },
+    { name = "python-dotenv" },
+    { name = "sniffle" },
+    { name = "streamlit" },
+]
+
+[package.optional-dependencies]
+test = [
+    { name = "pytest" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "cryptography", specifier = ">=40.0.0" },
+    { name = "matplotlib", specifier = ">=3.10.9" },
+    { name = "plotly", specifier = ">=7.1.0" },
+    { name = "pydantic", specifier = ">=2.0.0" },
+    { name = "pyserial", specifier = ">=3.5" },
+    { name = "pytest", specifier = ">=9.1.1" },
+    { name = "pytest", marker = "extra == 'test'", specifier = ">=7.0.0" },
+    { name = "python-dotenv", specifier = ">=1.2.4" },
+    { name = "sniffle", editable = "src/sniffle" },
+    { name = "streamlit", specifier = ">=1.64.0" },
+]
+provides-extras = ["test"]
 
 [[package]]
 name = "altair"
@@ -97,43 +134,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/9a/8e/82a0fe20a541c0314
 wheels = [
     { url = "https://files.pythonhosted.org/packages/64/b4/17d4b0b2a2dc85a6df63d1157e028ed19f90d4cd97c36717afef2bc2f395/attrs-26.1.0-py3-none-any.whl", hash = "sha256:c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309", size = 67548, upload-time = "2026-03-19T14:22:23.645Z" },
 ]
-
-[[package]]
-name = "bluetooth-sniffle"
-version = "0.2.0"
-source = { editable = "." }
-dependencies = [
-    { name = "cryptography" },
-    { name = "matplotlib", version = "3.10.9", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "matplotlib", version = "3.11.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "plotly" },
-    { name = "pydantic" },
-    { name = "pyserial" },
-    { name = "pytest" },
-    { name = "python-dotenv" },
-    { name = "sniffle" },
-    { name = "streamlit" },
-]
-
-[package.optional-dependencies]
-test = [
-    { name = "pytest" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "cryptography", specifier = ">=40.0.0" },
-    { name = "matplotlib", specifier = ">=3.10.9" },
-    { name = "plotly", specifier = ">=7.1.0" },
-    { name = "pydantic", specifier = ">=2.0.0" },
-    { name = "pyserial", specifier = ">=3.5" },
-    { name = "pytest", specifier = ">=9.1.1" },
-    { name = "pytest", marker = "extra == 'test'", specifier = ">=7.0.0" },
-    { name = "python-dotenv", specifier = ">=1.2.4" },
-    { name = "sniffle", editable = "src/sniffle" },
-    { name = "streamlit", specifier = ">=1.64.0" },
-]
-provides-extras = ["test"]
 
 [[package]]
 name = "certifi"

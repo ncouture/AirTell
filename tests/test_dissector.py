@@ -5,13 +5,13 @@ from uuid import UUID
 
 import pytest
 
-from bluetooth_sniffle.protocol.mac import (
+from airtell.protocol.mac import (
     generate_palindromic_mac,
     mac_to_str,
     str_to_mac,
 )
-from bluetooth_sniffle.protocol.wire import PacketMessage
-from bluetooth_sniffle.sniff.dissector import (
+from airtell.protocol.wire import PacketMessage
+from airtell.sniff.dissector import (
     BleAddressType,
     IBeaconInfo,
     classify_address,

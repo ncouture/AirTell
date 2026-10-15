@@ -35,8 +35,8 @@ from uuid import UUID
 
 import pytest
 
-from bluetooth_sniffle.protocol.beacons import BurstCycleHelper, BurstProfile
-from bluetooth_sniffle.protocol.probing import (
+from airtell.protocol.beacons import BurstCycleHelper, BurstProfile
+from airtell.protocol.probing import (
     AD_TYPE_COMPLETE_LOCAL_NAME,
     build_scan_req,
     build_scan_rsp,

@@ -2,10 +2,10 @@
 
 import pytest
 
-from bluetooth_sniffle.sniff.correlation import (
+from airtell.sniff.correlation import (
     StimulusResponseCorrelator,
 )
-from bluetooth_sniffle.sniff.dissector import DissectedBleFrame
+from airtell.sniff.dissector import DissectedBleFrame
 
 
 class TestStimulusRegistration:

@@ -10,7 +10,7 @@ import logging
 import threading
 import time
 
-from bluetooth_sniffle.protocol.wire import (
+from airtell.protocol.wire import (
     COMMAND_ADVERTISE,
     COMMAND_ADVHOP,
     COMMAND_ADVINTRVL,

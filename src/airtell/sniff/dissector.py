@@ -15,7 +15,7 @@ from enum import Enum
 from typing import Any
 from uuid import UUID
 
-from bluetooth_sniffle.protocol.beacons import (
+from airtell.protocol.beacons import (
     ALTBEACON_CODE,
     APPLE_COMPANY_ID,
     EDDYSTONE_SERVICE_UUID,
@@ -23,7 +23,7 @@ from bluetooth_sniffle.protocol.beacons import (
     GAEN_SERVICE_UUID,
     RADIUS_NETWORKS_ID,
 )
-from bluetooth_sniffle.protocol.mac import (
+from airtell.protocol.mac import (
     mac_to_str,
     str_to_mac,
 )

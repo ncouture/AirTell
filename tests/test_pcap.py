@@ -9,9 +9,9 @@ from pathlib import Path
 
 import pytest
 
-from bluetooth_sniffle.protocol.wire import PacketMessage
-from bluetooth_sniffle.sniff.dissector import DissectedBleFrame
-from bluetooth_sniffle.sniff.pcap import (
+from airtell.protocol.wire import PacketMessage
+from airtell.sniff.dissector import DissectedBleFrame
+from airtell.sniff.pcap import (
     BLE_ADV_AA,
     BLE_ADV_CRC_INIT_REV,
     DLT_BLUETOOTH_LE_LL_WITH_PHDR,

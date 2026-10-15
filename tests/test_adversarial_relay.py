@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from bluetooth_sniffle.adversarial.relay import (
+from airtell.adversarial.relay import (
     PairingFailureCode,
     PairingRelayBridge,
     RelayedLinkLayerPacket,

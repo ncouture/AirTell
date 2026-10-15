@@ -22,10 +22,10 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
-from bluetooth_sniffle.device.mock import MockSerialInterface, VirtualRadioBus
-from bluetooth_sniffle.device.serial_port import open_sniffle_serial
-from bluetooth_sniffle.protocol.mac import str_to_mac
-from bluetooth_sniffle.protocol.wire import (
+from airtell.device.mock import MockSerialInterface, VirtualRadioBus
+from airtell.device.serial_port import open_sniffle_serial
+from airtell.protocol.mac import str_to_mac
+from airtell.protocol.wire import (
     BLE_ADV_AA,
     BLE_ADV_CRC_INIT,
     COMMAND_ADVERTISE,

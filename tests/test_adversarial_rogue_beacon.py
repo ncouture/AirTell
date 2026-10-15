@@ -4,13 +4,17 @@ from __future__ import annotations
 
 import tempfile
 
-from bluetooth_sniffle.adversarial.rogue_beacon import (
+from airtell.adversarial.rogue_beacon import (
     AntiStalkingEvasionEvaluator,
     EvasionBenchmarkResult,
     RogueBeaconGenerator,
     SyntheticBeaconSpec,
 )
-from scripts.ble_antistalking_tracker import BLETrackerDB, classify_payload
+
+try:
+    from airtell.scripts.ble_antistalking_tracker import BLETrackerDB, classify_payload
+except ImportError:
+    from scripts.ble_antistalking_tracker import BLETrackerDB, classify_payload
 
 
 def test_rogue_beacon_generator_payload_construction():
