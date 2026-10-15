@@ -49,12 +49,12 @@ $ echo $?
 
 ## Framework Implementation
 
-The device status detection logic is implemented in `bluetooth_sniffle.device.serial_port`:
+The device status detection logic is implemented in `airtell.device.serial_port`:
 
 ### Python API
 
 ```python
-from bluetooth_sniffle.device.serial_port import (
+from airtell.device.serial_port import (
     check_device_usage,
     get_device_status,
     get_sniffle_devices_status,

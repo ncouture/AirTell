@@ -1,4 +1,4 @@
-# Technology Stack: Bluetooth-Sniffle
+# Technology Stack: AirTell
 
 ## Core Language & Runtime
 - **Python**: `>=3.10`

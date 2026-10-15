@@ -1,7 +1,7 @@
-# Product Definition: Bluetooth-Sniffle
+# Product Definition: AirTell
 
 ## Vision
-Bluetooth-Sniffle is a modular security and privacy testbed coordinating two Sniffle-enabled USB dongles (SONOFF Zigbee 3.0 Plus TI CC2652P) to evaluate, exercise, and monitor Bluetooth Low Energy (BLE) tracking networks, rotating identifiers, and identification methods documented in empirical research (such as PoPETs 2025-0103).
+AirTell is a modular security and privacy testbed coordinating two Sniffle-enabled USB dongles (SONOFF Zigbee 3.0 Plus TI CC2652P) to evaluate, exercise, and monitor Bluetooth Low Energy (BLE) tracking networks, rotating identifiers, and identification methods documented in empirical research (such as PoPETs 2025-0103).
 
 ## Operational Focus
 - **Dual-Track Deployment**:
@@ -30,14 +30,14 @@ Bluetooth-Sniffle is a modular security and privacy testbed coordinating two Sni
    - **Event-Driven Queue Bridge**: Thread-safe singleton `EventQueue` with bounded capacity, drop-oldest overflow protection, and non-blocking draining linking background Sniffle topology threads to Streamlit UI state.
    - In-memory `VirtualRadioBus` for 100% offline unit, integration, and E2E simulation testing without physical hardware.
 5. **Adversarial Security Testbed & Identifier Deanonymization**:
-   - **Multi-Signal Rotating Identifier Deanonymizer** (`bluetooth_sniffle.adversarial.deanonymizer`): Static MAC leakage detection, constant OUI prefix identification, payload-to-address rotation desynchronization ($\Delta t$), and trajectory reconstruction across address cycles.
-   - **Two-Ended Pairing Relay Testbed** (`bluetooth_sniffle.adversarial.relay`): Inter-dongle pairing relay across a microsecond timestamp-preserving IPC queue with Link Layer connection tracking and SMP handshake failure error extraction (`SMP_PAIRING_FAILED`).
-   - **Synthetic Rogue Beacon Generator & Evasion Benchmark** (`bluetooth_sniffle.adversarial.rogue_beacon`): Parameterized rogue beacon generation for Apple Find My (`0x004C`/`0x12`), Google Find Hub (`0xFE9F`), Samsung SmartThings Find (`0x0075`), and Tile (`0xFEED`), and automated evasion benchmarking against `BLETrackerDB` heuristics.
-   - **CLI Subcommands & Streamlit Integration**: Dedicated CLI tools (`bluetooth-sniffle relay`, `deanonymize`, `rogue-inject`) and integrated Adversarial Testbed view in the Streamlit M3 dashboard.
+   - **Multi-Signal Rotating Identifier Deanonymizer** (`airtell.adversarial.deanonymizer`): Static MAC leakage detection, constant OUI prefix identification, payload-to-address rotation desynchronization ($\Delta t$), and trajectory reconstruction across address cycles.
+   - **Two-Ended Pairing Relay Testbed** (`airtell.adversarial.relay`): Inter-dongle pairing relay across a microsecond timestamp-preserving IPC queue with Link Layer connection tracking and SMP handshake failure error extraction (`SMP_PAIRING_FAILED`).
+   - **Synthetic Rogue Beacon Generator & Evasion Benchmark** (`airtell.adversarial.rogue_beacon`): Parameterized rogue beacon generation for Apple Find My (`0x004C`/`0x12`), Google Find Hub (`0xFE9F`), Samsung SmartThings Find (`0x0075`), and Tile (`0xFEED`), and automated evasion benchmarking against `BLETrackerDB` heuristics.
+   - **CLI Subcommands & Streamlit Integration**: Dedicated CLI tools (`airtell relay`, `deanonymize`, `rogue-inject`) and integrated Adversarial Testbed view in the Streamlit M3 dashboard.
 6. **Live Tshark & Sniffle Extcap JSON Streaming Pipeline**:
-   - **Asynchronous Extcap Subprocess Runner** (`bluetooth_sniffle.extcap.runner`): Programmatic construction and lifecycle execution of `tshark -i sniffle -o "extcap.sniffle.<option>:<value>"` with line-buffered stdout (`-l`), graceful shutdown (`SIGTERM`/`SIGKILL`), and ring buffer queuing.
-   - **High-Performance BLE JSON Stream Dissector** (`bluetooth_sniffle.extcap.parser`): Dual-mode parsing for Elasticsearch line-delimited JSON (`-T ek`) and streaming array JSON (`-T json`) with multiline brace-depth assembly, ISO 8601 timestamps, nested EIR/AD structure unpacking, and tracking network classification (Apple Find My, Google Find Hub, Samsung SmartThings, Tile).
-   - **Multi-Dongle Topology Orchestration & Contention Guard** (`bluetooth_sniffle.extcap.topology`): Non-interfering serial port probing preventing collisions with active background Sniffle logging processes; Topology A (Dual-Channel aggregation) and Topology B (Single Radio / Cross-Band).
+   - **Asynchronous Extcap Subprocess Runner** (`airtell.extcap.runner`): Programmatic construction and lifecycle execution of `tshark -i sniffle -o "extcap.sniffle.<option>:<value>"` with line-buffered stdout (`-l`), graceful shutdown (`SIGTERM`/`SIGKILL`), and ring buffer queuing.
+   - **High-Performance BLE JSON Stream Dissector** (`airtell.extcap.parser`): Dual-mode parsing for Elasticsearch line-delimited JSON (`-T ek`) and streaming array JSON (`-T json`) with multiline brace-depth assembly, ISO 8601 timestamps, nested EIR/AD structure unpacking, and tracking network classification (Apple Find My, Google Find Hub, Samsung SmartThings, Tile).
+   - **Multi-Dongle Topology Orchestration & Contention Guard** (`airtell.extcap.topology`): Non-interfering serial port probing preventing collisions with active background Sniffle logging processes; Topology A (Dual-Channel aggregation) and Topology B (Single Radio / Cross-Band).
    - **Universal Streamlit View Ingestion**: Direct non-destructive feed into the shared `EventQueue` powering real-time packet rendering across Live Telemetry, RSSI Trends, Threat Alerts, Packet Inspector, and the interactive Extcap Streaming Panel in Radio Controls.
 
 ## Future Roadmap (Multi-Radio & Infrastructure Extensions)
