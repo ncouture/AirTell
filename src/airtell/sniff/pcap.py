@@ -16,6 +16,8 @@ from typing import Any, BinaryIO, Iterator
 
 # PCAP Constants
 PCAP_MAGIC_USEC: int = 0xA1B2C3D4  # Standard microsecond PCAP magic
+PCAP_MAGIC_NANO: int = 0xA1B23C4D  # Nanosecond PCAP magic
+PCAPNG_SHB_MAGIC: int = 0x0A0D0D0A  # PCAPNG Section Header Block magic
 PCAP_VERSION_MAJOR: int = 2
 PCAP_VERSION_MINOR: int = 4
 PCAP_SNAPLEN: int = 65535
@@ -378,6 +380,12 @@ class PcapBleReader:
             self.input = input_source
             self._owns_stream = False
 
+        self._is_pcapng: bool = False
+        self._is_nano: bool = False
+        self._endian: str = "<"
+        self._iface_count: int = 0
+        self._iface_linktype: dict[int, int] = {}
+        self._iface_ts_factor: dict[int, float] = {}
         self._read_global_header()
 
     def __enter__(self) -> PcapBleReader:
@@ -388,27 +396,46 @@ class PcapBleReader:
 
     def _read_global_header(self) -> None:
         hdr = self.input.read(24)
-        if len(hdr) < 24:
+        if len(hdr) < 4:
             raise ValueError("File too short for PCAP global header")
-        magic, major, minor, _, _, _, dlt = struct.unpack(GLOBAL_HEADER_FORMAT, hdr)
-        if magic != PCAP_MAGIC_USEC:
+
+        magic = struct.unpack("<I", hdr[:4])[0]
+        if magic == 0x0A0D0D0A:
+            # PCAPNG format
+            self._is_pcapng = True
+            if len(hdr) < 12:
+                raise ValueError("Truncated PCAPNG Section Header Block")
+            bom = hdr[8:12]
+            if bom == b"\x1a\x2b\x3c\x4d":
+                self._endian = ">"
+            else:
+                self._endian = "<"
+            block_total_len = struct.unpack(f"{self._endian}I", hdr[4:8])[0]
+            rem = block_total_len - 24
+            if rem > 0:
+                self.input.read(rem)
+            self._iface_count = 0
+            self._iface_linktype = {}
+            self._iface_ts_factor = {}
+        elif magic in (PCAP_MAGIC_USEC, PCAP_MAGIC_NANO, 0xD4C3B2A1, 0x4D3CB2A1):
+            self._is_pcapng = False
+            if len(hdr) < 24:
+                raise ValueError("File too short for PCAP global header")
+            self._is_nano = magic in (PCAP_MAGIC_NANO, 0x4D3CB2A1)
+            self._endian = "<" if magic in (PCAP_MAGIC_USEC, PCAP_MAGIC_NANO) else ">"
+            major, minor, _, _, _, dlt = struct.unpack(f"{self._endian}HHIIII", hdr[4:])
+            if dlt != DLT_BLUETOOTH_LE_LL_WITH_PHDR:
+                raise ValueError(
+                    f"Unsupported LinkType: {dlt}, expected {DLT_BLUETOOTH_LE_LL_WITH_PHDR}"
+                )
+        else:
+            if len(hdr) < 24:
+                raise ValueError("File too short for PCAP global header")
             raise ValueError(f"Invalid PCAP magic: 0x{magic:08X}")
-        if dlt != DLT_BLUETOOTH_LE_LL_WITH_PHDR:
-            raise ValueError(
-                f"Unsupported LinkType: {dlt}, expected {DLT_BLUETOOTH_LE_LL_WITH_PHDR}"
-            )
 
-    def read_packet(self) -> CapturedBlePacket | None:
-        """Read and parse the next packet from the PCAP stream."""
-        pkt_hdr = self.input.read(16)
-        if len(pkt_hdr) < 16:
-            return None
-
-        ts_sec, ts_usec, incl_len, _ = struct.unpack(PACKET_HEADER_FORMAT, pkt_hdr)
-        data = self.input.read(incl_len)
-        if len(data) < incl_len:
-            raise EOFError("Truncated packet payload in PCAP")
-
+    def _parse_ble_packet_payload(
+        self, data: bytes, ts_sec: int, ts_usec: int, ts_epoch: float
+    ) -> CapturedBlePacket:
         if len(data) < 17:  # 10B pseudo + 4B AA + 3B CRC
             raise ValueError(f"Payload too short for BLE PHDR ({len(data)} bytes)")
 
@@ -430,7 +457,7 @@ class PcapBleReader:
         return CapturedBlePacket(
             ts_sec=ts_sec,
             ts_usec=ts_usec,
-            ts_epoch=ts_sec + (ts_usec / 1_000_000.0),
+            ts_epoch=ts_epoch,
             rf_chan=rf_chan,
             ble_chan=rf_to_ble_chan(rf_chan),
             rssi=rssi,
@@ -444,6 +471,106 @@ class PcapBleReader:
             crc=crc_val,
             raw_packet=data,
         )
+
+    def _read_pcapng_packet(self) -> CapturedBlePacket | None:
+        while True:
+            hdr = self.input.read(8)
+            if len(hdr) < 8:
+                return None
+            b_type, b_len = struct.unpack(f"{self._endian}II", hdr)
+            if b_len < 12:
+                return None
+            body = self.input.read(b_len - 12)
+            trailing_len = self.input.read(4)
+            if len(body) < b_len - 12 or len(trailing_len) < 4:
+                return None
+
+            if b_type == 0x00000001:  # IDB (Interface Description Block)
+                if len(body) >= 8:
+                    link_type, _, snaplen = struct.unpack(f"{self._endian}HHI", body[:8])
+                    iface_idx = self._iface_count
+                    self._iface_count += 1
+                    self._iface_linktype[iface_idx] = link_type
+                    # Parse options for if_tsresol (option code 9)
+                    ts_factor = 1e-6  # default microsecond
+                    opt_offset = 8
+                    while opt_offset + 4 <= len(body):
+                        opt_code, opt_len = struct.unpack(
+                            f"{self._endian}HH", body[opt_offset:opt_offset + 4]
+                        )
+                        opt_offset += 4
+                        if opt_code == 0:  # opt_endofopt
+                            break
+                        if opt_code == 9 and opt_len >= 1 and opt_offset < len(body):
+                            res = body[opt_offset]
+                            if res & 0x80:
+                                ts_factor = 2 ** -(res & 0x7F)
+                            else:
+                                ts_factor = 10 ** -res
+                        padded_opt_len = (opt_len + 3) & ~3
+                        opt_offset += padded_opt_len
+                    self._iface_ts_factor[iface_idx] = ts_factor
+
+            elif b_type == 0x00000006:  # EPB (Enhanced Packet Block)
+                if len(body) < 20:
+                    continue
+                iface_id, ts_hi, ts_lo, cap_len, orig_len = struct.unpack(
+                    f"{self._endian}IIIII", body[:20]
+                )
+                data = body[20:20 + cap_len]
+                if len(data) < 17:
+                    continue
+                ts_factor = self._iface_ts_factor.get(iface_id, 1e-6)
+                ts_raw = (ts_hi << 32) | ts_lo
+                ts_epoch = ts_raw * ts_factor
+                ts_sec = int(ts_epoch)
+                ts_usec = int(round((ts_epoch - ts_sec) * 1_000_000.0))
+
+                return self._parse_ble_packet_payload(data, ts_sec, ts_usec, ts_epoch)
+
+            elif b_type == 0x00000003:  # SPB (Simple Packet Block)
+                if len(body) < 4:
+                    continue
+                orig_len = struct.unpack(f"{self._endian}I", body[:4])[0]
+                cap_len = min(orig_len, b_len - 16)
+                data = body[4:4 + cap_len]
+                if len(data) < 17:
+                    continue
+                return self._parse_ble_packet_payload(data, 0, 0, 0.0)
+
+            elif b_type == 0x0A0D0D0A:  # New SHB
+                if len(body) >= 4:
+                    bom = body[:4]
+                    if bom == b"\x1a\x2b\x3c\x4d":
+                        self._endian = ">"
+                    else:
+                        self._endian = "<"
+                self._iface_count = 0
+                self._iface_linktype.clear()
+                self._iface_ts_factor.clear()
+
+    def read_packet(self) -> CapturedBlePacket | None:
+        """Read and parse the next packet from the PCAP/PCAPNG stream."""
+        if getattr(self, "_is_pcapng", False):
+            return self._read_pcapng_packet()
+
+        pkt_hdr = self.input.read(16)
+        if len(pkt_hdr) < 16:
+            return None
+
+        endian = getattr(self, "_endian", "<")
+        ts_sec, ts_usec, incl_len, _ = struct.unpack(f"{endian}IIII", pkt_hdr)
+        data = self.input.read(incl_len)
+        if len(data) < incl_len:
+            raise EOFError("Truncated packet payload in PCAP")
+
+        if getattr(self, "_is_nano", False):
+            ts_epoch = ts_sec + (ts_usec / 1_000_000_000.0)
+            ts_usec = ts_usec // 1000
+        else:
+            ts_epoch = ts_sec + (ts_usec / 1_000_000.0)
+
+        return self._parse_ble_packet_payload(data, ts_sec, ts_usec, ts_epoch)
 
     def __iter__(self) -> Iterator[CapturedBlePacket]:
         while True:
