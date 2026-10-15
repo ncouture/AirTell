@@ -24,8 +24,9 @@ from airtell.adversarial import (
     SyntheticBeaconSpec,
     TrajectoryReconstructor,
 )
+from airtell.device.controller import SniffleDeviceController
 from airtell.device.mock import VirtualRadioBus
-from airtell.device.serial_port import allocate_dual_ports
+from airtell.device.serial_port import allocate_dual_ports, mark_and_flush
 from airtell.protocol.beacons import (
     build_altbeacon,
     build_eddystone_tlm,
@@ -35,6 +36,10 @@ from airtell.protocol.beacons import (
     build_ibeacon,
 )
 from airtell.protocol.mac import generate_palindromic_mac
+from airtell.sidechannel import (
+    SideChannelAnalysisRunner,
+    generate_mock_stream,
+)
 from airtell.sniff.correlation import StimulusResponseCorrelator
 from airtell.sniff.dissector import dissect_advertising_pdu
 from airtell.sniff.pcap import PcapBleReader, PcapBleWriter
@@ -681,6 +686,125 @@ def handle_rogue_inject(args: argparse.Namespace) -> int:
     return 0
 
 
+def handle_sidechannel(args: argparse.Namespace) -> int:
+    """Execute exclusive-use BLE side-channel detection and analysis."""
+    # 1. Validate input source
+    source_count = sum(bool(x) for x in [args.pcap, args.mock, args.live])
+    if source_count == 0:
+        logger.error("No input source specified. Provide --pcap, --mock, or --live.")
+        print("ERROR: Must specify an input source (--pcap, --mock, or --live)", file=sys.stderr)
+        return 2
+
+    if source_count > 1:
+        logger.error("Multiple conflicting input sources specified.")
+        print("ERROR: Multiple conflicting input sources specified", file=sys.stderr)
+        return 2
+
+    # 2. Validate PCAP file existence
+    if args.pcap:
+        pcap_file = Path(args.pcap)
+        if not pcap_file.exists() or not pcap_file.is_file():
+            logger.error("PCAP file not found: %s", args.pcap)
+            print(f"ERROR: PCAP file not found: {args.pcap}", file=sys.stderr)
+            return 2
+
+    # 3. Validate CSRK hex string if provided
+    csrk_bytes: bytes | None = None
+    if args.csrk is not None:
+        try:
+            csrk_bytes = bytes.fromhex(args.csrk)
+            if len(csrk_bytes) != 16:
+                logger.error("CSRK must be 16 bytes (32 hex characters), got %d bytes", len(csrk_bytes))
+                print(
+                    f"ERROR: CSRK must be 16 bytes (32 hex characters), got {len(csrk_bytes)} bytes",
+                    file=sys.stderr,
+                )
+                return 2
+        except ValueError:
+            logger.error("Invalid hex string for CSRK: %s", args.csrk)
+            print(f"ERROR: Invalid hex string for CSRK: {args.csrk}", file=sys.stderr)
+            return 2
+
+    # 4. Configure active analyzers
+    analyzers: list[str] = (
+        ["encryption", "csrk", "bat"]
+        if args.analyzer == "all"
+        else [args.analyzer]
+    )
+
+    runner = SideChannelAnalysisRunner(
+        analyzers=analyzers,
+        target_mac=args.target,
+        csrk=csrk_bytes,
+    )
+
+    try:
+        limit_val = getattr(args, "limit", None)
+        if args.pcap:
+            report = runner.run_pcap(args.pcap, limit=limit_val)
+        elif args.mock:
+            mock_stream = generate_mock_stream(
+                analyzer_type=args.analyzer,
+                target_mac=args.target,
+                csrk=csrk_bytes,
+            )
+            report = runner.run_stream(mock_stream, limit=limit_val)
+        elif args.live:
+            try:
+                controller = SniffleDeviceController(port=args.live)
+                controller.open()
+                try:
+                    if not mark_and_flush(controller.ser, timeout=0.5):
+                        logger.error("Live sniffing interface not available on %s", args.live)
+                        print(f"ERROR: Live sniffing interface not available on {args.live}", file=sys.stderr)
+                        return 2
+                    controller.start_sniffing()
+
+                    def _live_stream():
+                        try:
+                            while controller.is_open:
+                                for p in controller.drain_packets():
+                                    yield p
+                                time.sleep(0.01)
+                        except KeyboardInterrupt:
+                            pass
+
+                    report = runner.run_stream(_live_stream())
+                finally:
+                    controller.close()
+            except Exception as exc:
+                logger.error("Live sniffing interface not available on %s: %s", args.live, exc)
+                print(f"ERROR: Live sniffing interface not available on {args.live}", file=sys.stderr)
+                return 2
+        else:
+            return 2
+    except FileNotFoundError as exc:
+        logger.error("PCAP file error: %s", exc)
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+    except Exception as exc:
+        logger.error("Analysis execution error: %s", exc)
+        print(f"ERROR: Analysis failed: {exc}", file=sys.stderr)
+        return 2
+
+    # 5. Format and deliver report output
+    output_content = report.to_json(indent=2) if args.json else report.to_text_summary()
+
+    if args.output:
+        try:
+            out_path = Path(args.output).resolve()
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            out_path.write_text(output_content, encoding="utf-8")
+        except OSError as exc:
+            logger.error("Failed to write report output: %s", exc)
+            print(f"ERROR: Failed to write output file: {exc}", file=sys.stderr)
+            return 2
+
+    print(output_content)
+
+    return 1 if report.has_detections else 0
+
+
 def create_parser(prog: str = "airtell") -> argparse.ArgumentParser:
     """Create and configure the top-level argument parser and subparsers."""
     parser = argparse.ArgumentParser(
@@ -801,6 +925,29 @@ def create_parser(prog: str = "airtell") -> argparse.ArgumentParser:
     p_rogue.add_argument("--mac", type=str, default=None, help="Custom MAC address")
     p_rogue.add_argument("--mock", action="store_true", help="Simulate burst injection in mock mode")
 
+    # 8. Side-Channel Analysis
+    p_side = subparsers.add_parser(
+        "sidechannel",
+        aliases=["side-channel", "analyze-sidechannel"],
+        help="Run exclusive-use BLE side-channel detection and analysis (PoPETs 2025)",
+    )
+    p_side.add_argument("-i", "--pcap", "--input", dest="pcap", type=str, default=None, help="Path to input PCAP / capture file")
+    p_side.add_argument("--live", type=str, default=None, help="Serial port / interface for live sniffing stream")
+    p_side.add_argument("--mock", action="store_true", help="Run with mock simulation stream")
+    p_side.add_argument(
+        "--analyzer",
+        type=str,
+        default="all",
+        choices=["all", "encryption", "csrk", "bat"],
+        help="Analyzer selection: 'all', 'encryption', 'csrk', or 'bat' (default: all)",
+    )
+    p_side.add_argument("--target", type=str, default=None, help="Target MAC / RPA address filter")
+    p_side.add_argument("--csrk", type=str, default=None, help="16-byte hex string CSRK for cryptographic signature verification")
+    p_side.add_argument("--json", action="store_true", help="Output report in JSON format")
+    p_side.add_argument("-o", "--output", dest="output", type=str, default=None, help="File path to save output report (JSON or text)")
+    p_side.add_argument("--summary", action="store_true", help="Include verbose human-readable summary")
+    p_side.add_argument("--limit", "--max-packets", dest="limit", type=int, default=None, help="Maximum number of packets to process")
+
     return parser
 
 
@@ -845,6 +992,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return handle_deanonymize(args)
     elif cmd == "rogue-inject":
         return handle_rogue_inject(args)
+    elif cmd in ("sidechannel", "side-channel", "analyze-sidechannel"):
+        return handle_sidechannel(args)
     else:
         logger.error("Unknown command: %s", cmd)
         parser.print_help(sys.stderr)
