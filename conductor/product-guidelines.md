@@ -1,4 +1,4 @@
-# Product Guidelines: Bluetooth-Sniffle
+# Product Guidelines: AirTell
 
 ## 1. Voice and Tone
 - **Objective & Scientifically Rigorous**: Use precise technical terminology from the Bluetooth Core Specification and peer-reviewed privacy literature (e.g. PoPETs 2025-0103). Distinguish Link Layer PDUs, AD structures, and upper-layer public keys.
