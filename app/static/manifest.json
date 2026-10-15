@@ -1,6 +1,6 @@
 {
-  "name": "Bluetooth-Sniffle Tactical Dashboard",
-  "short_name": "Sniffle M3",
+  "name": "AirTell Tactical Dashboard",
+  "short_name": "AirTell",
   "description": "Dual-Dongle BLE Anti-Stalking & Threat Telemetry Testbed",
   "start_url": ".",
   "display": "standalone",

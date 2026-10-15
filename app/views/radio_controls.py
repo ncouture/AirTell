@@ -15,21 +15,25 @@ import plotly.graph_objects as go
 import serial.tools.list_ports
 import streamlit as st
 
-from app.queue_bridge import EventQueue, get_event_queue
-from bluetooth_sniffle.device.serial_port import check_device_usage, is_sniffle_device
-from bluetooth_sniffle.extcap.runner import TsharkConfig
-from bluetooth_sniffle.extcap.topology import (
+from airtell.device.serial_port import check_device_usage, is_sniffle_device
+from airtell.extcap.runner import TsharkConfig
+from airtell.extcap.topology import (
     TsharkTopologyManager,
     check_port_availability,
 )
-from bluetooth_sniffle.protocol.beacons import (
+from airtell.protocol.beacons import (
     build_altbeacon,
     build_eddystone_uid,
     build_gaen,
     build_ibeacon,
 )
-from bluetooth_sniffle.sniff.pcap import PcapBleWriter
-from scripts.ble_antistalking_tracker import BLETrackerDB
+from airtell.sniff.pcap import PcapBleWriter
+from app.queue_bridge import EventQueue, get_event_queue
+
+try:
+    from airtell.scripts.ble_antistalking_tracker import BLETrackerDB
+except ImportError:
+    from scripts.ble_antistalking_tracker import BLETrackerDB
 
 
 def discover_available_dongles() -> list[dict[str, Any]]:

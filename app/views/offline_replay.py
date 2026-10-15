@@ -11,9 +11,13 @@ from typing import Any, Optional
 import pandas as pd
 import streamlit as st
 
-from bluetooth_sniffle.protocol.mac import mac_to_str
-from bluetooth_sniffle.sniff.pcap import PcapBleReader
-from scripts.ble_antistalking_tracker import BLETrackerDB, classify_payload
+from airtell.protocol.mac import mac_to_str
+from airtell.sniff.pcap import PcapBleReader
+
+try:
+    from airtell.scripts.ble_antistalking_tracker import BLETrackerDB, classify_payload
+except ImportError:
+    from scripts.ble_antistalking_tracker import BLETrackerDB, classify_payload
 
 
 def parse_uploaded_pcap(pcap_bytes: bytes) -> list[dict[str, Any]]:

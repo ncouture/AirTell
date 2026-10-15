@@ -1,4 +1,4 @@
-"""Main entrypoint alias for the Bluetooth-Sniffle Streamlit Dashboard."""
+"""Main entrypoint alias for the AirTell Streamlit Dashboard."""
 
 from __future__ import annotations
 

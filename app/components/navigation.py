@@ -204,7 +204,7 @@ def get_top_app_bar_html(
 <div class="m3-top-bar" data-surface="#0F141C">
   <div class="m3-top-bar-title">
     <span>📡</span>
-    <span>BLUETOOTH-SNIFFLE // TACTICAL TESTBED</span>
+    <span>AIRTELL // BLUETOOTH-SNIFFLE TACTICAL TESTBED</span>
   </div>
   <div class="m3-status-pills">
     <div class="m3-status-pill">

@@ -1,4 +1,4 @@
-"""Material Design v3 Dark Tactical PWA Dashboard for Bluetooth-Sniffle."""
+"""Material Design v3 Dark Tactical PWA Dashboard for AirTell."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from typing import Optional
 
 import streamlit as st
 
+from airtell.device.serial_port import check_device_usage
 from app.components.navigation import render_navigation, render_top_app_bar
 from app.components.pwa import inject_pwa_assets
 from app.queue_bridge import get_event_queue
@@ -23,12 +24,15 @@ from app.views.radio_controls import (
 )
 from app.views.rssi_trends import render_rssi_trends
 from app.views.telemetry_overview import render_telemetry_overview
-from bluetooth_sniffle.device.serial_port import check_device_usage
-from scripts.ble_antistalking_tracker import BLETrackerDB
+
+try:
+    from airtell.scripts.ble_antistalking_tracker import BLETrackerDB
+except ImportError:
+    from scripts.ble_antistalking_tracker import BLETrackerDB
 
 # 1. Page Configuration (Must be first Streamlit call)
 st.set_page_config(
-    page_title="Sniffle Tactical M3",
+    page_title="AirTell Tactical M3",
     page_icon="📡",
     layout="wide",
     initial_sidebar_state="expanded",
