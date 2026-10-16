@@ -1,10 +1,16 @@
-# Bluetooth-Sniffle Testbed Framework
+# AirTell
+
+### Exposing the digital body language of Bluetooth Low Energy.
 
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/status-active-brightgreen.svg)]()
 
-A modular Python testbed framework coordinating two [Sniffle-enabled USB devices](https://www.nccgroup.com/research-blog/sniffle-a-sniffer-for-bluetooth-5/) (simultaneously executing active beacon injection/replay and passive sniffing/fingerprinting) to exercise and evaluate the Bluetooth Low Energy (BLE) tracking and identification methods documented in **PoPETs 2025-0103**: *"Your Signal, Their Data: An Empirical Privacy Analysis of Wireless-scanning SDKs in Android"*.
+Modern mobile operating systems treat Bluetooth Low Energy (BLE) privacy as an address-randomization problem. It isn't. Across advertising intervals, scan request timings, and proprietary payload structures, devices broadcast a continuous, identifiable "body language" long before a connection is ever established.
+
+Standard single-dongle sniffers periodically hop across advertising channels (37, 38, and 39), leaving predictable blind spots during channel transitions. **AirTell** eliminates this blindness. Built on top of [NCC Group's Sniffle](https://github.com/nccgroup/Sniffle) firmware, AirTell orchestrates multiple CC2652-based radio dongles over UART or an in-memory virtual radio bus. It pairs active stimulators with synchronized passive observers to evaluate, benchmark, and expose the BLE tracking mechanisms documented across [Privacy Enhancing Technologies Symposium (PETS)](https://petsymposium.org/) research.
+
+A public Google Notebook containing architectural notes, research references, and packet dissection logs is available at [Google NotebookLM](https://notebook.google.com/notebook/26cd837a-4d66-4ab1-94c7-128105718ad6).
 
 ---
 
@@ -17,9 +23,9 @@ A modular Python testbed framework coordinating two [Sniffle-enabled USB devices
 - [Hardware Requirements](#hardware-requirements)
   - [Supported Dongles & Bridge Limits](#supported-dongles--bridge-limits)
   - [Port Auto-Discovery & In-Use Verification](#port-auto-discovery--in-use-verification)
+- [Centralized Documentation](#centralized-documentation)
 - [Mock Simulation & Offline Harness](#mock-simulation--offline-harness)
 - [Wire Protocol & Line Framing](#wire-protocol--line-framing)
-- [Centralized Documentation](#centralized-documentation)
 - [Installation & Quick Start](#installation--quick-start)
 - [Running Tests](#running-tests)
 - [Project Layout](#project-layout)
@@ -31,31 +37,31 @@ A modular Python testbed framework coordinating two [Sniffle-enabled USB devices
 The testbed coordinates two Sniffle radio dongles over UART or an in-memory virtual radio bus:
 
 ```
-                          ┌───────────────────────────┐
-                          │   Testbed Orchestration   │
-                          │   (Topology A / B / CLI)  │
-                          └──────┬─────────────┬──────┘
-                                 │             │
-                    ┌────────────┴───┐     ┌───┴────────────┐
-                    │ Device 1 Ctrl  │     │ Device 2 Ctrl  │
-                    └────────┬───────┘     └───┬────────────┘
-                             │                 │
+                        ┌───────────────────────────┐
+                        │   Testbed Orchestration   │
+                        │   (Topology A / B / CLI)  │
+                        └──────┬─────────────┬──────┘
+                               │             │
+                    ┌──────────┴───┐     ┌───┴────────────┐
+                    │ Device 1 Ctrl│     │ Device 2 Ctrl  │
+                    └────────┬─────┘     └───┬────────────┘
+                             │               │
                ┌─────────────┴─────┐     ┌─────┴─────────────┐
                │  SerialPort /     │     │  SerialPort /     │
                │  MockSerial (Dev1)│     │  MockSerial (Dev2)│
                └─────────────┬─────┘     └─────┬─────────────┘
-                             │                 │
-                     ▲       ▼                 ▲       ▼
-                ╔════════════════════════════════════════════╗
-                ║   Physical BLE Air / VirtualRadioBus       ║
-                ║   (Channels 37, 38, 39, 1 µs Timestamps)   ║
-                ╚════════════════════════════════════════════╝
+                             │               │
+                        ▲    ▼               ▲    ▼
+               ╔════════════════════════════════════════════╗
+               ║   Physical BLE Air / VirtualRadioBus       ║
+               ║   (Channels 37, 38, 39, 1 us Timestamps)   ║
+               ╚════════════════════════════════════════════╝
 ```
 
 Key subsystems include:
 1. **`protocol`**:
    - `wire`: Base64+CRLF line framing with word-count prefix, command opcodes, and binary message parsing (`PacketMessage`, `MarkerMessage`, `StateMessage`, `MeasurementMessage`).
-   - `mac`: Synthetic palindromic MAC address generator ensuring endianness invariance ($B_0..B_5 = B_5..B_0$) across LE radio bytes and network logs, with full support for Static Random, NRPA, RPA, and Public address types.
+   - `mac`: Synthetic palindromic MAC address generator ensuring endianness invariance ($B_0 \dots B_5 = B_5 \dots B_0$) across LE radio bytes and network logs, with full support for Static Random, NRPA, RPA, and Public address types.
    - `beacons`: Standardized bit-for-bit AD encoders for Apple iBeacon, AltBeacon, Google Eddystone (UID, URL, TLM), and Google/Apple Exposure Notification (GAEN `0xFD6F`).
    - `probing`: Active probe constructors (`SCAN_REQ`) and response frames (`SCAN_RSP`) eliciting Complete Local Names and service UUIDs.
 2. **`device`**:
@@ -72,14 +78,14 @@ Key subsystems include:
 ## Operational Topologies
 
 ### Topology A: Stimulator + Observer
-- **Device 1 (Stimulator)**: Configured as an active transmitter broadcasting parameterized beacon profiles (e.g. iBeacon, AltBeacon, Eddystone, GAEN) or replaying recorded advertisement sequences with custom transmission intervals (e.g., 20 ms to 1000 ms) and palindromic MAC addresses.
+- **Device 1 (Stimulator)**: Configured as an active transmitter broadcasting parameterized beacon profiles (e.g., iBeacon, AltBeacon, Eddystone, GAEN) or replaying recorded advertisement sequences with custom transmission intervals (20 ms to 1000 ms) and palindromic MAC addresses.
 - **Device 2 (Observer)**: Concurrently sniffs primary advertising channels (37, 38, 39) to capture peripheral advertisements, mobile device scan requests (`SCAN_REQ`), and connection attempts elicited by the stimulator.
 
 ### Topology B: Dual-Channel Passive Observer
 Standard single-dongle sniffers periodically hop across channels 37, 38, and 39, causing blind spots during channel transitions. Topology B coordinates two devices simultaneously locked to fixed primary advertising channels:
 - **Device 1**: Locked to Channel 37 (`hop3=False`).
 - **Device 2**: Locked to Channel 38 (`hop3=False`) or Channel 39.
-- Captured packets from both dongles are merged in real time into a strictly timestamp-ordered queue, providing continuous multi-channel visibility.
+Captured packets from both dongles are merged in real time into a strictly timestamp-ordered queue, providing continuous multi-channel visibility.
 
 ### Topology C: Master / Slave Link Layer Traffic Relay
 Sniffle performs [link-layer relaying](https://hardwear.io/netherlands-2022/presentation/bluetooth-LE-link-layer-relay-attacks.pdf) of Bluetooth LE traffic:
@@ -95,7 +101,7 @@ Sniffle performs [link-layer relaying](https://hardwear.io/netherlands-2022/pres
 - **Sonoff Zigbee 3.0 USB Dongle Plus** (TI CC2652P, USB VID: `0x10C4`, PID: `0xEA60`).
   - *Note*: Older Sonoff dongles use Silicon Labs CP2102 (non-N) bridge chips limited to **921,600 baud**. The framework automatically caps the baud rate to 921,600 baud when CP2102 bridges are detected. Newer CP2102N revisions operate at **2,000,000 baud**.
 - **Texas Instruments CC26x2 LaunchPad** (CC2652R / CC2652RB / CC1352P with XDS110 Debug Probe, VID: `0x0451`, PID: `0xBEF3`). Default: **2,000,000 baud**.
-- **Electronic Cats CatSniffer V3** (VID: `0x2E8A` / 11914, PID: `0x00C0` / 192).
+- **Electronic Cats CatSniffer V3** (VID: `0x2E8A`, PID: `0x00C0`).
 
 ### Port Auto-Discovery & In-Use Verification
 The `discover_sniffle_ports()` and `allocate_dual_ports()` utilities automatically scan available serial interfaces, match hardware descriptors, and assign two distinct ports (`port1 != port2`) to Device 1 and Device 2 without manual configuration.
@@ -106,7 +112,7 @@ To determine at all times whether a Sniffle device is open and being used:
 lsof /dev/ttyUSB0  # Return code 0 = OPEN and IN USE; Non-zero = IDLE / NOT OPEN
 lsof /dev/ttyUSB1
 ```
-The Streamlit application checks this status continuously via `bluetooth_sniffle.device.serial_port.check_device_usage()`, displaying real-time telemetry badges in the top app bar, sidebar, and radio controls view. See [`docs/device_status.md`](docs/device_status.md).
+The application checks this status continuously via `airtell.device.serial_port.check_device_usage()`, displaying real-time telemetry badges in the top app bar, sidebar, and radio controls view. See [`docs/device_status.md`](docs/device_status.md).
 
 ---
 
@@ -123,7 +129,6 @@ Full technical documentation is centralized in [`docs/`](docs/):
 - [**Filtering BLE JSON with JQ**](docs/json_jq.md): Recipes for structured log processing.
 - [**TShark & PCAP Dissection**](docs/tshark.md): Native vs. extcap capture guide.
 - [**Hardware Setup & Flashing**](docs/hardware_setup.md): Bootloader flashing and configuration.
-
 
 ---
 
@@ -154,7 +159,7 @@ Dongle to Host:
 
 ### PacketMessage Header Format (Message Type `0x10`)
 Packets received by the radio unpack a 10-byte header:
-- `ts` (4 bytes, uint32 LE): Microsecond timestamp (1 µs resolution).
+- `ts` (4 bytes, uint32 LE): Microsecond timestamp ($1\ \mu\text{s}$ resolution).
 - `l` (2 bytes, uint16 LE): Flags bitfield:
   - Bit 15: Direction (`0` = Central -> Peripheral, `1` = Peripheral -> Central).
   - Bit 14: CRC Error flag (`1` = CRC error, `0` = Valid CRC).
@@ -170,8 +175,8 @@ Packets received by the radio unpack a 10-byte header:
 
 ```bash
 # Clone the repository
-git clone https://github.com/example/bluetooth-sniffle.git
-cd bluetooth-sniffle
+git clone https://github.com/example/airtell.git
+cd airtell
 
 # Install in editable mode with development dependencies
 pip install -e .[test]
@@ -188,7 +193,7 @@ Execute the automated test suite with strict warning trapping:
 pytest -v -W error tests/
 
 # Run with coverage report
-pytest --cov=bluetooth_sniffle --cov-report=term-missing tests/
+pytest --cov=airtell --cov-report=term-missing tests/
 
 # Run linter
 ruff check src tests
@@ -199,47 +204,48 @@ ruff check src tests
 ## Project Layout
 
 ```
-bluetooth-sniffle/
+airtell/
 ├── README.md
 ├── pyproject.toml
-├── app/                         # Material Design v3 Tactical Streamlit Dashboard
-│   ├── components/              # Navigation rail, top app bar, PWA assets
-│   ├── views/                   # Telemetry, RSSI trends, alerts, radio controls
-│   └── streamlit_app.py         # Dashboard application entrypoint
-├── docs/                        # Centralized documentation hub
-│   ├── index.md                 # Documentation navigation index
-│   ├── relay_specifications.md  # Master/Slave link layer relay specification
-│   ├── device_status.md         # Device in-use validation via lsof
-│   ├── scripts_reference.md     # Comprehensive scripts directory guide
-│   ├── howto.md                 # Sniffle CLI operations guide
-│   ├── airdrop.md               # Apple AirDrop advertisement dissection
+├── app/                        # Material Design v3 Tactical Streamlit Dashboard
+│   ├── components/             # Navigation rail, top app bar, PWA assets
+│   ├── views/                  # Telemetry, RSSI trends, alerts, radio controls
+│   └── streamlit_app.py        # Dashboard application entrypoint
+├── docs/                       # Centralized documentation hub
+│   ├── index.md                # Documentation navigation index
+│   ├── relay_specifications.md # Master/Slave link layer relay specification
+│   ├── device_status.md        # Device in-use validation via lsof
+│   ├── scripts_reference.md    # Comprehensive scripts directory guide
+│   ├── howto.md                # Sniffle CLI operations guide
+│   ├── airdrop.md              # Apple AirDrop advertisement dissection
 │   ├── crackle_pcap_analysis.md # Crackle analysis & longitudinal tracking
-│   ├── json_jq.md               # Parsing Wireshark JSON with JQ
-│   ├── tshark.md                # TShark & PCAP dissection guide
-│   └── hardware_setup.md        # Hardware flashing & multi-dongle guide
-├── scripts/                     # Standalone CLI tools, relays, & decoders
-│   ├── advertiser.py            # Connectable peripheral emulator
+│   ├── json_jq.md              # Parsing Wireshark JSON with JQ
+│   ├── tshark.md               # TShark & PCAP dissection guide
+│   └── hardware_setup.md       # Hardware flashing & multi-dongle guide
+├── scripts/                    # Standalone CLI tools, relays, & decoders
+│   ├── advertiser.py           # Connectable peripheral emulator
 │   ├── ble_antistalking_tracker.py # SQLite logger & heuristic alert dispatcher
-│   ├── ble_parser.py            # Standalone offline finding key parser
-│   ├── crackle                  # BLE encryption cracking ELF binary
-│   ├── initiator.py             # Active central connection tester
-│   ├── pcap_decoder.py          # Offline PCAP AD structure parser
-│   ├── radar_tomography.py      # 2D radio tomographic sensing engine
-│   ├── relay_master.py          # Central relay forwarder (TCP 7352)
-│   ├── relay_slave.py           # Peripheral relay emulator
-│   ├── reset.py                 # Firmware reset utility
-│   ├── scanner.py               # Active discovery scanner & RSSI aggregator
-│   ├── sniff_receiver.py        # Core packet sniffer & connection follower
-│   ├── sniffle_extcap.py        # Wireshark extcap live capture plugin
-│   ├── uart_test.py             # Serial round-trip latency benchmark
-│   └── version_check.py         # Firmware version & API validator
+│   ├── ble_parser.py           # Standalone offline finding key parser
+│   ├── crackle                 # BLE encryption cracking ELF binary
+│   ├── initiator.py            # Active central connection tester
+│   ├── pcap_decoder.py         # Offline PCAP AD structure parser
+│   ├── radar_tomography.py     # 2D radio tomographic sensing engine
+│   ├── relay_master.py         # Central relay forwarder (TCP 7352)
+│   ├── relay_slave.py          # Peripheral relay emulator
+│   ├── reset.py                # Firmware reset utility
+│   ├── scanner.py              # Active discovery scanner & RSSI aggregator
+│   ├── sniff_receiver.py       # Core packet sniffer & connection follower
+│   ├── sniffle_extcap.py       # Wireshark extcap live capture plugin
+│   ├── uart_test.py            # Serial round-trip latency benchmark
+│   └── version_check.py        # Firmware version & API validator
 ├── src/
-│   ├── bluetooth_sniffle/       # Modular testbed framework
-│   │   ├── adversarial/         # Deanonymizer, relay bridge, rogue beacons
-│   │   ├── device/              # Serial port lifecycle, lsof check, mock bus
-│   │   ├── extcap/              # Asynchronous Tshark runner & stream parser
-│   │   ├── protocol/            # Wire protocol, beacons, probing, MAC generator
-│   │   └── topology/            # Topologies A & B, graceful shutdown
-│   └── sniffle/                 # Embedded Sniffle C firmware & CLI library
-└── tests/                       # Unit, integration, and E2E test suites
+│   ├── airtell/                # Modular testbed framework (`import airtell`)
+│   │   ├── adversarial/        # Deanonymizer, relay bridge, rogue beacons
+│   │   ├── device/             # Serial port lifecycle, lsof check, mock bus
+│   │   ├── extcap/             # Asynchronous Tshark runner & stream parser
+│   │   ├── protocol/           # Wire protocol, beacons, probing, MAC generator
+│   │   └── topology/           # Topologies A & B, graceful shutdown
+│   └── sniffle/                # Embedded Sniffle C firmware & CLI library
+└── tests/                      # Unit, integration, and E2E test suites
 ```
+
