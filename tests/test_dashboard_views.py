@@ -11,7 +11,7 @@ from app.queue_bridge import EventQueue
 from app.views.alert_feed import ThreatCategory, categorize_alert, render_alert_feed
 from app.views.packet_inspector import decode_ad_structures, render_packet_inspector
 from app.views.rssi_trends import build_rssi_figure, render_rssi_trends
-from app.views.telemetry_overview import compute_telemetry_metrics
+from app.views.telemetry_overview import compute_telemetry_metrics, render_telemetry_overview
 
 
 def test_alert_categorization_levels() -> None:
@@ -278,5 +278,98 @@ def test_render_alert_feed_with_event_queue() -> None:
         # Ensure markdown called with LIVE STREAM badge
         calls = [c[0][0] for c in mock_markdown.call_args_list if c[0] and isinstance(c[0][0], str)]
         assert any("[LIVE STREAM]" in c for c in calls)
+
+
+def test_views_duckdb_backend_integration() -> None:
+    """Validate dashboard views integrate cleanly with DuckDB backend."""
+    mock_backend = MagicMock()
+    mock_backend.get_observations.return_value = pd.DataFrame([
+        {
+            "id": 1,
+            "datetime_str": "2026-10-17 12:00:00",
+            "channel": 37,
+            "mac_address": "40:11:22:33:44:55",
+            "rssi": -55,
+            "network_type": "Apple Find My",
+            "ephemeral_key": "aabbcc112233",
+            "raw_payload": "020106",
+        }
+    ])
+    mock_backend.get_rssi_timeseries.return_value = pd.DataFrame([
+        {
+            "id": 1,
+            "datetime_str": "2026-10-17 12:00:00",
+            "rssi": -55,
+            "key_short": "aabbcc112233",
+            "network_type": "Apple Find My",
+        }
+    ])
+    mock_backend.get_alerts.return_value = [
+        {
+            "id": 1,
+            "datetime_str": "2026-10-17 12:00:00",
+            "identifier": "aabbcc112233",
+            "network_type": "Apple Find My",
+            "observation_count": 8,
+            "max_rssi": -50,
+            "alert_message": "Persistent tracker detected",
+        }
+    ]
+
+    def mock_columns(spec):
+        count = spec if isinstance(spec, int) else len(spec)
+        return [MagicMock() for _ in range(count)]
+
+    # 1. Packet inspector with backend
+    with (
+        patch("streamlit.subheader"),
+        patch("streamlit.markdown"),
+        patch("streamlit.columns", side_effect=mock_columns),
+        patch("streamlit.selectbox", side_effect=lambda label, options=None, **kwargs: options[0] if options else "All"),
+        patch("streamlit.text_input", return_value=""),
+        patch("streamlit.write"),
+        patch("streamlit.dataframe"),
+        patch("streamlit.code"),
+        patch("streamlit.expander", return_value=MagicMock()),
+    ):
+        render_packet_inspector(conn=None, event_queue=None, backend=mock_backend)
+        mock_backend.get_observations.assert_called()
+
+    # 2. RSSI trends with backend
+    with (
+        patch("streamlit.subheader"),
+        patch("streamlit.markdown"),
+        patch("streamlit.columns", side_effect=mock_columns),
+        patch("streamlit.multiselect", return_value=["Apple Find My"]),
+        patch("streamlit.slider", return_value=-95),
+        patch("streamlit.plotly_chart"),
+    ):
+        render_rssi_trends(conn=None, event_queue=None, backend=mock_backend)
+        mock_backend.get_rssi_timeseries.assert_called()
+
+    # 3. Alert feed with backend
+    with (
+        patch("streamlit.subheader"),
+        patch("streamlit.markdown"),
+        patch("streamlit.columns", side_effect=mock_columns),
+        patch("streamlit.download_button"),
+        patch("streamlit.write"),
+        patch("streamlit.container", return_value=MagicMock()),
+    ):
+        render_alert_feed(conn=None, tracker_db=None, event_queue=None, backend=mock_backend)
+        mock_backend.get_alerts.assert_called()
+
+    # 4. Telemetry overview with backend
+    with (
+        patch("streamlit.subheader"),
+        patch("streamlit.markdown"),
+        patch("streamlit.columns", side_effect=mock_columns),
+        patch("streamlit.metric"),
+        patch("streamlit.plotly_chart"),
+    ):
+        render_telemetry_overview(conn=None, event_queue=None, backend=mock_backend)
+        mock_backend.get_observations.assert_called()
+
+
 
 

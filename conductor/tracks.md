@@ -23,5 +23,5 @@
 - [x] **Track: Webhook and OS Desktop Notification Dispatchers**
   *Link: [./tracks/webhook_desktop_notifications_20261016/index.md](./tracks/webhook_desktop_notifications_20261016/index.md)*
 
-
-
+- [x] **Track: Embedded DuckDB High-Throughput Analytics Engine**
+  *Link: [./tracks/duckdb_high_throughput_analytics_20261016/index.md](./tracks/duckdb_high_throughput_analytics_20261016/index.md)*

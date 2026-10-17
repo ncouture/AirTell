@@ -418,7 +418,7 @@ def dispatch_desktop_notification(
 
 
 class BLETrackerDB:
-    """Thread-safe SQLite database manager for BLE observations and anti-stalking alerts."""
+    """Thread-safe SQLite and DuckDB database manager for BLE observations and anti-stalking alerts."""
 
     def __init__(
         self,
@@ -426,6 +426,8 @@ class BLETrackerDB:
         webhook_url: Optional[str] = None,
         webhook_secret: Optional[str] = None,
         enable_desktop_notify: Optional[bool] = None,
+        backend_type: Optional[str] = None,
+        enable_duckdb: Optional[bool] = None,
     ) -> None:
         self.db_path = db_path
         self.webhook_url = webhook_url if webhook_url is not None else os.getenv("WEBHOOK_URL", "")
@@ -441,8 +443,137 @@ class BLETrackerDB:
             )
         self.init_db()
 
+        self.duckdb_backend: Optional[Any] = None
+        self._sqlite_backend: Optional[Any] = None
+        if enable_duckdb is not None:
+            self.enable_duckdb = enable_duckdb
+        elif backend_type is not None:
+            self.enable_duckdb = backend_type.lower() in ("duckdb", "duck", "auto")
+        else:
+            env_val = os.getenv("DATABASE_BACKEND", os.getenv("AIRTELL_DB_BACKEND", "")).lower()
+            if env_val:
+                self.enable_duckdb = env_val in ("duckdb", "duck", "auto")
+            else:
+                self.enable_duckdb = os.getenv("AIRTELL_DUCKDB_ACCELERATION", "1").lower() in (
+                    "1",
+                    "true",
+                    "yes",
+                    "on",
+                )
+
+        if self.enable_duckdb:
+            self.attach_duckdb()
+
+    def attach_duckdb(self, threads: Optional[int] = None, memory_limit: Optional[str] = None) -> bool:
+        """Attach DuckDB vectorized engine to accelerate analytical queries."""
+        if threads is None:
+            try:
+                threads = int(os.getenv("DUCKDB_THREADS", "4"))
+            except ValueError:
+                threads = 4
+        if memory_limit is None:
+            memory_limit = os.getenv("DUCKDB_MEMORY_LIMIT", "2GB")
+
+        try:
+            from airtell.telemetry.storage import DuckDBBackend
+
+            self.duckdb_backend = DuckDBBackend(self.db_path, threads=threads, memory_limit=memory_limit)
+            self.enable_duckdb = True
+            return True
+        except Exception as e:
+            logger.debug("DuckDB backend attachment not enabled: %s", e)
+            self.duckdb_backend = None
+            self.enable_duckdb = False
+            return False
+
+    def disable_duckdb(self) -> None:
+        """Disable DuckDB acceleration and fall back strictly to SQLite."""
+        if self.duckdb_backend:
+            try:
+                self.duckdb_backend.close()
+            except Exception:
+                pass
+            self.duckdb_backend = None
+        self.enable_duckdb = False
+
+    def close(self) -> None:
+        """Close and release database backends."""
+        self.disable_duckdb()
+        if self._sqlite_backend is not None:
+            try:
+                self._sqlite_backend.close()
+            except Exception:
+                pass
+            self._sqlite_backend = None
+
+    @property
+    def backend(self) -> Any:
+        if self.enable_duckdb and self.duckdb_backend is not None:
+            return self.duckdb_backend
+        if self._sqlite_backend is None:
+            from airtell.telemetry.storage import SQLiteBackend
+
+            self._sqlite_backend = SQLiteBackend(self.db_path)
+        return self._sqlite_backend
+
+    def get_observations(
+        self,
+        limit: int = 1000,
+        network_type: Optional[str] = None,
+        search_query: Optional[str] = None,
+        channel: Optional[int] = None,
+        min_rssi: Optional[int] = None,
+        start_time: Optional[float] = None,
+        end_time: Optional[float] = None,
+        as_df: bool = False,
+    ) -> Any:
+        """Query observation records using accelerated backend."""
+        return self.backend.get_observations(
+            limit=limit,
+            network_type=network_type,
+            search_query=search_query,
+            channel=channel,
+            min_rssi=min_rssi,
+            start_time=start_time,
+            end_time=end_time,
+            as_df=as_df,
+        )
+
+    def get_rssi_timeseries(
+        self,
+        network_types: Optional[list[str]] = None,
+        min_rssi: Optional[int] = None,
+        limit: int = 2000,
+        as_df: bool = False,
+    ) -> Any:
+        """Retrieve chronological RSSI time series using accelerated backend."""
+        return self.backend.get_rssi_timeseries(
+            network_types=network_types,
+            min_rssi=min_rssi,
+            limit=limit,
+            as_df=as_df,
+        )
+
+    def get_channel_distribution(self) -> dict[int, int]:
+        """Compute packet observation count distribution across BLE channels."""
+        return self.backend.get_channel_distribution()
+
+    def get_tracker_frequencies(
+        self,
+        min_count: int = 1,
+        limit: int = 100,
+        as_df: bool = False,
+    ) -> Any:
+        """Aggregate tracker observation counts, signal stats, and time spans."""
+        return self.backend.get_tracker_frequencies(
+            min_count=min_count,
+            limit=limit,
+            as_df=as_df,
+        )
+
     def get_connection(self) -> sqlite3.Connection:
         return sqlite3.connect(self.db_path, timeout=10.0)
+
 
     def init_db(self) -> None:
         with self.get_connection() as conn:
@@ -740,24 +871,34 @@ class BLETrackerDB:
         now = time.time()
         cutoff = now - window_seconds
 
+        query = """
+            SELECT
+                COALESCE(NULLIF(TRIM(ephemeral_key), ''), mac_address) AS tracker_id,
+                network_type,
+                COUNT(*) as pkt_count,
+                MIN(timestamp) as first_seen,
+                MAX(timestamp) as last_seen,
+                MAX(rssi) as max_rssi,
+                AVG(rssi) as avg_rssi
+            FROM observations
+            WHERE timestamp >= ? AND network_type != 'Unknown'
+            GROUP BY tracker_id, network_type
+            HAVING pkt_count >= ? AND (last_seen - first_seen) >= ?
+        """
+        results = None
+        if self.enable_duckdb and self.duckdb_backend is not None:
+            try:
+                with getattr(self.duckdb_backend, "_lock", threading.RLock()):
+                    results = self.duckdb_backend.con.execute(query, [cutoff, min_observations, min_time_span]).fetchall()
+            except Exception as e:
+                logger.debug("DuckDB query failed (%s), falling back to SQLite", e)
+                results = None
+
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            query = """
-                SELECT
-                    COALESCE(NULLIF(ephemeral_key, ''), mac_address) AS tracker_id,
-                    network_type,
-                    COUNT(*) as pkt_count,
-                    MIN(timestamp) as first_seen,
-                    MAX(timestamp) as last_seen,
-                    MAX(rssi) as max_rssi,
-                    AVG(rssi) as avg_rssi
-                FROM observations
-                WHERE timestamp >= ? AND network_type != 'Unknown'
-                GROUP BY tracker_id
-                HAVING pkt_count >= ? AND (last_seen - first_seen) >= ?
-            """
-            cursor.execute(query, (cutoff, min_observations, min_time_span))
-            results = cursor.fetchall()
+            if results is None:
+                cursor.execute(query, (cutoff, min_observations, min_time_span))
+                results = cursor.fetchall()
 
             alerts: list[str] = []
             for row in results:
@@ -765,6 +906,7 @@ class BLETrackerDB:
                 # Suppress whitelisted identifiers
                 if self.is_whitelisted("ephemeral_key", tracker_id) or self.is_whitelisted("mac_address", tracker_id):
                     continue
+
 
                 duration_min = (last_s - first_s) / 60.0
 
@@ -832,30 +974,41 @@ class BLETrackerDB:
         effective_secret = webhook_secret if webhook_secret is not None else self.webhook_secret
         effective_desktop = enable_desktop_notify if enable_desktop_notify is not None else self.enable_desktop_notify
 
+        query = """
+            SELECT
+                COALESCE(NULLIF(TRIM(ephemeral_key), ''), mac_address) AS tracker_id,
+                network_type,
+                COUNT(*) as pkt_count,
+                MIN(timestamp) as first_seen,
+                MAX(timestamp) as last_seen,
+                MAX(rssi) as max_rssi,
+                AVG(rssi) as avg_rssi
+            FROM observations
+            WHERE timestamp >= ? AND network_type != 'Unknown'
+            GROUP BY tracker_id, network_type
+            HAVING pkt_count >= ? AND (last_seen - first_seen) >= ?
+        """
+        results = None
+        if self.enable_duckdb and self.duckdb_backend is not None:
+            try:
+                with getattr(self.duckdb_backend, "_lock", threading.RLock()):
+                    results = self.duckdb_backend.con.execute(query, [cutoff, min_observations, min_time_span]).fetchall()
+            except Exception as e:
+                logger.debug("DuckDB query failed (%s), falling back to SQLite", e)
+                results = None
+
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            query = """
-                SELECT
-                    COALESCE(NULLIF(TRIM(ephemeral_key), ''), mac_address) AS tracker_id,
-                    network_type,
-                    COUNT(*) as pkt_count,
-                    MIN(timestamp) as first_seen,
-                    MAX(timestamp) as last_seen,
-                    MAX(rssi) as max_rssi,
-                    AVG(rssi) as avg_rssi
-                FROM observations
-                WHERE timestamp >= ? AND network_type != 'Unknown'
-                GROUP BY tracker_id
-                HAVING pkt_count >= ? AND (last_seen - first_seen) >= ?
-            """
-            cursor.execute(query, (cutoff, min_observations, min_time_span))
-            results = cursor.fetchall()
+            if results is None:
+                cursor.execute(query, (cutoff, min_observations, min_time_span))
+                results = cursor.fetchall()
 
             alerts: list[dict[str, Any]] = []
             for row in results:
                 tracker_id, net_type, count, first_s, last_s, max_r, avg_r = row
                 if self.is_whitelisted("ephemeral_key", tracker_id) or self.is_whitelisted("mac_address", tracker_id):
                     continue
+
 
                 duration_sec = max(0.0, float(last_s - first_s))
                 duration_min = duration_sec / 60.0
@@ -883,6 +1036,7 @@ class BLETrackerDB:
                 if is_in_cooldown and deduplicate:
                     continue
 
+                avg_val = round(float(avg_r), 2) if avg_r is not None else 0.0
                 alert_dict: dict[str, Any] = {
                     "identifier": tracker_id,
                     "tracker_id": tracker_id,
@@ -894,8 +1048,8 @@ class BLETrackerDB:
                     "duration": round(duration_sec, 2),
                     "duration_seconds": round(duration_sec, 2),
                     "max_rssi": max_r,
-                    "avg_rssi": avg_r,
-                    "mean_rssi": avg_r,
+                    "avg_rssi": avg_val,
+                    "mean_rssi": avg_val,
                     "alert_level": alert_lvl,
                     "alert_message": msg,
                     "in_cooldown": is_in_cooldown,

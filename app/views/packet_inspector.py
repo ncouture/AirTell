@@ -86,6 +86,7 @@ def decode_ad_structures(payload_hex: str) -> list[dict[str, Any]]:
 def render_packet_inspector(
     conn: Optional[sqlite3.Connection],
     event_queue: Optional[EventQueue] = None,
+    backend: Optional[Any] = None,
 ) -> None:
     """Render the Deep Packet Inspector view."""
     st.subheader("🔍 Deep Packet Inspector & Protocol Dissection")
@@ -120,7 +121,22 @@ def render_packet_inspector(
         row_limit = st.selectbox("Max Packets:", options=[100, 250, 500, 1000], index=1)
 
     df_db = pd.DataFrame()
-    if conn:
+    db_loaded = False
+    if backend is not None:
+        try:
+            res = backend.get_observations(
+                limit=row_limit,
+                network_type=selected_net if selected_net != "All" else None,
+                search_query=search_query if search_query else None,
+                as_df=True,
+            )
+            df_db = res if isinstance(res, pd.DataFrame) else pd.DataFrame(res)
+            db_loaded = True
+        except Exception as e:
+            st.error(f"Error executing DuckDB packet query: {e}")
+            df_db = pd.DataFrame()
+
+    if not db_loaded and conn:
         query = """
         SELECT id, datetime_str, channel, mac_address, rssi, network_type, ephemeral_key, raw_payload
         FROM observations
@@ -142,6 +158,7 @@ def render_packet_inspector(
             df_db = pd.read_sql_query(query, conn, params=params)
         except Exception as e:
             st.error(f"Error executing packet query: {e}")
+
 
     # Filter live packets
     filtered_live = []

@@ -74,6 +74,7 @@ def render_alert_feed(
     conn: Optional[sqlite3.Connection],
     tracker_db: Optional[BLETrackerDB] = None,
     event_queue: Optional[EventQueue] = None,
+    backend: Optional[Any] = None,
 ) -> None:
     """Render the Multi-Level Alert Feed view with analyst triage capabilities."""
     st.subheader("🚨 Anti-Stalking Threat Feed & Triage")
@@ -116,7 +117,19 @@ def render_alert_feed(
                 })
 
     alerts_list: list[dict[str, Any]] = list(live_threats)
-    if conn:
+    db_loaded = False
+    if backend is not None:
+        try:
+            alerts_data = backend.get_alerts(limit=200)
+            for r in alerts_data:
+                item_dict = dict(r)
+                item_dict["is_live"] = False
+                alerts_list.append(item_dict)
+            db_loaded = True
+        except Exception as e:
+            st.error(f"Error loading alerts from DuckDB analytics backend: {e}")
+
+    if not db_loaded and conn:
         query = """
         SELECT id, datetime_str, timestamp, identifier, network_type,
                observation_count, first_seen, last_seen, max_rssi, alert_message
@@ -132,6 +145,7 @@ def render_alert_feed(
                 alerts_list.append(d)
         except Exception as e:
             st.error(f"Error loading alerts from database: {e}")
+
 
     if not alerts_list:
         st.success("No active anti-stalking threats logged in the current operational session.")

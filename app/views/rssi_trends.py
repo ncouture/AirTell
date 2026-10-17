@@ -99,6 +99,7 @@ def build_rssi_figure(df: pd.DataFrame) -> go.Figure:
 def render_rssi_trends(
     conn: Optional[sqlite3.Connection],
     event_queue: Optional[EventQueue] = None,
+    backend: Optional[Any] = None,
 ) -> None:
     """Render the RSSI Trends view with interactive filtering and Plotly graphs."""
     st.subheader("📈 RSSI Signal Strength & Tracker Trajectories")
@@ -129,7 +130,17 @@ def render_rssi_trends(
                 })
 
     df_db = pd.DataFrame()
-    if conn:
+    db_loaded = False
+    if backend is not None:
+        try:
+            res = backend.get_rssi_timeseries(limit=2000, as_df=True)
+            df_db = res if isinstance(res, pd.DataFrame) else pd.DataFrame(res)
+            db_loaded = True
+        except Exception as e:
+            st.error(f"Error loading signal telemetry from DuckDB analytics backend: {e}")
+            df_db = pd.DataFrame()
+
+    if not db_loaded and conn:
         query = """
         SELECT id, datetime_str, timestamp, mac_address, rssi, network_type,
                SUBSTR(COALESCE(NULLIF(ephemeral_key, ''), mac_address), 1, 16) as key_short,
@@ -143,6 +154,7 @@ def render_rssi_trends(
             df_db = pd.read_sql_query(query, conn)
         except Exception as e:
             st.error(f"Error loading signal telemetry from database: {e}")
+
 
     # 2. Combine historical DB records with live streaming packets
     frames_to_concat = []
