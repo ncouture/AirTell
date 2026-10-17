@@ -132,14 +132,27 @@ def handle_topology_a(args: argparse.Namespace) -> int:
             topo.stop()
 
     try:
+        if args.dev1 and args.dev2 and args.dev1 == args.dev2:
+            msg = f"Conflicting port allocation: Device 1 and Device 2 cannot share port '{args.dev1}'"
+            logger.error("Hardware setup failed: %s", msg)
+            print(f"ERROR: {msg}", file=sys.stderr)
+            return 1
+
+        single_requested = bool(getattr(args, "single_dongle", False) or (args.dev2 and not args.dev1))
+
         if args.mock:
-            topo = TopologyAOrchestrator.create_mock(observer_channel=args.chan)
+            topo = TopologyAOrchestrator.create_mock(
+                observer_channel=args.chan,
+                single_dongle=single_requested,
+            )
         else:
             try:
                 topo = TopologyAOrchestrator.create_hardware(
                     port1=args.dev1,
                     port2=args.dev2,
                     observer_channel=args.chan,
+                    allow_single=True,
+                    single_dongle=single_requested,
                 )
             except Exception as exc:
                 logger.error("Hardware setup failed: %s", exc)
@@ -154,9 +167,20 @@ def handle_topology_a(args: argparse.Namespace) -> int:
             print(f"ERROR: {exc}", file=sys.stderr)
             return 1
 
-        pal_mac = generate_palindromic_mac("static", seed=b"topo-a-static")
-        topo.set_stimulus_mac(pal_mac, is_random=True)
-        adv_payload = build_beacon_payload(args.burst_type)
+        is_passive = topo.is_single_dongle
+        pal_mac: bytes = b""
+        adv_payload: bytes = b""
+
+        if is_passive:
+            logger.info("Single-dongle passive capture mode active: stimulus injection is inactive.")
+            print("Notice: Single-dongle passive capture mode active (stimulus injection disabled).")
+            if args.correlate:
+                logger.info("Stimulus-response correlation disabled in single-dongle passive mode (no stimulus emitted).")
+                print("Notice: Correlation disabled in single-dongle passive mode (stimulus injection inactive).")
+        else:
+            pal_mac = generate_palindromic_mac("static", seed=b"topo-a-static")
+            topo.set_stimulus_mac(pal_mac, is_random=True)
+            adv_payload = build_beacon_payload(args.burst_type)
 
         if args.pcap:
             pcap_writer = PcapBleWriter(args.pcap)
@@ -164,7 +188,7 @@ def handle_topology_a(args: argparse.Namespace) -> int:
         if args.json or args.csv or args.correlate:
             telemetry_session = TelemetrySession(topology="Topology A")
 
-        if args.correlate:
+        if not is_passive and args.correlate:
             correlator = StimulusResponseCorrelator()
             correlator.register_stimulus(
                 adv_a=pal_mac,
@@ -174,13 +198,14 @@ def handle_topology_a(args: argparse.Namespace) -> int:
                 payload=adv_payload,
             )
 
-        topo.inject_beacon(adv_data=adv_payload, interval_ms=args.interval_ms, mode=2)
+        if not is_passive:
+            topo.inject_beacon(adv_data=adv_payload, interval_ms=args.interval_ms, mode=2)
 
         deadline = time.monotonic() + args.duration_sec
         next_mock_inject = time.monotonic() + (args.interval_ms / 1000.0)
 
         while time.monotonic() < deadline and not coord.is_shutting_down:
-            if args.mock and time.monotonic() >= next_mock_inject:
+            if not is_passive and args.mock and time.monotonic() >= next_mock_inject:
                 topo.inject_beacon(adv_data=adv_payload, interval_ms=args.interval_ms, mode=2)
                 next_mock_inject = time.monotonic() + max(0.02, args.interval_ms / 1000.0)
 
@@ -1176,6 +1201,12 @@ def create_parser(prog: str = "airtell") -> argparse.ArgumentParser:
     p_topo_a.add_argument("--json", type=str, default=None, help="Output JSON session telemetry path")
     p_topo_a.add_argument("--csv", type=str, default=None, help="Output CSV summary path")
     p_topo_a.add_argument("--correlate", action="store_true", help="Enable stimulus-response correlation engine")
+    p_topo_a.add_argument(
+        "--single-dongle",
+        "--single",
+        action="store_true",
+        help="Force single-dongle passive capture mode (stimulus injection disabled)",
+    )
 
     # 2. Topology B
     p_topo_b = subparsers.add_parser(

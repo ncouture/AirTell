@@ -269,8 +269,11 @@ python3 -m airtell.scripts.reset -s /dev/ttyUSB0
 Run passive advertising capture locked to channel 37, 38, or 39:
 
 ```bash
-# Passive packet capture locked to advertising channel 37
+# Passive packet capture locked to advertising channel 37 (single dongle on dev2)
 airtell topology-a --dev2 /dev/ttyUSB0 --chan 37 --pcap /tmp/chan37.pcap
+
+# Explicit single-dongle passive capture mode (stimulus injection disabled)
+airtell topology-a --single-dongle --chan 37 --pcap /tmp/chan37.pcap
 
 # Capture with target MAC address filter and RSSI threshold
 python3 -m airtell.scripts.sniff_receiver -s /dev/ttyUSB0 -m "AA:BB:CC:DD:EE:FF" -r -75 -o captures/target.pcap
@@ -319,6 +322,7 @@ Dual-device workflows coordinate two physical Sniffle dongles concurrently to ex
 
 The framework utilizes `allocate_dual_ports(dev1, dev2)` from `airtell.device.serial_port`:
 - When ports are omitted, it discovers connected devices via USB VID/PID and assigns two distinct devices.
+- When `allow_single=True` (used by `topology-a`), it gracefully falls back to single-dongle passive capture mode `(None, port)` if only 1 Sniffle dongle is connected or specified.
 - It guarantees invariant `dev1 != dev2`. If identical ports are specified, it exits with an allocation collision error.
 - It checks port availability with `lsof` before opening to prevent conflicting processes from corrupting the stream.
 
@@ -502,7 +506,7 @@ Usage: airtell topology-a [-h] [--dev1 DEV1] [--dev2 DEV2] [--mock]
                                    [--interval-ms INTERVAL_MS]
                                    [--duration-sec DURATION_SEC]
                                    [--pcap PCAP] [--json JSON] [--csv CSV]
-                                   [--correlate]
+                                   [--correlate] [--single-dongle]
 ```
 
 | Option Flag(s) | Type | Choices | Default | Required? | Help Description |
@@ -519,6 +523,7 @@ Usage: airtell topology-a [-h] [--dev1 DEV1] [--dev2 DEV2] [--mock]
 | `--json` | `str` | None | `None` | No | Output JSON session telemetry path |
 | `--csv` | `str` | None | `None` | No | Output CSV summary path |
 | `--correlate` | flag | None | `False` | No | Enable stimulus-response correlation engine |
+| `--single-dongle`, `--single` | flag | None | `False` | No | Force single-dongle passive capture mode (stimulus injection disabled) |
 
 ### 5.3 `topology-b`
 

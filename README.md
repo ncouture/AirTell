@@ -105,7 +105,7 @@ Sniffle performs [link-layer relaying](https://hardwear.io/netherlands-2022/pres
 - **Electronic Cats CatSniffer V3** (VID: `0x2E8A`, PID: `0x00C0`).
 
 ### Port Auto-Discovery & In-Use Verification
-The `discover_sniffle_ports()` and `allocate_dual_ports()` utilities automatically scan available serial interfaces, match hardware descriptors, and assign two distinct ports (`port1 != port2`) to Device 1 and Device 2 without manual configuration.
+The `discover_sniffle_ports()` and `allocate_dual_ports()` utilities automatically scan available serial interfaces, match hardware descriptors, and assign two distinct ports (`port1 != port2`) to Device 1 and Device 2 without manual configuration. When only a single dongle is present or specified, `allocate_dual_ports(allow_single=True)` enables single-dongle passive sniffing mode (`topology-a`) on the observer device while stimulus injection is gracefully deactivated.
 
 **Device Usage Validation (`lsof`):**
 To determine at all times whether a Sniffle device is open and being used:
