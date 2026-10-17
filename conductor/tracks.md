@@ -14,3 +14,7 @@
 - [x] **Track: Streamlit Exclusive-Use Side-Channel Visualizer Tab**
   *Link: [./tracks/sidechannel_dashboard_integration_20261016/index.md](./tracks/sidechannel_dashboard_integration_20261016/index.md)*
 
+- [x] **Track: Complete CLI Adversarial Ingestion and Live UART Injection**
+  *Link: [./tracks/cli_adversarial_completion_20261016/index.md](./tracks/cli_adversarial_completion_20261016/index.md)*
+
+

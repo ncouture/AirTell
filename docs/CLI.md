@@ -216,6 +216,23 @@ Active Analyzer Results:
 Mock simulation PASSED: 100% packet delivery fidelity verified across all primary channels.
 ```
 
+#### Trace Deanonymization Analysis (`deanonymize --mock`)
+```text
+Deanonymization Analysis: Reconstructed 3 trajectories across address rotations.
+Packets Processed: 3 total packets (3 valid advertising frames)
+
+--- Reconstructed Trajectories ---
+  Trajectory #1: 1 frames, 1 MAC(s) [AA:BB:CC:11:22:33], Network: Apple Find My, Confidence: 50%
+  Trajectory #2: 1 frames, 1 MAC(s) [40:AA:BB:CC:DD:11], Network: Apple Find My, Confidence: 50%
+  Trajectory #3: 1 frames, 1 MAC(s) [40:AA:BB:CC:DD:22], Network: Apple Find My, Confidence: 50%
+
+--- Address Rotation Desynchronization (1 events) ---
+  [MAC_ROTATED_KEY_PERSISTED] Prev MAC: 40:AA:BB:CC:DD:11 -> Curr MAC: 40:AA:BB:CC:DD:22 (delta: 40.00s, linkable: True)
+
+--- Static Identifier Leakage Warnings (1 findings) ---
+  [STATIC_MAC] Public/Static MAC address (AA:BB:CC:11:22:33) in use with rotating tracking key.
+```
+
 ---
 
 ## 3. Single-Device Scenarios (1 Sniffle Hardware Dongle)
@@ -289,7 +306,7 @@ airtell rogue-inject --port /dev/ttyUSB0 --network "Google Find Hub" --key "0102
 
 #### Rogue Beacon Injection (`rogue-inject`)
 ```text
-Injected 5 rogue beacon packets for network 'Apple Find My' on channel 37 via /dev/ttyUSB0.
+Injected 5 rogue beacon packets for network 'Apple Find My'.
 ```
 
 ---
@@ -596,6 +613,7 @@ Aliases: *(none)*
 Usage: airtell deanonymize [-h] [--pcap PCAP] [--mock]
                                     [--max-gap MAX_GAP]
                                     [--max-rssi-delta MAX_RSSI_DELTA]
+                                    [--json JSON] [--csv CSV]
 ```
 
 | Option Flag(s) | Type | Choices | Default | Required? | Help Description |
@@ -605,6 +623,8 @@ Usage: airtell deanonymize [-h] [--pcap PCAP] [--mock]
 | `--mock` | flag | None | `False` | No | Run on mock synthetic traces |
 | `--max-gap` | `float` | None | `30.0` | No | Max time gap for trajectory linkability in seconds |
 | `--max-rssi-delta` | `float` | None | `15.0` | No | Max RSSI delta for trajectory linkability in dBm |
+| `--json` | `str` | None | `None` | No | Output JSON analysis summary path (optional) |
+| `--csv` | `str` | None | `None` | No | Output CSV trajectories summary path (optional) |
 
 ### 5.8 `rogue-inject`
 
@@ -614,9 +634,11 @@ Aliases: *(none)*
 Usage: airtell rogue-inject [-h]
                                      [--network {Apple Find My,Google Find Hub,Samsung SmartThings Find,Tile}]
                                      [--count COUNT] [--interval INTERVAL]
-                                     [--jitter JITTER] [--port PORT]
-                                     [--channel {37,38,39}] [--key KEY]
-                                     [--mac MAC] [--mock]
+                                     [--interval-ms INTERVAL_MS]
+                                     [--jitter JITTER] [--jitter-ms JITTER_MS]
+                                     [--port PORT] [--channel {37,38,39}]
+                                     [--channels CHANNELS]
+                                     [--key KEY] [--mac MAC] [--mock]
 ```
 
 | Option Flag(s) | Type | Choices | Default | Required? | Help Description |
@@ -625,9 +647,12 @@ Usage: airtell rogue-inject [-h]
 | `--network` | `str` | `Apple Find My`, `Google Find Hub`, `Samsung SmartThings Find`, `Tile` | `"Apple Find My"` | No | Target tracking network |
 | `--count` | `int` | None | `5` | No | Number of packets to inject in burst |
 | `--interval` | `float` | None | `1.0` | No | Interval between packets in seconds |
+| `--interval-ms` | `int` | None | `None` | No | Interval between packets in milliseconds |
 | `--jitter` | `float` | None | `0.05` | No | Timing jitter in seconds |
+| `--jitter-ms` | `int` | None | `None` | No | Timing jitter in milliseconds |
 | `--port` | `str` | None | `"/dev/ttyUSB0"` | No | Serial port for injection |
 | `--channel` | `int` | `37`, `38`, `39` | `37` | No | Advertising channel |
+| `--channels` | `str` | None | `None` | No | Advertising channels comma-separated (e.g. '37,38,39') |
 | `--key` | `str` | None | `None` | No | Custom ephemeral public key hex string |
 | `--mac` | `str` | None | `None` | No | Custom MAC address |
 | `--mock` | flag | None | `False` | No | Simulate burst injection in mock mode |
