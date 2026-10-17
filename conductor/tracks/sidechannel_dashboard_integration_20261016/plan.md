@@ -49,4 +49,4 @@
   - [x] Update `tests/test_dashboard_views.py` tabs mock to accommodate 4th tab
   - [x] Run `uv run pytest` across full repository (all 1,090+ tests passing)
   - [x] Run `uv run ruff check` with zero warnings
-- [ ] Task: Close all Track 1 GitHub issues (Issue #7, #12, #19, #20, #21, #22, #23, #24, #38, #39, #40, #47, #54)
+- [x] Task: Close all Track 1 GitHub issues (Issue #7, #12, #19, #20, #21, #22, #23, #24, #38, #39, #40, #47, #54)

@@ -219,6 +219,13 @@ class SideChannelSuiteReport:
         devs_str = ", ".join(excl_devs) if excl_devs else "None (No confirmed exclusive devices)"
         time_str = time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(self.timestamp))
 
+        bat_rep = self.reports.get("bat_allowlist") or self.reports.get("bat")
+        is_bat_leakage = bat_rep is not None and bat_rep.verdict in (
+            Verdict.ALLOWLIST_CONFIRMED.value,
+            Verdict.DIRECTED_EXCLUSIVE.value,
+            Verdict.PROFILE_MATCH.value,
+        )
+
         lines = [
             "# AirTell – BLE Exclusive-Use Side-Channel Vulnerability Assessment Report",
             "",
@@ -237,7 +244,7 @@ class SideChannelSuiteReport:
             "| Metric | Empirical Target / Benchmark | Observed Result | Status |",
             "| :--- | :--- | :--- | :--- |",
             f"| **Overall Classification** | RPA Privacy Maintained | `{self.overall_verdict}` | {'🚨 VULNERABLE' if self.has_detections else '🛡️ SECURE'} |",
-            f"| **Timing Oracle Precision ($T_{{IFS}}$)** | $150\\,\\mu\\text{{s}} \\pm 2\\,\\mu\\text{{s}}$ | Observed in allowable window | {'⚠️ LEAKAGE' if 'bat' in self.reports and self.reports['bat'].verdict == Verdict.ALLOWLIST_CONFIRMED.value else '✅ COMPLIANT'} |",
+            f"| **Timing Oracle Precision ($T_{{IFS}}$)** | $150\\,\\mu\\text{{s}} \\pm 2\\,\\mu\\text{{s}}$ | Observed in allowable window | {'⚠️ LEAKAGE' if is_bat_leakage else '✅ COMPLIANT'} |",
             "| **False Positive Rate (FPR)** | $< 0.5\\%$ | $< 0.5\\%$ | ✅ PASS |",
             "| **False Negative Rate (FNR)** | $< 1.2\\%$ | $< 1.2\\%$ | ✅ PASS |",
             f"| **Monitored Exclusive Devices** | 0 (Indiscriminate) | `{len(self.confirmed_exclusive_devices)}` | {'⚠️ TRACKABLE' if self.confirmed_exclusive_devices else '✅ SECURE'} |",
@@ -252,8 +259,11 @@ class SideChannelSuiteReport:
             for name, rep in self.reports.items():
                 title_map = {
                     "differential_encryption": "Differential Encryption Initiation",
+                    "encryption": "Differential Encryption Initiation",
                     "csrk_counter": "CSRK 32-bit SignCounter Monotonicity & Tracking",
+                    "csrk": "CSRK 32-bit SignCounter Monotonicity & Tracking",
                     "bat_allowlist": "Bluetooth Address Tracking (BAT) Allowlist Timing Oracle",
+                    "bat": "Bluetooth Address Tracking (BAT) Allowlist Timing Oracle",
                 }
                 disp_title = title_map.get(name.lower(), name.upper())
                 badge = "🔴 VULNERABILITY DETECTED" if rep.verdict in DETECTION_VERDICTS else "🟢 BENIGN / UNCONFIRMED"

@@ -41,6 +41,7 @@ from app.views.adversarial_evaluation import (
     render_adversarial_evaluation,
     render_sidechannel_metrics,
     render_sidechannel_tab,
+    validate_and_parse_csrk,
 )
 
 
@@ -234,6 +235,7 @@ class TestPlotlyFigureGenerators:
                 "seq": 1,
                 "time": 100.0,
                 "delta_t_usec": 150.0,
+                "adv_interval_ms": 20.0,
                 "device_addr": "AA:BB:CC:DD:EE:02",
                 "peer_addr": "AA:BB:CC:DD:EE:01",
                 "classification": "Allowed Peer (T_IFS ~150µs)",
@@ -245,6 +247,45 @@ class TestPlotlyFigureGenerators:
         fig = build_timing_oracle_figure(data_points=points)
         assert len(fig.data) == 1
         assert fig.data[0].y[0] == 150.0
+
+    def test_build_timing_oracle_figure_interval_axis(self, mock_suite_report: SideChannelSuiteReport) -> None:
+        """Plotting with x_axis='interval' sets X-axis to Advertising Interval."""
+        fig = build_timing_oracle_figure(report=mock_suite_report, x_axis="interval")
+        assert "Advertising Interval vs Δt" in fig.layout.title.text
+        assert "Advertising / Connection Interval (ms)" in fig.layout.xaxis.title.text
+
+    def test_build_timing_oracle_figure_extra_mechanisms(self) -> None:
+        """Verify LL_CONNECTION_UPDATE and ADV_DIRECT_IND_BURST findings are plotted."""
+        from airtell.sidechannel import BatAllowlistFinding, SideChannelType
+        rep = SideChannelSuiteReport(timestamp=1729000000.0, total_packets=50)
+        f_conn = BatAllowlistFinding(
+            finding_type=SideChannelType.BAT_ALLOWLIST.value,
+            timestamp=1729000010.0,
+            device_addr="CONN_12345678",
+            target_addr="",
+            verdict=Verdict.PROFILE_MATCH.value,
+            confidence=0.85,
+            details={"mechanism": "LL_CONNECTION_UPDATE", "interval_ms": 45.0, "profile_tuple": (36, 0, 100)},
+        )
+        f_burst = BatAllowlistFinding(
+            finding_type=SideChannelType.BAT_ALLOWLIST.value,
+            timestamp=1729000020.0,
+            device_addr="AA:BB:CC:DD:EE:02",
+            target_addr="11:22:33:44:55:66",
+            verdict=Verdict.DIRECTED_EXCLUSIVE.value,
+            confidence=1.0,
+            details={"mechanism": "ADV_DIRECT_IND_BURST", "burst_count": 5},
+        )
+        rep.reports["bat_allowlist"] = AnalyzerReport(
+            analyzer_name="BatAllowlistAnalyzer",
+            verdict=Verdict.DIRECTED_EXCLUSIVE.value,
+            summary="Directed burst detected.",
+            findings=[f_conn, f_burst],
+        )
+        fig = build_timing_oracle_figure(report=rep, x_axis="interval")
+        trace_names = [t.name for t in fig.data]
+        assert any("Directed Adv Burst" in name for name in trace_names)
+        assert any("Connection Interval Profile" in name for name in trace_names)
 
     def test_build_csrk_trajectory_figure_empty(self) -> None:
         """Empty report generates a styled empty CSRK trajectory figure."""
@@ -370,8 +411,13 @@ class TestCachedPcapAndReportExports:
         assert report.has_detections is True
         assert report.overall_verdict == Verdict.PAIRED_SHARED_LTK.value
 
+    def test_cached_analyze_pcap_empty_raises(self) -> None:
+        """Cached PCAP analysis with empty byte buffer raises ValueError."""
+        with pytest.raises(ValueError, match="empty"):
+            cached_analyze_pcap(b"", ("encryption",))
+
     def test_markdown_summary_structure(self, mock_suite_report: SideChannelSuiteReport) -> None:
-        """Verify to_markdown_summary outputs expected Markdown structure and tables."""
+        """Verify to_markdown_summary outputs expected Markdown structure, tables, and leakage status."""
         md = mock_suite_report.to_markdown_summary()
         assert "# AirTell – BLE Exclusive-Use Side-Channel Vulnerability Assessment Report" in md
         assert "## 1. Executive Summary & PoPETs Empirical Indicators" in md
@@ -382,6 +428,8 @@ class TestCachedPcapAndReportExports:
         assert "CSRK 32-bit SignCounter Monotonicity" in md
         assert "Allowlist Timing Oracle" in md
         assert "AA:BB:CC:DD:EE:02" in md
+        # Confirms bugfix: BAT allowlist leakage detection triggers ⚠️ LEAKAGE
+        assert "⚠️ LEAKAGE" in md
 
     def test_json_serialization(self, mock_suite_report: SideChannelSuiteReport) -> None:
         """Verify to_json produces valid JSON with expected top-level keys."""
@@ -408,6 +456,15 @@ class TestSideChannelDashboardViewRendering:
         ):
             render_sidechannel_metrics(mock_suite_report)
             assert mock_metric.call_count >= 8
+            labels = [call[0][0] for call in mock_metric.call_args_list]
+            assert "Detection Accuracy" in labels
+            assert "False Positive Rate (FPR)" in labels
+            assert "False Negative Rate (FNR)" in labels
+            assert "Detections Count" in labels
+            assert "Monitored Sessions" in labels
+            assert "Oracle Detections" in labels
+            assert "CSRK Trajectories" in labels
+            assert "Handshake Success Rate" in labels
 
     def test_render_sidechannel_tab_empty_state(self) -> None:
         """Rendering when no report has been run displays info box and empty charts."""
@@ -518,6 +575,53 @@ class TestSideChannelDashboardViewRendering:
             assert "sc_last_report" in session_state
             assert session_state["sc_last_report"].total_packets == 1
 
+    def test_render_sidechannel_tab_invalid_csrk_warning(self) -> None:
+        """Invalid CSRK input renders warning and prevents crash."""
+        with (
+            patch("streamlit.markdown"),
+            patch("streamlit.caption"),
+            patch("streamlit.radio", return_value="📁 Offline PCAP/PCAPNG Upload"),
+            patch("streamlit.columns", side_effect=mock_columns),
+            patch("streamlit.text_input", side_effect=["", "not_a_valid_hex"]),
+            patch("streamlit.multiselect", return_value=["Differential Encryption"]),
+            patch("streamlit.file_uploader", return_value=None),
+            patch("streamlit.session_state", {}),
+            patch("streamlit.warning") as mock_warn,
+            patch("streamlit.info"),
+            patch("streamlit.plotly_chart"),
+            patch("streamlit.dataframe"),
+            patch("streamlit.divider"),
+        ):
+            render_sidechannel_tab()
+            mock_warn.assert_called_once()
+            assert "CSRK must be exactly 32" in mock_warn.call_args[0][0]
+
+    def test_render_sidechannel_tab_empty_pcap_error(self) -> None:
+        """Uploading empty 0-byte file shows error and clears session state."""
+        mock_file = MagicMock()
+        mock_file.getvalue.return_value = b""
+        mock_file.name = "empty.pcap"
+        session_state = {"sc_last_report": "stale"}
+        with (
+            patch("streamlit.markdown"),
+            patch("streamlit.caption"),
+            patch("streamlit.radio", return_value="📁 Offline PCAP/PCAPNG Upload"),
+            patch("streamlit.columns", side_effect=mock_columns),
+            patch("streamlit.text_input", return_value=""),
+            patch("streamlit.multiselect", return_value=["Differential Encryption"]),
+            patch("streamlit.file_uploader", return_value=mock_file),
+            patch("streamlit.session_state", session_state),
+            patch("streamlit.error") as mock_err,
+            patch("streamlit.info"),
+            patch("streamlit.plotly_chart"),
+            patch("streamlit.dataframe"),
+            patch("streamlit.divider"),
+        ):
+            render_sidechannel_tab()
+            mock_err.assert_called_once()
+            assert "empty (0 bytes)" in mock_err.call_args[0][0]
+            assert "sc_last_report" not in session_state
+
     def test_render_adversarial_evaluation_includes_4th_tab(self) -> None:
         """Validate render_adversarial_evaluation initializes 4 tabs including Exclusive-Use Side-Channels."""
         mock_tabs = [MagicMock(), MagicMock(), MagicMock(), MagicMock()]
@@ -550,3 +654,37 @@ class TestSideChannelDashboardViewRendering:
             render_adversarial_evaluation(conn=None)
             assert len(captured_tabs) == 4
             assert "⚡ Exclusive-Use Side-Channels" in captured_tabs[3]
+
+
+# =============================================================================
+# 6. CSRK Validation & Error Boundary Tests
+# =============================================================================
+class TestCsrkValidation:
+    """Tests verifying CSRK hex input parsing and validation rules."""
+
+    def test_validate_and_parse_csrk_valid(self) -> None:
+        raw_hex = "00112233445566778899aabbccddeeff"
+        b, err = validate_and_parse_csrk(raw_hex)
+        assert err is None
+        assert b == bytes.fromhex(raw_hex)
+
+    def test_validate_and_parse_csrk_with_delimiters(self) -> None:
+        delimited = "00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF"
+        b, err = validate_and_parse_csrk(delimited)
+        assert err is None
+        assert len(b) == 16
+
+    def test_validate_and_parse_csrk_invalid_hex(self) -> None:
+        b, err = validate_and_parse_csrk("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz")
+        assert b is None
+        assert "Invalid hexadecimal" in err
+
+    def test_validate_and_parse_csrk_wrong_length(self) -> None:
+        b, err = validate_and_parse_csrk("1234")
+        assert b is None
+        assert "must be exactly 32" in err
+
+    def test_validate_and_parse_csrk_none_or_empty(self) -> None:
+        assert validate_and_parse_csrk(None) == (None, None)
+        assert validate_and_parse_csrk("") == (None, None)
+        assert validate_and_parse_csrk("   ") == (None, None)
