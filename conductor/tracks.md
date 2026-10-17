@@ -25,3 +25,6 @@
 
 - [x] **Track: Embedded DuckDB High-Throughput Analytics Engine**
   *Link: [./tracks/duckdb_high_throughput_analytics_20261016/index.md](./tracks/duckdb_high_throughput_analytics_20261016/index.md)*
+
+- [x] **Track: GitHub Issue & Conductor Track Commit/Branch/PR Traceability**
+  *Link: [./tracks/github_issue_traceability_20261017/index.md](./tracks/github_issue_traceability_20261017/index.md)*
