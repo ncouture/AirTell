@@ -17,6 +17,7 @@ EXPECTED_COMMITS = {
     "track_3": "4140e9840b71743af686b21e4588f4148efd675f",
     "track_4": "5d525b8137bb01fe6d5972ffff158dd2d6a3f83e",
     "track_5": "c74cedca99e580e26b6af7b61ca7d4038095310e",
+    "traceability": "0581d4150d954ddffa5b7ae6491da861e097ec89",
 }
 
 TRACK_ISSUE_MAPPING = {
@@ -51,6 +52,29 @@ TRACK_ISSUE_MAPPING = {
 }
 
 
+def parse_spec_traceability_matrix() -> dict[int, dict[str, object]]:
+    """Parse the 51-row markdown traceability matrix from github_issue_traceability_20261017/spec.md."""
+    spec_path = CONDUCTOR_TRACKS_DIR / "github_issue_traceability_20261017" / "spec.md"
+    spec_text = spec_path.read_text(encoding="utf-8")
+    matrix: dict[int, dict[str, object]] = {}
+    for line in spec_text.splitlines():
+        if not line.startswith("| `#"):
+            continue
+        cells = [cell.strip() for cell in line.split("|")[1:-1]]
+        assert len(cells) == 6, f"Malformed table row in spec.md: {line}"
+        issue_num = int(cells[0].strip("`#"))
+        commits = re.findall(r"\b[0-9a-f]{40}\b", cells[4])
+        files = re.findall(r"`([^`]+)`", cells[5])
+        matrix[issue_num] = {
+            "track_col": cells[1],
+            "branch": cells[2].strip("`"),
+            "pr": cells[3],
+            "commits": commits,
+            "files": files,
+        }
+    return matrix
+
+
 def test_all_51_issues_partitioned_without_gaps_or_duplicates() -> None:
     """Verify that issue #5 plus issues #7-#56 (51 total) are uniquely and completely mapped."""
     track_issues: list[int] = []
@@ -77,8 +101,16 @@ def test_resolving_commits_exist_in_git_history() -> None:
 
 
 def test_conductor_track_plans_have_checkpoints_and_traceability() -> None:
-    """Verify each of the 5 Track plan.md files has checkpoint SHAs, branch, PR #58, and issue IDs."""
-    for track_id, info in TRACK_ISSUE_MAPPING.items():
+    """Verify each of the 5 Track plan.md files and the traceability track plan.md have valid checkpoints."""
+    all_tracks_to_verify = {
+        **TRACK_ISSUE_MAPPING,
+        "github_issue_traceability_20261017": {
+            "epic": 5,
+            "issues": [5, *range(7, 57)],
+            "commits": [EXPECTED_COMMITS["traceability"]],
+        },
+    }
+    for track_id, info in all_tracks_to_verify.items():
         track_dir = CONDUCTOR_TRACKS_DIR / track_id
         assert track_dir.is_dir(), f"Missing track directory: {track_dir}"
 
@@ -91,7 +123,7 @@ def test_conductor_track_plans_have_checkpoints_and_traceability() -> None:
         assert len(checkpoints) >= 3, f"Expected phase checkpoints in {plan_file}"
 
         # Verify traceability section references branch, PR #58, and full commit SHAs
-        assert "## Git & GitHub Traceability" in plan_text
+        assert "## Git & GitHub Traceability" in plan_text, f"Missing traceability section in {plan_file}"
         assert "feat/ble-exposure" in plan_text
         assert "#58" in plan_text
         for sha in info["commits"]:  # type: ignore[union-attr]
@@ -103,8 +135,8 @@ def test_conductor_track_plans_have_checkpoints_and_traceability() -> None:
             assert f"#{issue_num}" in plan_text, f"Issue #{issue_num} not referenced in {plan_file}"
 
 
-def test_traceability_track_spec_covers_all_51_issues() -> None:
-    """Verify the github_issue_traceability_20261017 track artifacts and 51-issue matrix."""
+def test_traceability_track_spec_covers_all_51_issues_and_verifies_commit_diffs() -> None:
+    """Verify the 51-issue matrix in spec.md has valid commits and files actually touched by those commits."""
     trace_dir = CONDUCTOR_TRACKS_DIR / "github_issue_traceability_20261017"
     assert trace_dir.is_dir()
 
@@ -112,10 +144,51 @@ def test_traceability_track_spec_covers_all_51_issues() -> None:
     assert meta["track_id"] == "github_issue_traceability_20261017"
     assert meta["status"] == "completed"
 
-    spec_text = (trace_dir / "spec.md").read_text(encoding="utf-8")
-    all_issues = [5, *range(7, 57)]
-    for issue_num in all_issues:
-        assert f"| `#{issue_num}` |" in spec_text, f"Issue #{issue_num} missing from spec.md matrix"
-
     tracks_registry = (REPO_ROOT / "conductor" / "tracks.md").read_text(encoding="utf-8")
     assert "github_issue_traceability_20261017" in tracks_registry
+
+    # Map each issue to its expected track commits
+    expected_issue_commits: dict[int, list[str]] = {
+        5: list(EXPECTED_COMMITS.values()),
+    }
+    for info in TRACK_ISSUE_MAPPING.values():
+        for inum in info["issues"]:  # type: ignore[union-attr]
+            expected_issue_commits[int(inum)] = list(info["commits"])  # type: ignore[arg-type]
+
+    # Cache git diff file sets per commit SHA
+    commit_changed_files: dict[str, set[str]] = {}
+    for sha in EXPECTED_COMMITS.values():
+        res = subprocess.run(
+            ["git", "show", "--name-only", "--pretty=format:", sha],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        commit_changed_files[sha] = {line.strip() for line in res.stdout.splitlines() if line.strip()}
+
+    matrix = parse_spec_traceability_matrix()
+    all_issues = [5, *range(7, 57)]
+    assert sorted(matrix.keys()) == all_issues
+
+    for issue_num in all_issues:
+        row = matrix[issue_num]
+        assert row["branch"] == "feat/ble-exposure"
+        assert "#58" in str(row["pr"])
+        row_commits: list[str] = row["commits"]  # type: ignore[assignment]
+        assert row_commits == expected_issue_commits[issue_num], (
+            f"Issue #{issue_num} commits in spec.md ({row_commits}) != expected ({expected_issue_commits[issue_num]})"
+        )
+
+        row_files: list[str] = row["files"]  # type: ignore[assignment]
+        assert len(row_files) >= 1, f"Issue #{issue_num} has no attributed files in spec.md"
+
+        union_changed = set()
+        for sha in row_commits:
+            union_changed.update(commit_changed_files[sha])
+
+        for rel_file in row_files:
+            assert (REPO_ROOT / rel_file).is_file(), f"Issue #{issue_num} file {rel_file} does not exist on disk"
+            assert rel_file in union_changed, (
+                f"Issue #{issue_num} file {rel_file} was NOT modified in commits {[s[:7] for s in row_commits]}"
+            )
