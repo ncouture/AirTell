@@ -397,6 +397,61 @@ Validates link-layer transmission using two Sniffle boards connected to the same
    python3 scripts/pcap_decoder.py -q /tmp/decrypted_pairing.pcapng
    ```
 
+### Workflow 4: Real-Time Anti-Stalking Threat Detection with Webhooks & Desktop Notifications
+
+Deploys `ble_antistalking_tracker.py` to monitor crowdsourced BLE tracking beacons (Apple Find My, Google Find Hub, Tile, Samsung SmartThings Find) on primary advertising channel 37, record observations in SQLite, and dispatch alerts to a security webhook endpoint and local desktop notifications:
+
+1. Start a local or remote webhook endpoint to receive threat alerts (example receiver below):
+   ```python
+   # webhook_receiver.py
+   import hashlib
+   import hmac
+   from http.server import BaseHTTPRequestHandler, HTTPServer
+
+   SECRET = "s3cr3t_antistalking_k3y"
+
+   class AlertHandler(BaseHTTPRequestHandler):
+       def do_POST(self):
+           length = int(self.headers.get("Content-Length", 0))
+           body = self.rfile.read(length)
+           sig = self.headers.get("X-Signature-SHA256", "")
+           expected = hmac.new(SECRET.encode(), body, hashlib.sha256).hexdigest()
+           if hmac.compare_digest(sig, expected):
+               print(f"[+] Verified threat alert received: {body.decode()}")
+               self.send_response(200)
+           else:
+               print("[-] Invalid signature!")
+               self.send_response(403)
+           self.end_headers()
+
+   HTTPServer(("0.0.0.0", 8080), AlertHandler).serve_forever()
+   ```
+
+2. Launch the anti-stalking tracker with webhook and desktop alerts enabled:
+   ```bash
+   python3 scripts/ble_antistalking_tracker.py \
+       -s /dev/ttyUSB0 \
+       -c 37 \
+       -db data/antistalking.db \
+       --webhook-url http://localhost:8080/alert \
+       --webhook-secret "s3cr3t_antistalking_k3y" \
+       --enable-desktop-notify
+   ```
+
+3. Environment variable bindings can alternatively be placed in `.env`:
+   ```bash
+   export WEBHOOK_URL="http://localhost:8080/alert"
+   export WEBHOOK_SECRET="s3cr3t_antistalking_k3y"
+   export DESKTOP_NOTIFY="1"
+   python3 scripts/ble_antistalking_tracker.py -s /dev/ttyUSB0 -c 37
+   ```
+
+4. When persistent beacons are observed across rotating MAC addresses for $\ge 5$ minutes and $\ge 5$ packets:
+   - An alert record is saved into the SQLite database `alerts` table.
+   - A signed JSON payload is posted to the webhook endpoint.
+   - An OS desktop notification is displayed via `notify-send` (Linux), `osascript` (macOS), or PowerShell (Windows).
+   - Duplicate alerts are deduplicated during a 5-minute cooldown window.
+
 ---
 
 ## CLI Reference Summary Table

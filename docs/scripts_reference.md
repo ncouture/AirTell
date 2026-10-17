@@ -44,16 +44,56 @@ This document provides a comprehensive operational and technical reference for a
 
 ### 2. `ble_antistalking_tracker.py`
 * **Purpose**: Anti-stalking engine and SQLite database logger for crowdsourced tracker networks (Apple Find My, Google Find Hub, Tile, and Samsung SmartThings Find).
-* **Mechanism**: Spawns `sniff_receiver.py` as a subprocess, ingests raw advertising lines via `SniffleLineParser`, extracts rotating cryptographic keys, inserts records into `observations` table, and runs sliding-window heuristics to flag persistent tags across rotating MAC addresses. Dispatches SMS alerts via Twilio when alert thresholds are met.
+* **Mechanism**: Spawns `sniff_receiver.py` as a subprocess, ingests raw advertising lines via `SniffleLineParser`, extracts rotating cryptographic keys, inserts records into `observations` table, and runs sliding-window heuristics to flag persistent tags across rotating MAC addresses. Dispatches real-time alerts via HTTP webhooks (with HMAC SHA-256 signatures), native OS desktop notifications (Linux `notify-send`, macOS `osascript`, Windows PowerShell), and optional SMS alerts via Twilio.
 * **Usage**:
   ```bash
-  python3 scripts/ble_antistalking_tracker.py -p /dev/ttyUSB0 -c 37 -db data/ble_tracker.db
+  python3 scripts/ble_antistalking_tracker.py -s /dev/ttyUSB0 -c 37 -db data/ble_tracker.db \
+      --webhook-url https://security.corp.internal/ble-alerts \
+      --webhook-secret "s3cr3t_antistalking_k3y" \
+      --enable-desktop-notify
   ```
 * **Options**:
-  - `-p`, `--serial-port`: Serial device port (default: `/dev/ttyUSB0`).
+  - `-s`, `--serial-port`: Serial device port (default: `/dev/ttyUSB0`).
   - `-c`, `--channel`: Primary advertising channel (37, 38, or 39).
-  - `-db`, `--database`: SQLite database destination path.
+  - `-db`, `--database`: SQLite database destination path (or `DATABASE` env var).
+  - `--webhook-url`: Destination HTTP/HTTPS webhook URL for alert POST requests (or `WEBHOOK_URL` env var).
+  - `--webhook-secret`: Shared secret for HMAC-SHA256 signature verification (`X-Signature-SHA256`) and Bearer authentication (`Authorization: Bearer <secret>`) (or `WEBHOOK_SECRET` env var).
+  - `--enable-desktop-notify`: Enable native OS desktop notifications (or `DESKTOP_NOTIFY=1` env var).
   - `--twilio-sid`, `--twilio-token`, `--twilio-from`, `--twilio-to`: Twilio SMS credentials and phone numbers.
+
+* **Webhook Payload Schema**:
+  The HTTP POST payload is delivered as a JSON body with the following schema:
+  ```json
+  {
+    "timestamp": 1700000000.0,
+    "timestamp_iso": "2023-11-14T22:13:20+00:00",
+    "tracker_id": "0102030405060708090a0b0c",
+    "network_type": "Apple Find My",
+    "packet_count": 8,
+    "duration": 600.0,
+    "duration_seconds": 600.0,
+    "max_rssi": -55,
+    "mean_rssi": -62.4,
+    "avg_rssi": -62.4,
+    "alert_level": "CRITICAL",
+    "alert_message": "POSSIBLE STALKER DETECTED: Apple Find My beacon seen 8 times over 10.0 mins (Max RSSI: -55 dBm)"
+  }
+  ```
+
+* **HMAC Signature Verification**:
+  Receiving webhook endpoints can verify authenticity by computing the HMAC-SHA256 hex digest of the raw HTTP request body against the shared secret:
+  ```python
+  import hmac, hashlib
+
+  computed_sig = hmac.new(secret.encode("utf-8"), request_body_bytes, hashlib.sha256).hexdigest()
+  is_valid = hmac.compare_digest(computed_sig, request.headers.get("X-Signature-SHA256", ""))
+  ```
+
+* **Desktop Notifications & Headless Fallback**:
+  - **Linux**: Dispatches high-urgency notifications using `notify-send -u critical`. Gracefully falls back (skips execution without error) when running headlessly without `DISPLAY` or `WAYLAND_DISPLAY`, or when the binary is not installed.
+  - **macOS**: Dispatches native notifications via AppleScript (`osascript`).
+  - **Windows**: Dispatches alert popups using PowerShell `System.Windows.Forms.MessageBox` or Windows `ctypes`.
+  - **Deduplication Cooldown**: Alert storms are suppressed using a configurable 300-second (5-minute) cooldown window recorded in the SQLite `alerts` table.
 
 ---
 
