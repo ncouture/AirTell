@@ -27,6 +27,7 @@ A public Google Notebook containing architectural notes, research references, an
 - [Mock Simulation & Offline Harness](#mock-simulation--offline-harness)
 - [Wire Protocol & Line Framing](#wire-protocol--line-framing)
 - [Installation & Quick Start](#installation--quick-start)
+  - [Adversarial Evaluation & CLI Quick Start](#adversarial-evaluation--cli-quick-start)
 - [Running Tests](#running-tests)
 - [Project Layout](#project-layout)
 
@@ -104,7 +105,7 @@ Sniffle performs [link-layer relaying](https://hardwear.io/netherlands-2022/pres
 - **Electronic Cats CatSniffer V3** (VID: `0x2E8A`, PID: `0x00C0`).
 
 ### Port Auto-Discovery & In-Use Verification
-The `discover_sniffle_ports()` and `allocate_dual_ports()` utilities automatically scan available serial interfaces, match hardware descriptors, and assign two distinct ports (`port1 != port2`) to Device 1 and Device 2 without manual configuration.
+The `discover_sniffle_ports()` and `allocate_dual_ports()` utilities automatically scan available serial interfaces, match hardware descriptors, and assign two distinct ports (`port1 != port2`) to Device 1 and Device 2 without manual configuration. When only a single dongle is present or specified, `allocate_dual_ports(allow_single=True)` enables single-dongle passive sniffing mode (`topology-a`) on the observer device while stimulus injection is gracefully deactivated.
 
 **Device Usage Validation (`lsof`):**
 To determine at all times whether a Sniffle device is open and being used:
@@ -120,6 +121,7 @@ The application checks this status continuously via `airtell.device.serial_port.
 
 Full technical documentation is centralized in [`docs/`](docs/):
 - [**Documentation Index**](docs/index.md): Central navigation hub.
+- [**Unified CLI Reference & Adversarial Ingestion**](docs/CLI.md): Complete CLI reference for topologies, side-channels, deanonymization, and rogue injection.
 - [**Link Layer Traffic Relay Specifications**](docs/relay_specifications.md): Master/Slave topology on USB0/USB1.
 - [**Device Status & LSOF Validation**](docs/device_status.md): In-use determination mechanics.
 - [**Scripts Directory Reference**](docs/scripts_reference.md): Complete guide to all scripts in `scripts/`.
@@ -180,6 +182,22 @@ cd airtell
 
 # Install in editable mode with development dependencies
 pip install -e .[test]
+```
+
+### Adversarial Evaluation & CLI Quick Start
+
+```bash
+# Run trace deanonymization analysis on simulated multi-tag rotation traces
+airtell deanonymize --mock
+
+# Ingest an offline PCAP capture for trajectory reconstruction and static leakage detection
+airtell deanonymize --pcap captures/session.pcap --max-gap 30.0 --max-rssi-delta 15.0
+
+# Simulate rogue tracking beacon injection bursts in software
+airtell rogue-inject --mock --network "Apple Find My" --count 5
+
+# Over-the-air rogue beacon injection with multi-channel hopping and jitter
+airtell rogue-inject --port /dev/ttyUSB0 --network "Google Find Hub" --count 10 --interval-ms 200 --channels 37,38,39
 ```
 
 ---

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import collections
 import threading
+import time
 from typing import Any
 
 import streamlit as st
@@ -106,6 +107,18 @@ class EventQueue:
         with self._lock:
             return len(self._deque)
 
+    def push_packet(self, pkt: Any) -> bool:
+        """Convert a BLE packet into an EventQueue dictionary and push it.
+
+        Args:
+            pkt: PacketMessage, dict, or BLE packet-like object.
+
+        Returns:
+            True on successful push.
+        """
+        item = packet_to_event_dict(pkt)
+        return self.push(item)
+
     def is_empty(self) -> bool:
         """Check if queue is empty.
 
@@ -121,6 +134,111 @@ class EventQueue:
             self._deque.clear()
 
 
+def packet_to_event_dict(pkt: Any) -> dict[str, Any]:
+    """Convert a PacketMessage or raw BLE packet structure into an EventQueue dictionary.
+
+    Args:
+        pkt: PacketMessage, dict, or object with BLE frame fields.
+
+    Returns:
+        Structured observation dictionary ready for EventQueue ingestion.
+    """
+    if isinstance(pkt, dict):
+        out = dict(pkt)
+        if "timestamp" not in out:
+            out["timestamp"] = time.time()
+        if "datetime_str" not in out:
+            out["datetime_str"] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(out["timestamp"]))
+        if "channel" not in out:
+            out["channel"] = 37
+        if "rssi" not in out:
+            out["rssi"] = -60
+        if "mac_address" not in out:
+            out["mac_address"] = "00:00:00:00:00:00"
+        if "network_type" not in out:
+            out["network_type"] = "Unknown"
+        if "ephemeral_key" not in out:
+            out["ephemeral_key"] = ""
+        if "raw_payload" not in out:
+            out["raw_payload"] = ""
+        return out
+
+    now = time.time()
+    if hasattr(pkt, "ts_epoch") and isinstance(pkt.ts_epoch, (int, float)) and pkt.ts_epoch > 0:
+        ts_val = float(pkt.ts_epoch)
+    elif hasattr(pkt, "timestamp") and isinstance(pkt.timestamp, (int, float)) and pkt.timestamp > 0:
+        ts_val = float(pkt.timestamp)
+    else:
+        ts_val = now
+
+    datetime_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ts_val))
+    chan = int(getattr(pkt, "chan", getattr(pkt, "channel", 37)))
+    rssi = int(getattr(pkt, "rssi", -60))
+
+    body = getattr(pkt, "body", b"")
+    if not isinstance(body, (bytes, bytearray)):
+        if isinstance(body, str):
+            try:
+                body = bytes.fromhex(body)
+            except ValueError:
+                body = b""
+        else:
+            body = b""
+
+    raw_payload_hex = bytes(body).hex()
+    mac_str = "00:00:00:00:00:00"
+    adv_payload_hex = ""
+
+    if len(body) >= 8:
+        adv_a_bytes = body[2:8]
+        mac_str = ":".join(f"{b:02X}" for b in reversed(adv_a_bytes))
+        adv_payload_hex = body[8:].hex()
+    elif len(body) > 0:
+        adv_payload_hex = body.hex()
+
+    net_type = "Unknown"
+    eph_key = ""
+    try:
+        from airtell.scripts.ble_antistalking_tracker import classify_payload
+
+        net_type, eph_key = classify_payload(adv_payload_hex or raw_payload_hex)
+        if net_type == "Tile Tracker":
+            net_type = "Tile"
+    except Exception:
+        pass
+
+    if net_type == "Unknown":
+        payload_lower = (adv_payload_hex or raw_payload_hex).lower()
+        if "4c000215" in payload_lower or "4c001219" in payload_lower:
+            net_type = "Apple Find My"
+            idx = payload_lower.find("4c000215") if "4c000215" in payload_lower else payload_lower.find("4c001219")
+            eph_key = payload_lower[idx + 8 : idx + 8 + 32]
+        elif "fe9f" in payload_lower or "feaa" in payload_lower:
+            net_type = "Google Find Hub"
+            idx = payload_lower.find("fe9f") if "fe9f" in payload_lower else payload_lower.find("feaa")
+            eph_key = payload_lower[idx : idx + 32]
+        elif "feed" in payload_lower:
+            net_type = "Tile"
+            idx = payload_lower.find("feed")
+            eph_key = payload_lower[idx : idx + 32]
+        elif "7500" in payload_lower:
+            net_type = "Samsung SmartThings Find"
+            idx = payload_lower.find("7500")
+            eph_key = payload_lower[idx : idx + 32]
+
+    return {
+        "timestamp": ts_val,
+        "datetime_str": datetime_str,
+        "channel": chan,
+        "rssi": rssi,
+        "mac_address": mac_str,
+        "network_type": net_type,
+        "ephemeral_key": eph_key,
+        "raw_payload": adv_payload_hex or raw_payload_hex,
+        "raw_bytes": bytes(body),
+    }
+
+
 @st.cache_resource
 def get_event_queue() -> EventQueue:
     """Obtain or initialize the application-wide singleton EventQueue.
@@ -129,3 +247,4 @@ def get_event_queue() -> EventQueue:
         Shared EventQueue instance.
     """
     return EventQueue(maxsize=10000)
+

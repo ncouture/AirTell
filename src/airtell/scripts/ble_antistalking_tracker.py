@@ -12,28 +12,568 @@ sliding-window heuristics and alert dispatching (including optional Twilio SMS /
 from __future__ import annotations
 
 import argparse
+import hashlib
+import hmac
+import json
+import logging
 import os
 import re
+import shutil
 import sqlite3
 import subprocess
 import sys
+import threading
 import time
-from datetime import datetime
+import urllib.error
+import urllib.request
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from dotenv import load_dotenv
 
 load_dotenv()  # project root's .env
 
-class BLETrackerDB:
-    """Thread-safe SQLite database manager for BLE observations and anti-stalking alerts."""
+logger = logging.getLogger("airtell.tracker")
 
-    def __init__(self, db_path: str) -> None:
+
+# Concurrency guard to prevent thread starvation under heavy burst loads
+_DISPATCH_SEMAPHORE = threading.BoundedSemaphore(value=16)
+
+
+def format_webhook_payload(alert_data: Any) -> dict[str, Any]:
+    """Formats an alert dictionary or string into a standardized JSON-serializable webhook payload.
+
+    Schema conforms to:
+    - timestamp (unix float) and timestamp_iso (ISO 8601 UTC string)
+    - tracker_id (ephemeral public key fragment or MAC address)
+    - network_type (Apple Find My, Google Find Hub, Tile, etc.)
+    - packet_count (int)
+    - duration and duration_seconds (float, in seconds)
+    - max_rssi (int, in dBm)
+    - mean_rssi and avg_rssi (float, in dBm)
+    - alert_level (HIGH or CRITICAL)
+    - alert_message (human-readable string summary)
+    """
+    now = time.time()
+    if not isinstance(alert_data, dict):
+        msg = str(alert_data or "")
+        return {
+            "timestamp": now,
+            "timestamp_iso": datetime.now(tz=timezone.utc).isoformat(),
+            "tracker_id": "Unknown",
+            "network_type": "Unknown",
+            "packet_count": 0,
+            "duration": 0.0,
+            "duration_seconds": 0.0,
+            "max_rssi": 0,
+            "mean_rssi": 0.0,
+            "avg_rssi": 0.0,
+            "alert_level": "HIGH",
+            "alert_message": msg,
+        }
+
+    def _safe_float(val: Any, default: float = 0.0) -> float:
+        if val is None:
+            return default
+        try:
+            return float(val)
+        except (ValueError, TypeError):
+            return default
+
+    def _safe_int(val: Any, default: int = 0) -> int:
+        if val is None:
+            return default
+        try:
+            return int(val)
+        except (ValueError, TypeError):
+            return default
+
+    def _safe_str(val: Any, default: str = "") -> str:
+        if val is None:
+            return default
+        s = str(val).strip()
+        return s if s else default
+
+    raw_ts = alert_data.get("timestamp")
+    ts = _safe_float(raw_ts, now)
+    try:
+        iso_ts = datetime.fromtimestamp(ts, tz=timezone.utc).isoformat()
+    except Exception:
+        iso_ts = datetime.now(tz=timezone.utc).isoformat()
+
+    first_s = _safe_float(alert_data.get("first_seen"), ts)
+    last_s = _safe_float(alert_data.get("last_seen"), ts)
+
+    raw_dur = alert_data.get("duration")
+    if raw_dur is None:
+        raw_dur = alert_data.get("duration_seconds")
+    if raw_dur is None:
+        raw_dur = max(0.0, last_s - first_s)
+    duration_sec = max(0.0, _safe_float(raw_dur, 0.0))
+
+    raw_id = alert_data.get("identifier")
+    if raw_id is None:
+        raw_id = alert_data.get("tracker_id")
+    tracker_id = _safe_str(raw_id, "Unknown")
+
+    net_type = _safe_str(alert_data.get("network_type"), "Unknown")
+
+    raw_count = alert_data.get("observation_count")
+    if raw_count is None:
+        raw_count = alert_data.get("packet_count")
+    pkt_count = _safe_int(raw_count, 0)
+
+    max_r = _safe_int(alert_data.get("max_rssi"), 0)
+
+    raw_mean = alert_data.get("avg_rssi")
+    if raw_mean is None:
+        raw_mean = alert_data.get("mean_rssi")
+    mean_r = _safe_float(raw_mean, 0.0)
+
+    raw_level = alert_data.get("alert_level")
+    if raw_level is not None and str(raw_level).strip():
+        alert_lvl = str(raw_level).strip()
+    else:
+        alert_lvl = "CRITICAL" if max_r >= -60 else "HIGH"
+
+    alert_msg = _safe_str(alert_data.get("alert_message"), "")
+
+    return {
+        "timestamp": ts,
+        "timestamp_iso": iso_ts,
+        "tracker_id": tracker_id,
+        "network_type": net_type,
+        "packet_count": pkt_count,
+        "duration": round(duration_sec, 2),
+        "duration_seconds": round(duration_sec, 2),
+        "max_rssi": max_r,
+        "mean_rssi": round(mean_r, 2),
+        "avg_rssi": round(mean_r, 2),
+        "alert_level": alert_lvl,
+        "alert_message": alert_msg,
+    }
+
+
+def dispatch_webhook_alert(
+    alert_data: dict[str, Any] | str,
+    webhook_url: str,
+    secret: Optional[str] = None,
+    timeout: float = 5.0,
+    headers: Optional[dict[str, str]] = None,
+    async_dispatch: bool = False,
+) -> bool:
+    """Dispatches a structured JSON threat alert to an external HTTP webhook endpoint.
+
+    Args:
+        alert_data: Dictionary or string containing tracker alert details.
+        webhook_url: Target HTTP/HTTPS endpoint URL.
+        secret: Optional secret for HMAC-SHA256 signing (X-Signature-SHA256) and Bearer auth.
+        timeout: Request timeout in seconds (default 5.0).
+        headers: Additional HTTP headers to include.
+        async_dispatch: If True, dispatch request asynchronously in a daemon thread.
+
+    Returns:
+        True if dispatched successfully (or dispatched asynchronously), False otherwise.
+    """
+    if not webhook_url:
+        return False
+
+    payload = format_webhook_payload(alert_data)
+    payload_json = json.dumps(payload, sort_keys=True, default=str)
+    payload_bytes = payload_json.encode("utf-8")
+
+    req_headers: dict[str, str] = {
+        "Content-Type": "application/json",
+        "User-Agent": "AirTell-Tracker/0.2.0",
+    }
+
+    if secret:
+        secret_str = secret if isinstance(secret, str) else str(secret)
+        sig = hmac.new(secret_str.encode("utf-8"), payload_bytes, hashlib.sha256).hexdigest()
+        req_headers["X-Signature-SHA256"] = sig
+        req_headers["Authorization"] = f"Bearer {secret_str}"
+
+    if headers:
+        req_headers.update(headers)
+
+    def _send() -> bool:
+        try:
+            req = urllib.request.Request(
+                url=webhook_url,
+                data=payload_bytes,
+                headers=req_headers,
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                code = resp.getcode()
+                if 200 <= code < 300:
+                    logger.info("Webhook alert posted successfully to %s (HTTP %d)", webhook_url, code)
+                    return True
+                logger.warning("Webhook alert to %s returned HTTP status %d", webhook_url, code)
+                return False
+        except urllib.error.HTTPError as http_err:
+            logger.error(
+                "Failed to post webhook alert to %s: HTTP %d %s",
+                webhook_url,
+                http_err.code,
+                http_err.reason,
+            )
+            return False
+        except (urllib.error.URLError, TimeoutError) as net_err:
+            logger.error(
+                "Network connection error posting webhook alert to %s: %s",
+                webhook_url,
+                net_err,
+            )
+            return False
+        except Exception as exc:
+            logger.error("Failed to post webhook alert to %s: %s", webhook_url, exc)
+            return False
+
+    if async_dispatch:
+        def _async_webhook_worker() -> None:
+            if not _DISPATCH_SEMAPHORE.acquire(blocking=False):
+                logger.warning("Dispatcher concurrency limit reached; dropping excess webhook alert.")
+                return
+            try:
+                _send()
+            finally:
+                _DISPATCH_SEMAPHORE.release()
+
+        thread = threading.Thread(
+            target=_async_webhook_worker,
+            name="AirTell-Webhook-Dispatcher",
+            daemon=True,
+        )
+        thread.start()
+        return True
+
+    return _send()
+
+
+def dispatch_desktop_notification(
+    alert_data: dict[str, Any] | str,
+    title: Optional[str] = None,
+    system_override: Optional[str] = None,
+    async_dispatch: bool = False,
+) -> bool:
+    """Dispatches a native cross-platform OS desktop notification.
+
+    Supports:
+      - Linux: notify-send
+      - macOS: osascript
+      - Windows: PowerShell or ctypes MessageBox
+
+    Gracefully falls back when running in headless environments or when platform binaries
+    are unavailable.
+
+    Args:
+        alert_data: Alert dict or text message.
+        title: Notification title override.
+        system_override: Optional platform string ('linux', 'darwin', 'windows') for testing.
+        async_dispatch: If True, spawn notification delivery in a background daemon thread.
+
+    Returns:
+        True if notification was launched successfully, False on failure or fallback.
+    """
+    def _safe_str(val: Any, default: str = "") -> str:
+        if val is None:
+            return default
+        s = str(val).strip()
+        return s if s else default
+
+    def _safe_int(val: Any, default: int = 0) -> int:
+        if val is None:
+            return default
+        try:
+            return int(val)
+        except (ValueError, TypeError):
+            return default
+
+    def _safe_float(val: Any, default: float = 0.0) -> float:
+        if val is None:
+            return default
+        try:
+            return float(val)
+        except (ValueError, TypeError):
+            return default
+
+    if isinstance(alert_data, dict):
+        level = _safe_str(alert_data.get("alert_level"), "HIGH")
+        net = _safe_str(alert_data.get("network_type"), "BLE Device")
+        raw_count = alert_data.get("observation_count")
+        if raw_count is None:
+            raw_count = alert_data.get("packet_count")
+        count = _safe_int(raw_count, 0)
+
+        raw_dur = alert_data.get("duration")
+        if raw_dur is None:
+            raw_dur = alert_data.get("duration_seconds")
+        dur_sec = max(0.0, _safe_float(raw_dur, 0.0))
+        dur_min = dur_sec / 60.0
+
+        max_r_val = alert_data.get("max_rssi")
+        max_r = _safe_int(max_r_val, 0) if max_r_val is not None else "N/A"
+
+        raw_id = alert_data.get("identifier")
+        if raw_id is None:
+            raw_id = alert_data.get("tracker_id")
+        ident = _safe_str(raw_id, "Unknown")
+        short_id = ident[:16]
+
+        notif_title = title or f"🚨 AirTell Alert: {level} Threat"
+        notif_body = (
+            alert_data.get("alert_message")
+            or f"{net} ({short_id}...) seen {count} times over {dur_min:.1f} mins (Max RSSI: {max_r} dBm)"
+        )
+    else:
+        notif_title = title or "🚨 AirTell Anti-Stalking Alert"
+        notif_body = str(alert_data or "")
+
+    # Sanitize title and body
+    notif_title = str(notif_title).replace("\0", "")
+    notif_body = str(notif_body).replace("\0", "")
+
+    def _deliver() -> bool:
+        plat = (system_override or sys.platform).lower()
+        try:
+            if plat.startswith("linux"):
+                if not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"):
+                    logger.warning("Headless environment detected; skipping notify-send.")
+                    return False
+                binary = shutil.which("notify-send")
+                if not binary:
+                    logger.warning("notify-send executable not found; skipping desktop notification.")
+                    return False
+                cmd = [binary, "-u", "critical", notif_title, notif_body]
+                res = subprocess.run(cmd, capture_output=True, timeout=5.0, check=True)
+                return res.returncode == 0
+            elif plat == "darwin":
+                binary = shutil.which("osascript")
+                if not binary:
+                    logger.warning("osascript executable not found; skipping desktop notification.")
+                    return False
+                clean_title = notif_title.replace("\r", " ").replace("\n", " ")
+                clean_body = notif_body.replace("\r", " ").replace("\n", " ")
+                safe_title = clean_title.replace("\\", "\\\\").replace('"', '\\"')
+                safe_body = clean_body.replace("\\", "\\\\").replace('"', '\\"')
+                script = f'display notification "{safe_body}" with title "{safe_title}"'
+                res = subprocess.run([binary, "-e", script], capture_output=True, timeout=5.0, check=True)
+                return res.returncode == 0
+            elif plat.startswith("win"):
+                ps_bin = shutil.which("powershell") or shutil.which("powershell.exe")
+                if ps_bin:
+                    clean_title = notif_title.replace("\r", " ").replace("\n", " ")
+                    clean_body = notif_body.replace("\r", " ").replace("\n", " ")
+                    safe_title = clean_title.replace("'", "''")
+                    safe_body = clean_body.replace("'", "''")
+                    ps_script = (
+                        f"[reflection.assembly]::loadwithpartialname('System.Windows.Forms'); "
+                        f"[System.Windows.Forms.MessageBox]::Show('{safe_body}', '{safe_title}', 0, 48)"
+                    )
+                    res = subprocess.run(
+                        [ps_bin, "-NoProfile", "-Command", ps_script],
+                        capture_output=True,
+                        timeout=5.0,
+                        check=True,
+                    )
+                    return res.returncode == 0
+                else:
+                    if sys.platform.startswith("win"):
+                        import ctypes
+
+                        try:
+                            ctypes.windll.user32.MessageBoxTimeoutW(0, notif_body, notif_title, 0x30, 0, 5000)
+                        except Exception:
+                            ctypes.windll.user32.MessageBoxW(0, notif_body, notif_title, 0x30)
+                        return True
+                    logger.warning("PowerShell not found and host is not Windows; cannot display notification.")
+                    return False
+            else:
+                logger.warning("Unsupported desktop notification platform: %s", plat)
+                return False
+        except Exception as exc:
+            logger.error("Failed to dispatch desktop notification: %s", exc)
+            return False
+
+    if async_dispatch:
+        def _async_desktop_worker() -> None:
+            if not _DISPATCH_SEMAPHORE.acquire(blocking=False):
+                logger.warning("Dispatcher concurrency limit reached; dropping excess desktop notification.")
+                return
+            try:
+                _deliver()
+            finally:
+                _DISPATCH_SEMAPHORE.release()
+
+        thread = threading.Thread(
+            target=_async_desktop_worker,
+            name="AirTell-Desktop-Dispatcher",
+            daemon=True,
+        )
+        thread.start()
+        return True
+
+    return _deliver()
+
+
+class BLETrackerDB:
+    """Thread-safe SQLite and DuckDB database manager for BLE observations and anti-stalking alerts."""
+
+    def __init__(
+        self,
+        db_path: str,
+        webhook_url: Optional[str] = None,
+        webhook_secret: Optional[str] = None,
+        enable_desktop_notify: Optional[bool] = None,
+        backend_type: Optional[str] = None,
+        enable_duckdb: Optional[bool] = None,
+    ) -> None:
         self.db_path = db_path
+        self.webhook_url = webhook_url if webhook_url is not None else os.getenv("WEBHOOK_URL", "")
+        self.webhook_secret = webhook_secret if webhook_secret is not None else os.getenv("WEBHOOK_SECRET", "")
+        if enable_desktop_notify is not None:
+            self.enable_desktop_notify = enable_desktop_notify
+        else:
+            self.enable_desktop_notify = os.getenv("DESKTOP_NOTIFY", "").strip().lower() in (
+                "1",
+                "true",
+                "yes",
+                "on",
+            )
         self.init_db()
+
+        self.duckdb_backend: Optional[Any] = None
+        self._sqlite_backend: Optional[Any] = None
+        if enable_duckdb is not None:
+            self.enable_duckdb = enable_duckdb
+        elif backend_type is not None:
+            self.enable_duckdb = backend_type.lower() in ("duckdb", "duck", "auto")
+        else:
+            env_val = os.getenv("DATABASE_BACKEND", os.getenv("AIRTELL_DB_BACKEND", "")).lower()
+            if env_val:
+                self.enable_duckdb = env_val in ("duckdb", "duck", "auto")
+            else:
+                self.enable_duckdb = os.getenv("AIRTELL_DUCKDB_ACCELERATION", "1").lower() in (
+                    "1",
+                    "true",
+                    "yes",
+                    "on",
+                )
+
+        if self.enable_duckdb:
+            self.attach_duckdb()
+
+    def attach_duckdb(self, threads: Optional[int] = None, memory_limit: Optional[str] = None) -> bool:
+        """Attach DuckDB vectorized engine to accelerate analytical queries."""
+        if threads is None:
+            try:
+                threads = int(os.getenv("DUCKDB_THREADS", "4"))
+            except ValueError:
+                threads = 4
+        if memory_limit is None:
+            memory_limit = os.getenv("DUCKDB_MEMORY_LIMIT", "2GB")
+
+        try:
+            from airtell.telemetry.storage import DuckDBBackend
+
+            self.duckdb_backend = DuckDBBackend(self.db_path, threads=threads, memory_limit=memory_limit)
+            self.enable_duckdb = True
+            return True
+        except Exception as e:
+            logger.debug("DuckDB backend attachment not enabled: %s", e)
+            self.duckdb_backend = None
+            self.enable_duckdb = False
+            return False
+
+    def disable_duckdb(self) -> None:
+        """Disable DuckDB acceleration and fall back strictly to SQLite."""
+        if self.duckdb_backend:
+            try:
+                self.duckdb_backend.close()
+            except Exception:
+                pass
+            self.duckdb_backend = None
+        self.enable_duckdb = False
+
+    def close(self) -> None:
+        """Close and release database backends."""
+        self.disable_duckdb()
+        if self._sqlite_backend is not None:
+            try:
+                self._sqlite_backend.close()
+            except Exception:
+                pass
+            self._sqlite_backend = None
+
+    @property
+    def backend(self) -> Any:
+        if self.enable_duckdb and self.duckdb_backend is not None:
+            return self.duckdb_backend
+        if self._sqlite_backend is None:
+            from airtell.telemetry.storage import SQLiteBackend
+
+            self._sqlite_backend = SQLiteBackend(self.db_path)
+        return self._sqlite_backend
+
+    def get_observations(
+        self,
+        limit: int = 1000,
+        network_type: Optional[str] = None,
+        search_query: Optional[str] = None,
+        channel: Optional[int] = None,
+        min_rssi: Optional[int] = None,
+        start_time: Optional[float] = None,
+        end_time: Optional[float] = None,
+        as_df: bool = False,
+    ) -> Any:
+        """Query observation records using accelerated backend."""
+        return self.backend.get_observations(
+            limit=limit,
+            network_type=network_type,
+            search_query=search_query,
+            channel=channel,
+            min_rssi=min_rssi,
+            start_time=start_time,
+            end_time=end_time,
+            as_df=as_df,
+        )
+
+    def get_rssi_timeseries(
+        self,
+        network_types: Optional[list[str]] = None,
+        min_rssi: Optional[int] = None,
+        limit: int = 2000,
+        as_df: bool = False,
+    ) -> Any:
+        """Retrieve chronological RSSI time series using accelerated backend."""
+        return self.backend.get_rssi_timeseries(
+            network_types=network_types,
+            min_rssi=min_rssi,
+            limit=limit,
+            as_df=as_df,
+        )
+
+    def get_channel_distribution(self) -> dict[int, int]:
+        """Compute packet observation count distribution across BLE channels."""
+        return self.backend.get_channel_distribution()
+
+    def get_tracker_frequencies(
+        self,
+        min_count: int = 1,
+        limit: int = 100,
+        as_df: bool = False,
+    ) -> Any:
+        """Aggregate tracker observation counts, signal stats, and time spans."""
+        return self.backend.get_tracker_frequencies(
+            min_count=min_count,
+            limit=limit,
+            as_df=as_df,
+        )
 
     def get_connection(self) -> sqlite3.Connection:
         return sqlite3.connect(self.db_path, timeout=10.0)
+
 
     def init_db(self) -> None:
         with self.get_connection() as conn:
@@ -331,24 +871,34 @@ class BLETrackerDB:
         now = time.time()
         cutoff = now - window_seconds
 
+        query = """
+            SELECT
+                COALESCE(NULLIF(TRIM(ephemeral_key), ''), mac_address) AS tracker_id,
+                network_type,
+                COUNT(*) as pkt_count,
+                MIN(timestamp) as first_seen,
+                MAX(timestamp) as last_seen,
+                MAX(rssi) as max_rssi,
+                AVG(rssi) as avg_rssi
+            FROM observations
+            WHERE timestamp >= ? AND network_type != 'Unknown'
+            GROUP BY tracker_id, network_type
+            HAVING pkt_count >= ? AND (last_seen - first_seen) >= ?
+        """
+        results = None
+        if self.enable_duckdb and self.duckdb_backend is not None:
+            try:
+                with getattr(self.duckdb_backend, "_lock", threading.RLock()):
+                    results = self.duckdb_backend.con.execute(query, [cutoff, min_observations, min_time_span]).fetchall()
+            except Exception as e:
+                logger.debug("DuckDB query failed (%s), falling back to SQLite", e)
+                results = None
+
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            query = """
-                SELECT
-                    COALESCE(NULLIF(ephemeral_key, ''), mac_address) AS tracker_id,
-                    network_type,
-                    COUNT(*) as pkt_count,
-                    MIN(timestamp) as first_seen,
-                    MAX(timestamp) as last_seen,
-                    MAX(rssi) as max_rssi,
-                    AVG(rssi) as avg_rssi
-                FROM observations
-                WHERE timestamp >= ? AND network_type != 'Unknown'
-                GROUP BY tracker_id
-                HAVING pkt_count >= ? AND (last_seen - first_seen) >= ?
-            """
-            cursor.execute(query, (cutoff, min_observations, min_time_span))
-            results = cursor.fetchall()
+            if results is None:
+                cursor.execute(query, (cutoff, min_observations, min_time_span))
+                results = cursor.fetchall()
 
             alerts: list[str] = []
             for row in results:
@@ -356,6 +906,7 @@ class BLETrackerDB:
                 # Suppress whitelisted identifiers
                 if self.is_whitelisted("ephemeral_key", tracker_id) or self.is_whitelisted("mac_address", tracker_id):
                     continue
+
 
                 duration_min = (last_s - first_s) / 60.0
 
@@ -402,34 +953,55 @@ class BLETrackerDB:
         window_minutes: int = 15,
         min_observations: int = 5,
         min_duration_minutes: int = 5,
+        webhook_url: Optional[str] = None,
+        webhook_secret: Optional[str] = None,
+        enable_desktop_notify: Optional[bool] = None,
+        cooldown_seconds: int = 300,
+        deduplicate: bool = True,
+        async_dispatch: bool = True,
     ) -> list[dict[str, Any]]:
         """Analyzes recent observations and returns threat alert dictionaries.
 
-        Suppresses alerts for whitelisted devices and keys.
+        Suppresses alerts for whitelisted devices and keys. Hooks into webhook
+        and desktop notification dispatchers with cooldown deduplication.
         """
         now = time.time()
         window_seconds = window_minutes * 60
         min_time_span = min_duration_minutes * 60
         cutoff = now - window_seconds
 
+        effective_url = webhook_url if webhook_url is not None else self.webhook_url
+        effective_secret = webhook_secret if webhook_secret is not None else self.webhook_secret
+        effective_desktop = enable_desktop_notify if enable_desktop_notify is not None else self.enable_desktop_notify
+
+        query = """
+            SELECT
+                COALESCE(NULLIF(TRIM(ephemeral_key), ''), mac_address) AS tracker_id,
+                network_type,
+                COUNT(*) as pkt_count,
+                MIN(timestamp) as first_seen,
+                MAX(timestamp) as last_seen,
+                MAX(rssi) as max_rssi,
+                AVG(rssi) as avg_rssi
+            FROM observations
+            WHERE timestamp >= ? AND network_type != 'Unknown'
+            GROUP BY tracker_id, network_type
+            HAVING pkt_count >= ? AND (last_seen - first_seen) >= ?
+        """
+        results = None
+        if self.enable_duckdb and self.duckdb_backend is not None:
+            try:
+                with getattr(self.duckdb_backend, "_lock", threading.RLock()):
+                    results = self.duckdb_backend.con.execute(query, [cutoff, min_observations, min_time_span]).fetchall()
+            except Exception as e:
+                logger.debug("DuckDB query failed (%s), falling back to SQLite", e)
+                results = None
+
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            query = """
-                SELECT
-                    COALESCE(NULLIF(ephemeral_key, ''), mac_address) AS tracker_id,
-                    network_type,
-                    COUNT(*) as pkt_count,
-                    MIN(timestamp) as first_seen,
-                    MAX(timestamp) as last_seen,
-                    MAX(rssi) as max_rssi,
-                    AVG(rssi) as avg_rssi
-                FROM observations
-                WHERE timestamp >= ? AND network_type != 'Unknown'
-                GROUP BY tracker_id
-                HAVING pkt_count >= ? AND (last_seen - first_seen) >= ?
-            """
-            cursor.execute(query, (cutoff, min_observations, min_time_span))
-            results = cursor.fetchall()
+            if results is None:
+                cursor.execute(query, (cutoff, min_observations, min_time_span))
+                results = cursor.fetchall()
 
             alerts: list[dict[str, Any]] = []
             for row in results:
@@ -437,22 +1009,86 @@ class BLETrackerDB:
                 if self.is_whitelisted("ephemeral_key", tracker_id) or self.is_whitelisted("mac_address", tracker_id):
                     continue
 
-                duration_min = (last_s - first_s) / 60.0
+
+                duration_sec = max(0.0, float(last_s - first_s))
+                duration_min = duration_sec / 60.0
+                alert_lvl = "CRITICAL" if max_r >= -60 else "HIGH"
                 msg = (
                     f"POSSIBLE STALKER DETECTED: {net_type} beacon"
                     f" ({tracker_id[:16]}...) seen {count} times over"
                     f" {duration_min:.1f} mins (Max RSSI: {max_r} dBm)"
                 )
-                alerts.append({
+
+                # Check cooldown window against alerts table
+                if cooldown_seconds > 0:
+                    cursor.execute(
+                        """
+                        SELECT COUNT(*) FROM alerts
+                        WHERE identifier = ? AND timestamp > ?
+                        """,
+                        (tracker_id, now - cooldown_seconds),
+                    )
+                    recent_alert_count = cursor.fetchone()[0]
+                    is_in_cooldown = recent_alert_count > 0
+                else:
+                    is_in_cooldown = False
+
+                if is_in_cooldown and deduplicate:
+                    continue
+
+                avg_val = round(float(avg_r), 2) if avg_r is not None else 0.0
+                alert_dict: dict[str, Any] = {
                     "identifier": tracker_id,
+                    "tracker_id": tracker_id,
                     "network_type": net_type,
                     "observation_count": count,
+                    "packet_count": count,
                     "first_seen": first_s,
                     "last_seen": last_s,
+                    "duration": round(duration_sec, 2),
+                    "duration_seconds": round(duration_sec, 2),
                     "max_rssi": max_r,
-                    "avg_rssi": avg_r,
+                    "avg_rssi": avg_val,
+                    "mean_rssi": avg_val,
+                    "alert_level": alert_lvl,
                     "alert_message": msg,
-                })
+                    "in_cooldown": is_in_cooldown,
+                }
+
+                if not is_in_cooldown:
+                    dt_str = datetime.fromtimestamp(now).strftime("%Y-%m-%d %H:%M:%S")
+                    cursor.execute(
+                        """
+                        INSERT INTO alerts (timestamp, datetime_str, identifier, network_type, observation_count, first_seen, last_seen, max_rssi, alert_message)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            now,
+                            dt_str,
+                            tracker_id,
+                            net_type,
+                            count,
+                            first_s,
+                            last_s,
+                            max_r,
+                            msg,
+                        ),
+                    )
+                    if effective_url:
+                        dispatch_webhook_alert(
+                            alert_dict,
+                            webhook_url=effective_url,
+                            secret=effective_secret,
+                            async_dispatch=async_dispatch,
+                        )
+                    if effective_desktop:
+                        dispatch_desktop_notification(
+                            alert_dict,
+                            async_dispatch=async_dispatch,
+                        )
+
+                alerts.append(alert_dict)
+            conn.commit()
             return alerts
 
 
@@ -592,8 +1228,21 @@ def classify_payload(payload_hex: str) -> tuple[str, str]:
     return "Unknown", ""
 
 
-def send_notification(alert_message: str, twilio_config: Optional[dict[str, str]] = None) -> None:
-    """Dispatches notification via Twilio SMS or terminal notification."""
+def send_notification(
+    alert_message: str | dict[str, Any],
+    twilio_config: Optional[dict[str, str]] = None,
+    webhook_url: Optional[str] = None,
+    webhook_secret: Optional[str] = None,
+    enable_desktop_notify: bool = False,
+) -> None:
+    """Dispatches notification via Twilio SMS, Webhook, and/or Desktop notification."""
+    if isinstance(alert_message, dict):
+        msg_str = str(alert_message.get("alert_message") or "")
+        alert_payload: dict[str, Any] | str = alert_message
+    else:
+        msg_str = str(alert_message or "")
+        alert_payload = {"alert_message": msg_str}
+
     # Twilio SMS dispatch if credentials provided
     if twilio_config and twilio_config.get("account_sid") and twilio_config.get("auth_token"):
         try:
@@ -601,13 +1250,24 @@ def send_notification(alert_message: str, twilio_config: Optional[dict[str, str]
 
             client = Client(twilio_config["account_sid"], twilio_config["auth_token"])
             client.messages.create(
-                body=f"🚨 [BLE Anti-Stalking Alert]\n{alert_message}",
+                body=f"🚨 [BLE Anti-Stalking Alert]\n{msg_str}",
                 from_=twilio_config["from_number"],
                 to=twilio_config["to_number"],
             )
             print(f"[+] SMS notification dispatched to {twilio_config['to_number']}.")
         except Exception as exc:
             print(f"[-] Twilio SMS dispatch failed: {exc}", file=sys.stderr)
+
+    if webhook_url:
+        dispatch_webhook_alert(
+            alert_payload,
+            webhook_url=webhook_url,
+            secret=webhook_secret,
+            async_dispatch=True,
+        )
+
+    if enable_desktop_notify:
+        dispatch_desktop_notification(alert_message, async_dispatch=True)
 
 
 def main() -> None:
@@ -639,6 +1299,23 @@ def main() -> None:
     parser.add_argument(
         "--twilio-to", default=os.getenv("TWILIO_TO_NUMBER"), help="Target alert phone number"
     )
+    desktop_default = os.getenv("DESKTOP_NOTIFY", "").strip().lower() in ("1", "true", "yes", "on")
+    parser.add_argument(
+        "--webhook-url",
+        default=os.getenv("WEBHOOK_URL", ""),
+        help="Target HTTP/HTTPS webhook URL for alert dispatch (env: WEBHOOK_URL)",
+    )
+    parser.add_argument(
+        "--webhook-secret",
+        default=os.getenv("WEBHOOK_SECRET", ""),
+        help="Shared secret for webhook HMAC SHA-256 signing or Bearer auth (env: WEBHOOK_SECRET)",
+    )
+    parser.add_argument(
+        "--enable-desktop-notify",
+        action="store_true",
+        default=desktop_default,
+        help="Enable native cross-platform OS desktop notifications (env: DESKTOP_NOTIFY)",
+    )
     args = parser.parse_args()
 
     twilio_cfg: Optional[dict[str, str]] = None
@@ -650,7 +1327,12 @@ def main() -> None:
             "to_number": args.twilio_to,
         }
 
-    db = BLETrackerDB(args.database)
+    db = BLETrackerDB(
+        args.database,
+        webhook_url=args.webhook_url,
+        webhook_secret=args.webhook_secret,
+        enable_desktop_notify=args.enable_desktop_notify,
+    )
     print("[*] BLE Anti-Stalking Tracker Initialized.")
     print(f"[*] Database: {args.database}")
     print(f"[*] Port: {args.serial_port} | Channel: {args.channel}\n")
@@ -667,7 +1349,6 @@ def main() -> None:
         print(proc)
         last_check_time = time.time()
         print(f"proc.stdout = {proc.stdout}")
-        #assert proc.stdout is not None
         for line in proc.stdout:
             parsed = parse_sniffle_line(line)
             if parsed:
@@ -686,12 +1367,17 @@ def main() -> None:
                 # Run anti-stalking heuristic check every 10 seconds
                 now = time.time()
                 if now - last_check_time >= 10:
-                    alerts = db.check_stalking_thresholds()
+                    alerts = db.check_stalking_heuristics(
+                        webhook_url=args.webhook_url,
+                        webhook_secret=args.webhook_secret,
+                        enable_desktop_notify=args.enable_desktop_notify,
+                    )
                     for alert in alerts:
+                        msg = alert.get("alert_message", "")
                         print("\n" + "=" * 60)
-                        print(f"⚠️  {alert}")
+                        print(f"⚠️  {msg}")
                         print("=" * 60 + "\n")
-                        send_notification(alert, twilio_cfg)
+                        send_notification(msg, twilio_cfg)
                     last_check_time = now
         print("done...")
     except FileNotFoundError:
@@ -701,6 +1387,19 @@ def main() -> None:
         )
     except KeyboardInterrupt:
         print("\n[*] Tracker stopped by user.")
+
+
+__all__ = [
+    "BLETrackerDB",
+    "SniffleLineParser",
+    "classify_payload",
+    "dispatch_desktop_notification",
+    "dispatch_webhook_alert",
+    "format_webhook_payload",
+    "main",
+    "parse_sniffle_line",
+    "send_notification",
+]
 
 
 if __name__ == "__main__":

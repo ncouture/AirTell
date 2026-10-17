@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import random
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, Optional
 
@@ -111,6 +112,7 @@ class RogueBeaconGenerator:
         interval_seconds: float = 1.0,
         jitter_seconds: float = 0.05,
         start_time: Optional[float] = None,
+        channels: Optional[Sequence[int]] = None,
     ) -> list[SyntheticPacket]:
         """Generate a sequential burst of synthetic packets with timing jitter.
 
@@ -120,6 +122,7 @@ class RogueBeaconGenerator:
             interval_seconds: Nominal interval between packets.
             jitter_seconds: Random timing jitter bound.
             start_time: Initial burst timestamp in seconds.
+            channels: Optional sequence of advertising channels (e.g. [37, 38, 39]) to cycle through.
 
         Returns:
             List of SyntheticPacket objects.
@@ -136,11 +139,13 @@ class RogueBeaconGenerator:
                 step = max(0.01, interval_seconds + jitter)
                 current_time += step
 
+            pkt_channel = channels[i % len(channels)] if channels else spec.channel
+
             packets.append(
                 SyntheticPacket(
                     mac_address=spec.mac_address,
                     rssi=spec.rssi,
-                    channel=spec.channel,
+                    channel=pkt_channel,
                     payload_bytes=payload,
                     timestamp=current_time,
                     network_type=net,

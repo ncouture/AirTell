@@ -397,9 +397,161 @@ Validates link-layer transmission using two Sniffle boards connected to the same
    python3 scripts/pcap_decoder.py -q /tmp/decrypted_pairing.pcapng
    ```
 
+### Workflow 4: Real-Time Anti-Stalking Threat Detection with Webhooks & Desktop Notifications
+
+Deploys `ble_antistalking_tracker.py` to monitor crowdsourced BLE tracking beacons (Apple Find My, Google Find Hub, Tile, Samsung SmartThings Find) on primary advertising channel 37, record observations in SQLite, and dispatch alerts to a security webhook endpoint and local desktop notifications:
+
+1. Start a local or remote webhook endpoint to receive threat alerts (example receiver below):
+   ```python
+   # webhook_receiver.py
+   import hashlib
+   import hmac
+   from http.server import BaseHTTPRequestHandler, HTTPServer
+
+   SECRET = "s3cr3t_antistalking_k3y"
+
+   class AlertHandler(BaseHTTPRequestHandler):
+       def do_POST(self):
+           length = int(self.headers.get("Content-Length", 0))
+           body = self.rfile.read(length)
+           sig = self.headers.get("X-Signature-SHA256", "")
+           expected = hmac.new(SECRET.encode(), body, hashlib.sha256).hexdigest()
+           if hmac.compare_digest(sig, expected):
+               print(f"[+] Verified threat alert received: {body.decode()}")
+               self.send_response(200)
+           else:
+               print("[-] Invalid signature!")
+               self.send_response(403)
+           self.end_headers()
+
+   HTTPServer(("0.0.0.0", 8080), AlertHandler).serve_forever()
+   ```
+
+2. Launch the anti-stalking tracker with webhook and desktop alerts enabled:
+   ```bash
+   python3 scripts/ble_antistalking_tracker.py \
+       -s /dev/ttyUSB0 \
+       -c 37 \
+       -db data/antistalking.db \
+       --webhook-url http://localhost:8080/alert \
+       --webhook-secret "s3cr3t_antistalking_k3y" \
+       --enable-desktop-notify
+   ```
+
+3. Environment variable bindings can alternatively be placed in `.env`:
+   ```bash
+   export WEBHOOK_URL="http://localhost:8080/alert"
+   export WEBHOOK_SECRET="s3cr3t_antistalking_k3y"
+   export DESKTOP_NOTIFY="1"
+   python3 scripts/ble_antistalking_tracker.py -s /dev/ttyUSB0 -c 37
+   ```
+
+4. When persistent beacons are observed across rotating MAC addresses for $\ge 5$ minutes and $\ge 5$ packets:
+   - An alert record is saved into the SQLite database `alerts` table.
+   - A signed JSON payload is posted to the webhook endpoint.
+   - An OS desktop notification is displayed via `notify-send` (Linux), `osascript` (macOS), or PowerShell (Windows).
+   - Duplicate alerts are deduplicated during a 5-minute cooldown window.
+
+---
+
+## Embedded DuckDB High-Throughput Analytics Engine
+
+AirTell integrates an embedded DuckDB columnar analytics engine (`duckdb>=1.5.6`) alongside SQLite to deliver sub-second query performance (<200ms) over multi-million packet PCAP telemetry datasets (5M+ observations).
+
+### Architecture & Pluggable Backend
+
+The analytics subsystem uses a pluggable `DatabaseBackend` abstraction (`airtell.telemetry.storage.DatabaseBackend`) with two concrete implementations:
+
+1. **`SQLiteBackend`**: Standard thread-safe SQLite connection manager for transactional writes, live sensor streaming, and environments without compiled extensions.
+2. **`DuckDBBackend`**: High-performance vectorized columnar query engine that directly attaches existing `.db` SQLite databases using DuckDB's native SQLite scanner:
+   ```sql
+   ATTACH '/path/to/ble_tracker.db' AS sqlite_db (TYPE SQLITE);
+   USE sqlite_db;
+   ```
+   Or connects natively to standalone `.duckdb` / in-memory databases.
+
+### Configuration & Environment Variables
+
+DuckDB backend acceleration can be configured via environment variables or runtime parameters:
+
+| Variable | Default | Description |
+| :--- | :--- | :--- |
+| `DATABASE_BACKEND` | `auto` | Database engine selection (`duckdb`, `sqlite`, or `auto`). |
+| `AIRTELL_DUCKDB_ACCELERATION` | `1` | Enable/disable DuckDB vectorized query acceleration (`1` or `0`). |
+| `DUCKDB_THREADS` | `4` | Maximum hardware execution threads allocated to DuckDB queries. |
+| `DUCKDB_MEMORY_LIMIT` | `2GB` | Memory ceiling for vectorized scans (e.g. `2GB`, `4GB`, `8GB`). |
+
+Example `.env` configuration for multi-million packet datasets:
+
+```bash
+export DATABASE_BACKEND="duckdb"
+export DUCKDB_THREADS="8"
+export DUCKDB_MEMORY_LIMIT="4GB"
+```
+
+### Schema Compatibility
+
+DuckDB seamlessly queries existing SQLite schemas without requiring data export or migration:
+
+* **`observations`**: High-volume link-layer BLE observations (timestamp, MAC, RSSI, network type, ephemeral key, channel, raw payload).
+* **`alerts`**: Anti-stalking incident records, duration, peak signal strength, and trigger messages.
+* **`whitelists`**: Authorized researcher hardware and known safe BLE devices.
+* **`alert_actions`**: Analyst triage dispositions and notes.
+
+### Python API Usage
+
+```python
+from airtell.telemetry.storage import get_database_backend
+
+# 1. Initialize accelerated DuckDB backend attaching existing SQLite database
+backend = get_database_backend(
+    backend_type="duckdb",
+    db_path="data/ble_tracker.db",
+    threads=4,
+    memory_limit="2GB",
+)
+
+# 2. Vectorized anti-stalking sliding-window heuristics
+alerts = backend.check_stalking_heuristics(
+    window_seconds=900,
+    min_observations=5,
+    min_time_span=300,
+)
+
+# 3. Vectorized tracker observation frequencies (returns pandas DataFrame)
+freq_df = backend.get_tracker_frequencies(min_count=5, as_df=True)
+
+# 4. Multi-channel observation distribution
+channels = backend.get_channel_distribution()
+
+# 5. Direct vectorized SQL execution
+df = backend.query_df(
+    "SELECT network_type, AVG(rssi) as avg_rssi, COUNT(*) as cnt "
+    "FROM observations GROUP BY network_type ORDER BY cnt DESC"
+)
+```
+
+### Streamlit Dashboard Acceleration
+
+The Streamlit tactical dashboard (`app/streamlit_app.py`) automatically initializes and caches the DuckDB backend in `st.session_state` (`@st.cache_resource`). The following operational views leverage DuckDB vectorized queries for sub-second interaction:
+
+* **Deep Packet Inspector (`app/views/packet_inspector.py`)**: Sub-second text search and filtering across MAC addresses, ephemeral keys, and protocol types over 5M+ packets.
+* **RSSI Trends (`app/views/rssi_trends.py`)**: Instantaneous aggregation and extraction of chronological signal trajectories for interactive Plotly charts.
+* **Threat Feed & Triage (`app/views/alert_feed.py`)**: Rapid retrieval of historical anti-stalking incident records.
+* **Live Telemetry Overview (`app/views/telemetry_overview.py`)**: Real-time channel distribution and network volume metrics.
+
+### Migration Guide for Large PCAP Files
+
+When analyzing large multi-gigabyte PCAP files containing 1M to 5M+ packets:
+
+1. Ingest packets into the SQLite database using `pcap_decoder.py` or offline replay.
+2. Enable DuckDB acceleration by setting `export DATABASE_BACKEND="duckdb"` or initializing `BLETrackerDB(db_path, enable_duckdb=True)`.
+3. If memory is constrained on edge hardware (e.g. Raspberry Pi), tune `DUCKDB_MEMORY_LIMIT="512MB"` and `DUCKDB_THREADS="2"` to avoid memory pressure while retaining sub-second analytical execution.
+
 ---
 
 ## CLI Reference Summary Table
+
 
 | Script | Primary Function | Key Arguments | Input | Output |
 | :--- | :--- | :--- | :--- | :--- |

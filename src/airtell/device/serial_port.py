@@ -110,15 +110,19 @@ def detect_optimal_baudrate(port_name: str) -> int:
 def allocate_dual_ports(
     dev1: str | None = None,
     dev2: str | None = None,
-) -> tuple[str, str]:
+    allow_single: bool = False,
+) -> tuple[str | None, str]:
     """Allocate distinct, non-conflicting serial ports for Device 1 and Device 2.
 
     Args:
-        dev1: Optional explicit path for Device 1.
-        dev2: Optional explicit path for Device 2.
+        dev1: Optional explicit path for Device 1 (stimulator).
+        dev2: Optional explicit path for Device 2 (observer).
+        allow_single: If True, permits falling back to a single port (None, port)
+            when only 1 port is available or passed, assigning port to the observer.
 
     Returns:
-        tuple (port1, port2) ensuring port1 != port2.
+        tuple (port1, port2) where port2 is the observer port and port1 is either the stimulator
+        port or None in single-dongle fallback mode.
 
     Raises:
         ValueError: If both ports are explicitly specified as identical.
@@ -134,6 +138,12 @@ def allocate_dual_ports(
     if dev1 and not dev2:
         candidates = [p for p in available if p != dev1]
         if not candidates:
+            if allow_single:
+                logger.info(
+                    "Single-dongle fallback: allocating %s to observer (dev2) and None to stimulator (dev1)",
+                    dev1,
+                )
+                return None, dev1
             raise RuntimeError(
                 f"Device 1 assigned to {dev1}, but no distinct secondary Sniffle port was found. "
                 f"Available ports: {available}. (Use mock mode for offline simulation)."
@@ -143,6 +153,12 @@ def allocate_dual_ports(
     if dev2 and not dev1:
         candidates = [p for p in available if p != dev2]
         if not candidates:
+            if allow_single:
+                logger.info(
+                    "Single-dongle fallback: allocating %s to observer (dev2) and None to stimulator (dev1)",
+                    dev2,
+                )
+                return None, dev2
             raise RuntimeError(
                 f"Device 2 assigned to {dev2}, but no distinct primary Sniffle port was found. "
                 f"Available ports: {available}. (Use mock mode for offline simulation)."
@@ -150,9 +166,25 @@ def allocate_dual_ports(
         return candidates[0], dev2
 
     # Neither specified
-    if len(available) < 2:
+    if len(available) == 0:
+        msg = (
+            "Single-dongle topology requires at least 1 Sniffle dongle, but 0 detected. "
+            "Connect a dongle or run with mock simulation mode."
+            if allow_single
+            else "Dual-device topology requires 2 Sniffle dongles, but only 0 detected: []. "
+            "Connect both dongles or run with mock simulation mode."
+        )
+        raise RuntimeError(msg)
+
+    if len(available) == 1:
+        if allow_single:
+            logger.info(
+                "Single-dongle fallback: auto-allocating %s to observer (dev2) and None to stimulator (dev1)",
+                available[0],
+            )
+            return None, available[0]
         raise RuntimeError(
-            f"Dual-device topology requires 2 Sniffle dongles, but only {len(available)} detected: {available}. "
+            f"Dual-device topology requires 2 Sniffle dongles, but only 1 detected: {available}. "
             "Connect both dongles or run with mock simulation mode."
         )
 

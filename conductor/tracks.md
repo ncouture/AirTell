@@ -11,3 +11,20 @@
 - [x] **Track: Live Bluetooth JSON Streaming via Tshark and Sniffle Extcap**
   *Link: [./tracks/tshark_json_stream_20261002/index.md](./tracks/tshark_json_stream_20261002/index.md)*
 
+- [x] **Track: Streamlit Exclusive-Use Side-Channel Visualizer Tab**
+  *Link: [./tracks/sidechannel_dashboard_integration_20261016/index.md](./tracks/sidechannel_dashboard_integration_20261016/index.md)*
+
+- [x] **Track: Complete CLI Adversarial Ingestion and Live UART Injection**
+  *Link: [./tracks/cli_adversarial_completion_20261016/index.md](./tracks/cli_adversarial_completion_20261016/index.md)*
+
+- [x] **Track: Single-Dongle Passive Sniffing Mode for topology-a**
+  *Link: [./tracks/single_dongle_topology_a_20261016/index.md](./tracks/single_dongle_topology_a_20261016/index.md)*
+
+- [x] **Track: Webhook and OS Desktop Notification Dispatchers**
+  *Link: [./tracks/webhook_desktop_notifications_20261016/index.md](./tracks/webhook_desktop_notifications_20261016/index.md)*
+
+- [x] **Track: Embedded DuckDB High-Throughput Analytics Engine**
+  *Link: [./tracks/duckdb_high_throughput_analytics_20261016/index.md](./tracks/duckdb_high_throughput_analytics_20261016/index.md)*
+
+- [x] **Track: GitHub Issue & Conductor Track Commit/Branch/PR Traceability**
+  *Link: [./tracks/github_issue_traceability_20261017/index.md](./tracks/github_issue_traceability_20261017/index.md)*

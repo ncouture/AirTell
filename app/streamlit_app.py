@@ -6,7 +6,7 @@ import os
 import sqlite3
 import time
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import streamlit as st
 
@@ -46,7 +46,24 @@ DEFAULT_DB = "data/ble_tracker.db"
 DB_PATH = os.environ.get("DATABASE", DEFAULT_DB)
 Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
 
-tracker_db = BLETrackerDB(DB_PATH)
+@st.cache_resource
+def get_tracker_db(db_path: str = DB_PATH) -> BLETrackerDB:
+    """Retrieve and cache BLETrackerDB instance."""
+    return BLETrackerDB(db_path)
+
+
+tracker_db = get_tracker_db(DB_PATH)
+
+
+@st.cache_resource
+def get_analytics_backend(db_path: str = DB_PATH) -> Optional[Any]:
+    """Retrieve and cache DuckDB high-throughput analytics backend."""
+    try:
+        from airtell.telemetry.storage import get_database_backend
+
+        return get_database_backend(backend_type="duckdb", db_path=db_path)
+    except Exception:
+        return None
 
 
 def get_db_connection() -> Optional[sqlite3.Connection]:
@@ -63,6 +80,14 @@ def main() -> None:
     """Main dashboard entrypoint routing views through M3 Navigation Rail."""
     conn = get_db_connection()
     event_queue = get_event_queue()
+
+    # Retrieve cached DuckDB analytical backend for sub-second query execution
+    if "analytics_backend" not in st.session_state:
+        st.session_state.analytics_backend = get_analytics_backend(DB_PATH)
+    backend = st.session_state.get("analytics_backend") or (
+        tracker_db.backend if hasattr(tracker_db, "backend") else None
+    )
+
 
     # Determine real-time device usage using lsof system command
     dev0_in_use = check_device_usage("/dev/ttyUSB0")
@@ -115,15 +140,16 @@ def main() -> None:
 
     # Route active operational view with live real-time event queue
     if active_view == "telemetry":
-        render_telemetry_overview(conn=conn, event_queue=event_queue)
+        render_telemetry_overview(conn=conn, event_queue=event_queue, backend=backend)
     elif active_view == "rssi":
-        render_rssi_trends(conn=conn, event_queue=event_queue)
+        render_rssi_trends(conn=conn, event_queue=event_queue, backend=backend)
     elif active_view == "alerts":
-        render_alert_feed(conn=conn, tracker_db=tracker_db, event_queue=event_queue)
+        render_alert_feed(conn=conn, tracker_db=tracker_db, event_queue=event_queue, backend=backend)
     elif active_view == "inspector":
-        render_packet_inspector(conn=conn, event_queue=event_queue)
+        render_packet_inspector(conn=conn, event_queue=event_queue, backend=backend)
     elif active_view == "controls":
         render_radio_controls(tracker_db=tracker_db, event_queue=event_queue)
+
     elif active_view == "adversarial":
         render_adversarial_evaluation(conn=conn, tracker_db=tracker_db, event_queue=event_queue)
 

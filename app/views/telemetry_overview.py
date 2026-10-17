@@ -6,6 +6,7 @@ import collections
 import sqlite3
 from typing import Any, Optional
 
+import pandas as pd
 import streamlit as st
 
 from app.queue_bridge import EventQueue
@@ -51,6 +52,7 @@ def compute_telemetry_metrics(
 def render_telemetry_overview(
     conn: Optional[sqlite3.Connection],
     event_queue: Optional[EventQueue] = None,
+    backend: Optional[Any] = None,
 ) -> None:
     """Render the Live Telemetry Overview dashboard view."""
     st.subheader("📡 Live Radio Telemetry & Signal Throughput")
@@ -66,9 +68,24 @@ def render_telemetry_overview(
         else:
             live_items = event_queue.drain(max_items=200)
 
-    # Query DB observations
+    # Query observations from accelerated backend or database connection
     obs_list: list[dict[str, Any]] = []
-    if conn:
+    db_loaded = False
+    if backend is not None:
+        try:
+            res = backend.get_observations(limit=1000)
+            if isinstance(res, pd.DataFrame):
+                obs_list = res.to_dict(orient="records")
+            elif isinstance(res, list):
+                obs_list = [dict(r) for r in res]
+            else:
+                obs_list = list(res)
+            db_loaded = True
+        except Exception as e:
+            st.error(f"Error querying DuckDB analytics backend: {e}")
+            obs_list = []
+
+    if not db_loaded and conn:
         try:
             cursor = conn.cursor()
             cursor.execute(
@@ -93,6 +110,7 @@ def render_telemetry_overview(
     # Combine with any in-flight live items
     all_observations = live_items + obs_list
     metrics = compute_telemetry_metrics(all_observations)
+
 
     # Metric Cards Row
     col1, col2, col3, col4 = st.columns(4)

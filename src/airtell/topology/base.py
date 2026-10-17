@@ -20,10 +20,10 @@ class BaseTopology(abc.ABC):
 
     def __init__(
         self,
-        device1: SniffleDeviceController,
+        device1: SniffleDeviceController | None,
         device2: SniffleDeviceController,
     ) -> None:
-        self.device1: SniffleDeviceController = device1
+        self.device1: SniffleDeviceController | None = device1
         self.device2: SniffleDeviceController = device2
         self.is_running: bool = False
 
