@@ -11,3 +11,6 @@
 - [x] **Track: Live Bluetooth JSON Streaming via Tshark and Sniffle Extcap**
   *Link: [./tracks/tshark_json_stream_20261002/index.md](./tracks/tshark_json_stream_20261002/index.md)*
 
+- [x] **Track: Streamlit Exclusive-Use Side-Channel Visualizer Tab**
+  *Link: [./tracks/sidechannel_dashboard_integration_20261016/index.md](./tracks/sidechannel_dashboard_integration_20261016/index.md)*
+

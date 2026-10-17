@@ -145,7 +145,7 @@ def test_render_adversarial_evaluation_structure() -> None:
         return [MagicMock() for _ in range(count)]
 
     with (
-        patch("streamlit.tabs", return_value=[MagicMock(), MagicMock(), MagicMock()]),
+        patch("streamlit.tabs", side_effect=lambda tabs: [MagicMock() for _ in tabs]),
         patch("streamlit.columns", side_effect=mock_columns),
         patch("streamlit.metric"),
         patch("streamlit.dataframe"),
@@ -156,6 +156,13 @@ def test_render_adversarial_evaluation_structure() -> None:
         patch("streamlit.selectbox", return_value="Apple Find My"),
         patch("streamlit.slider", return_value=5),
         patch("streamlit.button", return_value=False),
+        patch("streamlit.radio", return_value="📁 Offline PCAP/PCAPNG Upload"),
+        patch("streamlit.text_input", return_value=""),
+        patch("streamlit.multiselect", return_value=["Differential Encryption", "CSRK SignCounter", "BAT Allowlist"]),
+        patch("streamlit.file_uploader", return_value=None),
+        patch("streamlit.plotly_chart"),
+        patch("streamlit.download_button"),
+        patch("streamlit.expander", return_value=MagicMock()),
     ):
         render_adversarial_evaluation(mock_conn, mock_tracker_db, mock_event_queue)
 
