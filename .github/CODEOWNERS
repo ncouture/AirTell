@@ -1,0 +1,5 @@
+# GitHub CODEOWNERS File
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global repository owner: applies to all files across the entire codebase
+* @ncouture
