@@ -27,6 +27,7 @@ A public Google Notebook containing architectural notes, research references, an
   - [Supported Dongles & Bridge Limits](#supported-dongles--bridge-limits)
   - [Port Auto-Discovery & In-Use Verification](#port-auto-discovery--in-use-verification)
 - [Centralized Documentation](#centralized-documentation)
+- [GitHub Operations & AI Code Review](#github-operations--ai-code-review)
 - [Mock Simulation & Offline Harness](#mock-simulation--offline-harness)
 - [Wire Protocol & Line Framing](#wire-protocol--line-framing)
 - [Installation & Quick Start](#installation--quick-start)
@@ -134,8 +135,23 @@ Full technical documentation is centralized in [`docs/`](docs/):
 - [**Filtering BLE JSON with JQ**](docs/json_jq.md): Recipes for structured log processing.
 - [**TShark & PCAP Dissection**](docs/tshark.md): Native vs. extcap capture guide.
 - [**Hardware Setup & Flashing**](docs/hardware_setup.md): Bootloader flashing and configuration.
+- [**GitHub Operations & AI Code Review**](docs/GITHUB.md): Repository governance, Discussions, issue templates, Codeowners policy, and Gemini 3.8 Flash automated review system.
 
 ---
+
+## GitHub Operations & AI Code Review
+
+AirTell enforces strict repository governance and automated architectural quality controls:
+
+- **Global Code Ownership ([`.github/CODEOWNERS`](.github/CODEOWNERS))**: Designates `@ncouture` as global repository owner across all files, automatically assigning PR reviews and enforcing branch protection rules.
+- **Community Discussions ([`.github/DISCUSSIONS.md`](.github/DISCUSSIONS.md))**: Dedicated forum for RF tradecraft, signal forensics, hardware rigs, and privacy engineering, decluttering the issue tracker.
+- **Structured Issue Forms ([`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE/))**: Blank issues are disabled; bug reports require topology selection, hardware/firmware versions, and shell logs.
+- **AI Code Review System ([`.github/skills/code-review/SKILL.md`](.github/skills/code-review/SKILL.md))**:
+  - Powered by the **Google Antigravity SDK (`google-antigravity`)** and **Gemini 3.8 Flash** with **Thinking = High** (`thinking_budget: 16384`).
+  - Audits 1 µs hardware timer precision, CC2652 UART buffer flow control (2,000,000 baud), cross-dongle synchronization, and zero-panic parsing of untrusted over-the-air BLE packets.
+  - Grounded in the **[AirTell Research NotebookLM Workspace](https://notebook.google.com/notebook/26cd837a-4d66-4ab1-94c7-128105718ad6)** and its local synchronized index ([`docs/AirTell-PoPETs.md`](docs/AirTell-PoPETs.md)).
+  - **Enforced Dual-Gate Codeowner Policy**: Code reviews execute *only* on PRs authored by a repository codeowner (`ncouture`) and *only* when explicitly requested by a codeowner via ChatOps (`/review`, `/code-review`), UI review requests, PR labels, or manual dispatch.
+  - Implemented in [`scripts/code_review.py`](scripts/code_review.py) and automated via [`.github/workflows/code-review.yml`](.github/workflows/code-review.yml).
 
 ## Mock Simulation & Offline Harness
 
@@ -180,11 +196,21 @@ Packets received by the radio unpack a 10-byte header:
 
 ```bash
 # Clone the repository
-git clone https://github.com/example/airtell.git
-cd airtell
+git clone https://github.com/ncouture/AirTell.git
+cd AirTell
 
 # Install in editable mode with development dependencies
 pip install -e .[test]
+```
+
+### AI Code Review (Local Execution)
+
+```bash
+# Run local code review on git diff using Gemini 3.8 Flash (Thinking=High)
+python scripts/code_review.py --base origin/main --output review.md
+
+# Review staged changes only
+python scripts/code_review.py --staged
 ```
 
 ### Adversarial Evaluation & CLI Quick Start
@@ -228,12 +254,20 @@ ruff check src tests
 airtell/
 ├── README.md
 ├── pyproject.toml
+├── .github/                    # GitHub configurations, templates, & automation
+│   ├── CODEOWNERS              # Global repository ownership (* @ncouture)
+│   ├── DISCUSSIONS.md          # Discussions onboarding & maintainer protocol
+│   ├── ISSUE_TEMPLATE/         # Structured issue forms (bug, feature, config)
+│   ├── skills/code-review/     # Gemini 3.8 Flash (Thinking=High) review skill
+│   └── workflows/              # GitHub Actions CI (code-review.yml)
 ├── app/                        # Material Design v3 Tactical Streamlit Dashboard
 │   ├── components/             # Navigation rail, top app bar, PWA assets
 │   ├── views/                  # Telemetry, RSSI trends, alerts, radio controls
 │   └── streamlit_app.py        # Dashboard application entrypoint
 ├── docs/                       # Centralized documentation hub
 │   ├── index.md                # Documentation navigation index
+│   ├── GITHUB.md               # GitHub operations, governance, & AI code review
+│   ├── AirTell-PoPETs.md       # Synchronized NotebookLM research paper index
 │   ├── relay_specifications.md # Master/Slave link layer relay specification
 │   ├── device_status.md        # Device in-use validation via lsof
 │   ├── scripts_reference.md    # Comprehensive scripts directory guide
@@ -244,6 +278,7 @@ airtell/
 │   ├── tshark.md               # TShark & PCAP dissection guide
 │   └── hardware_setup.md       # Hardware flashing & multi-dongle guide
 ├── scripts/                    # Standalone CLI tools, relays, & decoders
+│   ├── code_review.py          # Antigravity SDK review runner (Gemini 3.8 Flash)
 │   ├── advertiser.py           # Connectable peripheral emulator
 │   ├── ble_antistalking_tracker.py # SQLite logger & heuristic alert dispatcher
 │   ├── ble_parser.py           # Standalone offline finding key parser
@@ -268,5 +303,6 @@ airtell/
 │   │   └── topology/           # Topologies A & B, graceful shutdown
 │   └── sniffle/                # Embedded Sniffle C firmware & CLI library
 └── tests/                      # Unit, integration, and E2E test suites
+    └── test_codeowner_enforcement.py # Codeowner authorization policy tests
 ```
 

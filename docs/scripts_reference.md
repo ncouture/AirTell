@@ -23,6 +23,7 @@ This document provides a comprehensive operational and technical reference for a
 | [`sniff_receiver.py`](#13-sniff_receiverpy) | Python CLI | Core packet sniffer & connection follower | `-s`, `-c`, `-m`, `-i`, `-e`, `-o` | Live RF | Terminal packets & PCAP stream |
 | [`uart_test.py`](#14-uart_testpy) | Python CLI | Serial round-trip latency benchmark | `-s`, `-b` | Serial UART | Round-trip latency (ms) |
 | [`version_check.py`](#15-version_checkpy) | Python CLI | Firmware version & API validator | `-s`, `-b` | Serial UART | API level & firmware version |
+| [`code_review.py`](#16-code_reviewpy) | Python CLI | AI code reviewer (Antigravity SDK) | `--base`, `--head`, `--enforce-codeowners` | Git diff & NotebookLM | Markdown review & PR comment |
 
 ---
 
@@ -257,7 +258,28 @@ This document provides a comprehensive operational and technical reference for a
 
 ---
 
-### 16. Radar Tomography Test Suite Scripts
+### 16. `code_review.py`
+* **Purpose**: Automated architectural, adversarial, and empirical privacy code reviewer for AirTell.
+* **Mechanism**: Powered by the Google Antigravity SDK (`google-antigravity`) and Gemini 3.8 Flash (Thinking=High). Dynamically evaluates link-layer safety, CC2652 UART buffer flow control, 1 µs hardware timer precision, and zero-panic BLE parsing. Grounded in the AirTell NotebookLM research workspace and enforces dual-gate Codeowner authorization (`ncouture`).
+* **Usage**:
+  ```bash
+  python3 scripts/code_review.py --base origin/main --output review.md
+  ```
+* **Options**:
+  - `--base`: Base commit/branch (e.g. `origin/main`).
+  - `--head`: Head commit/branch (e.g. `HEAD`).
+  - `--staged`: Review staged git changes only.
+  - `--enforce-codeowners`: Enforce dual-gate codeowner authorization.
+  - `--pr-author`: GitHub username of PR author.
+  - `--requester`: GitHub username of review requester.
+  - `--notebooklm-url`: Override NotebookLM workspace URL.
+  - `--notebooklm-context`: Path to local synchronized NotebookLM index snapshot.
+  - `--output`: File path to save review report.
+  - `--post-comment`: Post review comment to GitHub PR.
+
+---
+
+### 17. Radar Tomography Test Suite Scripts
 * **`test_radar_cli.py`**: Validates command-line argument parsing and flag handling for `radar_tomography.py`.
 * **`test_radar_public.py`**: Verifies dynamic ambient transmitter discovery and link pair creation in public mode.
 * **`test_radar_signal.py`**: Tests signal attenuation modeling, ellipse weight calculation, and Gaussian perturbation generation.
