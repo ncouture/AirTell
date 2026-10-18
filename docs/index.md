@@ -44,6 +44,10 @@ This repository pairs firmware for Texas Instruments CC1352 / CC26x2 wireless mi
 * [**Hardware Setup & Dongle Flashing**](hardware_setup.md)
   Step-by-step firmware flashing instructions for Sonoff CC2652P USB Dongle Plus, TI LaunchPad (XDS110), and CatSniffer v3, Linux `dialout` permission configuration, and CP2102 baud rate constraints.
 
+### 5. Repository Governance & Automation
+* [**GitHub Operations, Governance & AI Code Review**](GITHUB.md)
+  Operational architecture for GitHub Discussions, structured issue templates, global `CODEOWNERS` policies, and the Gemini 3.8 Flash automated AI code review runner grounded in NotebookLM.
+
 ---
 
 ## Repository Architecture
