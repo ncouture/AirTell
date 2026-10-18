@@ -5,6 +5,9 @@ Executes in-depth architectural and adversarial code reviews for AirTell BLE
 testbed changes using Gemini 3.8 Flash with high thinking, grounded in the
 AirTell Research NotebookLM Workspace (https://notebook.google.com/notebook/26cd837a-4d66-4ab1-94c7-128105718ad6)
 and the domain-specific review skill (.github/skills/code-review/SKILL.md).
+
+Enforces codeowner authorization policy: PRs must be authored by a repository
+codeowner, and the review must be explicitly requested by a repository codeowner.
 """
 
 from __future__ import annotations
@@ -19,7 +22,10 @@ import urllib.request
 from pathlib import Path
 from typing import Optional
 
-import google.antigravity as agy
+try:
+    import google.antigravity as agy
+except ImportError:
+    agy = None
 
 DEFAULT_NOTEBOOKLM_URL = "https://notebook.google.com/notebook/26cd837a-4d66-4ab1-94c7-128105718ad6"
 
@@ -57,12 +63,72 @@ def get_changed_files(base: Optional[str] = None, head: Optional[str] = None, st
     return [line.strip() for line in result.stdout.strip().splitlines() if line.strip()]
 
 
+def get_codeowners(codeowners_path: Path) -> set[str]:
+    """Parse CODEOWNERS file and return a set of lowercased GitHub usernames."""
+    if not codeowners_path.exists():
+        return set()
+    owners: set[str] = set()
+    for line in codeowners_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = line.split()
+        for part in parts[1:]:
+            if part.startswith("@"):
+                # Handle @org/team or @username
+                username = part.lstrip("@").split("/")[-1].lower()
+                owners.add(username)
+            elif "@" in part:
+                owners.add(part.lower())
+    return owners
+
+
+def verify_codeowner_authorization(
+    project_root: Path,
+    requester: Optional[str],
+    pr_author: Optional[str],
+) -> tuple[bool, str]:
+    """Verify that both the PR author and review requester are repository codeowners."""
+    codeowners_path = project_root / ".github" / "CODEOWNERS"
+    if not codeowners_path.exists():
+        codeowners_path = project_root / "CODEOWNERS"
+
+    if not codeowners_path.exists():
+        return False, "Authorization error: CODEOWNERS file not found in repository."
+
+    codeowners = get_codeowners(codeowners_path)
+    if not codeowners:
+        return False, "Authorization error: CODEOWNERS file does not define any codeowners."
+
+    if not pr_author:
+        return False, "Authorization error: PR author must be specified when enforcing codeowner execution."
+
+    if not requester:
+        return False, "Authorization error: Review requester must be specified when enforcing codeowner execution."
+
+    clean_author = pr_author.lower().lstrip("@")
+    clean_requester = requester.lower().lstrip("@")
+
+    if clean_author not in codeowners:
+        return False, (
+            f"PR author '@{pr_author}' is not a repository codeowner. "
+            f"AirTell code review execution is restricted to PRs created by codeowners: {sorted(codeowners)}"
+        )
+
+    if clean_requester not in codeowners:
+        return False, (
+            f"Review requester '@{requester}' is not a repository codeowner. "
+            f"AirTell code review execution must be requested by a codeowner: {sorted(codeowners)}"
+        )
+
+    return True, f"Authorized: PR author '@{pr_author}' and requester '@{requester}' are verified codeowners."
+
+
 def load_notebooklm_context(context_path: Optional[Path]) -> str:
     """Load local synchronized snapshot of the NotebookLM research workspace if present."""
     if context_path and context_path.exists():
         try:
             content = context_path.read_text(encoding="utf-8")
-            # Truncate to a reasonable summary if excessively large
             if len(content) > 15000:
                 return content[:15000] + "\n\n[... NotebookLM context truncated for prompt budget ...]"
             return content
@@ -79,6 +145,16 @@ async def run_review(
     notebooklm_context: str = "",
 ) -> str:
     """Run code review agent using Google Antigravity SDK with NotebookLM grounding."""
+    global agy
+    if agy is None:
+        try:
+            import google.antigravity as agy
+        except ImportError as e:
+            raise RuntimeError(
+                "The 'google-antigravity' package is required to execute code reviews. "
+                "Install it via 'pip install google-antigravity'."
+            ) from e
+
     endpoint = agy.GeminiAPIEndpoint(
         options=agy.GeminiModelOptions(thinking_level=agy.ThinkingLevel.HIGH)
     )
@@ -181,6 +257,21 @@ def main() -> None:
         "--notebooklm-context",
         help="Path to local Markdown file containing exported NotebookLM context/notes",
     )
+    parser.add_argument(
+        "--enforce-codeowners",
+        action="store_true",
+        help="Enforce that PR author and requester are designated repository codeowners",
+    )
+    parser.add_argument(
+        "--pr-author",
+        default=os.getenv("PR_AUTHOR"),
+        help="GitHub username of the Pull Request author",
+    )
+    parser.add_argument(
+        "--requester",
+        default=os.getenv("REQUESTER"),
+        help="GitHub username of the user requesting the code review",
+    )
     args = parser.parse_args()
 
     project_root = Path(__file__).resolve().parent.parent.parent
@@ -191,6 +282,28 @@ def main() -> None:
     if not skills_dir.exists():
         print(f"Error: Skills directory not found at {skills_dir}", file=sys.stderr)
         sys.exit(1)
+
+    # Enforce codeowner authorization if requested
+    if args.enforce_codeowners:
+        authorized, reason = verify_codeowner_authorization(
+            project_root=project_root,
+            requester=args.requester,
+            pr_author=args.pr_author,
+        )
+        if not authorized:
+            print(f"❌ Authorization Denied: {reason}", file=sys.stderr)
+            if args.post_comment and args.pr_number and args.repo and args.token:
+                comment = (
+                    f"> ⚠️ **AirTell Code Review Policy Violation**\n"
+                    f">\n"
+                    f"> Automated code reviews are strictly enforced for PRs created by repository codeowners "
+                    f"and must be requested by a codeowner.\n"
+                    f">\n"
+                    f"> **Detail**: {reason}"
+                )
+                post_github_pr_comment(comment, args.repo, args.pr_number, args.token)
+            sys.exit(1)
+        print(f"✅ Authorization Verified: {reason}")
 
     diff = get_git_diff(base=args.base, head=args.head, staged=args.staged)
     if not diff:
