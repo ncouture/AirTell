@@ -2,23 +2,41 @@ name: "AirTell Code Review (Gemini 3.8 Flash // Antigravity SDK)"
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [review_requested, labeled, ready_for_review]
+  issue_comment:
+    types: [created]
   workflow_dispatch:
     inputs:
+      pr_number:
+        description: "Pull Request number to review"
+        required: true
+        type: string
       base_ref:
         description: "Base git ref to compare against (e.g. origin/main)"
         required: false
         default: "origin/main"
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number || inputs.pr_number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   review:
-    name: "AI Code Review"
+    name: "AI Code Review (Codeowners Enforced)"
     runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && (
+        github.event.action == 'review_requested' ||
+        (github.event.action == 'labeled' && contains(fromJson('["code-review", "ai-review", "review"]'), github.event.label.name))
+      )) ||
+      (github.event_name == 'issue_comment' &&
+        github.event.issue.pull_request != null && (
+          contains(github.event.comment.body, '@gemini-code-review';) ||
+          contains(github.event.comment.body, '@code-review-wish') ||
+          contains(github.event.comment.body, '/ai-review')
+        )
+      )
     permissions:
       contents: read
       pull-requests: write
@@ -41,23 +59,73 @@ jobs:
           python -m pip install --upgrade pip
           pip install google-antigravity
 
+      - name: "Resolve PR Target & Authorize Codeowners"
+        id: resolve
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          EVENT="${{ github.event_name }}"
+          REPO="${{ github.repository }}"
+
+          if [ "$EVENT" = "issue_comment" ]; then
+            PR_NUMBER="${{ github.event.issue.number }}"
+            REQUESTER="${{ github.event.comment.user.login }}"
+            PR_AUTHOR="${{ github.event.issue.user.login }}"
+            PR_DATA=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json baseRefOid,headRefOid)
+            BASE_REF=$(echo "$PR_DATA" | jq -r .baseRefOid)
+            HEAD_REF=$(echo "$PR_DATA" | jq -r .headRefOid)
+          elif [ "$EVENT" = "pull_request" ]; then
+            PR_NUMBER="${{ github.event.pull_request.number }}"
+            REQUESTER="${{ github.event.sender.login }}"
+            PR_AUTHOR="${{ github.event.pull_request.user.login }}"
+            BASE_REF="${{ github.event.pull_request.base.sha }}"
+            HEAD_REF="${{ github.event.pull_request.head.sha }}"
+          elif [ "$EVENT" = "workflow_dispatch" ]; then
+            PR_NUMBER="${{ inputs.pr_number }}"
+            REQUESTER="${{ github.triggering_actor || github.actor }}"
+            PR_DATA=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json author,baseRefOid,headRefOid)
+            PR_AUTHOR=$(echo "$PR_DATA" | jq -r .author.login)
+            BASE_REF="${{ inputs.base_ref }}"
+            if [ -z "$BASE_REF" ] || [ "$BASE_REF" = "null" ]; then
+              BASE_REF=$(echo "$PR_DATA" | jq -r .baseRefOid)
+            fi
+            HEAD_REF=$(echo "$PR_DATA" | jq -r .headRefOid)
+          fi
+
+          echo "Event: $EVENT"
+          echo "PR Number: $PR_NUMBER"
+          echo "PR Author: $PR_AUTHOR"
+          echo "Requester: $REQUESTER"
+          echo "Base Ref: $BASE_REF"
+          echo "Head Ref: $HEAD_REF"
+
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          echo "pr_author=$PR_AUTHOR" >> $GITHUB_OUTPUT
+          echo "requester=$REQUESTER" >> $GITHUB_OUTPUT
+          echo "base_ref=$BASE_REF" >> $GITHUB_OUTPUT
+          echo "head_ref=$HEAD_REF" >> $GITHUB_OUTPUT
+
+      - name: "Fetch and Checkout PR Head"
+        run: |
+          HEAD_REF="${{ steps.resolve.outputs.head_ref }}"
+          if [ -n "$HEAD_REF" ] && [ "$HEAD_REF" != "null" ]; then
+            git fetch origin "$HEAD_REF"
+            git checkout "$HEAD_REF"
+          fi
+
       - name: "Execute Antigravity Code Review"
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BASE_REF="${{ github.event.pull_request.base.sha || inputs.base_ref || 'origin/main' }}"
-          HEAD_REF="${{ github.event.pull_request.head.sha || 'HEAD' }}"
-          PR_NUMBER="${{ github.event.pull_request.number }}"
-          REPO="${{ github.repository }}"
-
-          echo "Reviewing diff between $BASE_REF and $HEAD_REF..."
-
           python scripts/code_review.py \
-            --base "$BASE_REF" \
-            --head "$HEAD_REF" \
-            --pr-number "$PR_NUMBER" \
-            --repo "$REPO" \
+            --base "${{ steps.resolve.outputs.base_ref }}" \
+            --head "${{ steps.resolve.outputs.head_ref }}" \
+            --pr-number "${{ steps.resolve.outputs.pr_number }}" \
+            --repo "${{ github.repository }}" \
+            --pr-author "${{ steps.resolve.outputs.pr_author }}" \
+            --requester "${{ steps.resolve.outputs.requester }}" \
+            --enforce-codeowners \
             --notebooklm-url "https://notebook.google.com/notebook/26cd837a-4d66-4ab1-94c7-128105718ad6" \
             --output review.md \
             --post-comment
