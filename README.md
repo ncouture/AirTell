@@ -2,6 +2,9 @@
 
 ### Exposing the digital body language of Bluetooth Low Energy.
 
+<img src="./public/airtell-bluetooth-low-energy-snifffer.png" width="400">
+
+
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/status-active-brightgreen.svg)]()
