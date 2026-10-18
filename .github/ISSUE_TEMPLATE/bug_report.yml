@@ -1,0 +1,65 @@
+name: "🐛 Bug Report"
+description: "File a reproducible bug, hardware desync, parser failure, or UART buffer error"
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report an issue! 
+        *For general RF questions, hardware showcase, or research discussions, please visit [AirTell Discussions](https://github.com/ncouture/AirTell/discussions).*
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Operating Mode / Topology
+      description: Which AirTell topology or operating mode were you executing?
+      options:
+        - "Topology A: Stimulator + Observer (Dual Dongle)"
+        - "Topology B: Dual-Channel Passive Observer"
+        - "Topology C: Link Layer Relay"
+        - "CLI Side-Channel / Adversarial Ingestion"
+        - "Streamlit Dashboard UI"
+        - "VirtualRadioBus (Mock Simulation / Offline)"
+        - "Other"
+    validations:
+      required: true
+  - type: input
+    id: hardware
+    attributes:
+      label: Hardware Dongles & Firmware
+      description: e.g., 2x Sonoff Zigbee 3.0 Dongle Plus (CC2652P) running Sniffle firmware v1.10.0, or TI CC2652RB LaunchPad.
+      placeholder: "e.g., CC2652P on /dev/ttyUSB0, /dev/ttyUSB1 with Sniffle 1.10"
+    validations:
+      required: false
+  - type: input
+    id: os
+    attributes:
+      label: Operating System & Python Version
+      placeholder: "e.g., Linux Ubuntu 24.04, Python 3.11.8"
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the Bug
+      description: A clear and concise description of what the bug is.
+      placeholder: "Explain what happened versus what was expected."
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Steps or exact command line flags used to reproduce the behavior.
+      placeholder: |
+        1. Run `airtell sidechannel --port /dev/ttyUSB0 ...`
+        2. Execute ...
+        3. See error
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs, Tracebacks, or Packet Captures
+      description: Paste relevant terminal logs, stack traces, or Wireshark error outputs here.
+      render: shell

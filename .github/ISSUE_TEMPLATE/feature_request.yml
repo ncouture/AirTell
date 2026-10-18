@@ -1,0 +1,30 @@
+name: "💡 Feature or Protocol Enhancement"
+description: "Propose a new dissector, topology extension, signal processing metric, or export format"
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have an idea or need an enhancement for AirTell? Let us know!
+        *If you'd like to brainstorm or discuss open-ended design concepts first, join us on [Discussions](https://github.com/ncouture/AirTell/discussions).*
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement or Research Motivation
+      description: Is this related to a specific BLE privacy vector, hardware limitation, or research paper?
+      placeholder: "I'm always frustrated when..."
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Solution or Technical Implementation
+      description: Describe your proposed solution or how the protocol/feature should behave.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative solutions or workarounds you've evaluated.

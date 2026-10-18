@@ -1,0 +1,12 @@
+# Configuration for GitHub Issue Chooser
+# https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-prs/configuring-issue-templates-for-your-repository#configuring-the-template-chooser
+
+blank_issues_enabled: false
+
+contact_links:
+  - name: "💬 AirTell Community Discussions & RF Tradecraft"
+    url: https://github.com/ncouture/AirTell/discussions
+    about: "Ask questions, share PCAPs, debate BLE tracking heuristics, discuss privacy research, or showcase hardware setups!"
+  - name: "🔒 Report a Security Vulnerability"
+    url: https://github.com/ncouture/AirTell/security/advisories/new
+    about: "Please report potential security vulnerabilities privately and responsibly."
