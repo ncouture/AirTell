@@ -4,6 +4,7 @@ Unit Tests for BLE RSSI Radar CLI Runner (radar_tomography.py).
 
 import sys
 from pathlib import Path
+
 import pytest
 
 _SNIFFLE_CLI = Path(__file__).resolve().parents[1]
@@ -11,10 +12,10 @@ if str(_SNIFFLE_CLI) not in sys.path:
     sys.path.insert(0, str(_SNIFFLE_CLI))
 
 from radar_tomography import (
-    build_cli_parser,
-    parse_radar_args,
     RadarTomographyPipeline,
+    build_cli_parser,
     main,
+    parse_radar_args,
 )
 
 

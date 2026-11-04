@@ -14,14 +14,10 @@ Adversarial Challenger Test Suite:
 
 from __future__ import annotations
 
-import argparse
 import math
-import os
-import queue
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pytest
@@ -30,42 +26,32 @@ _SNIFFLE_CLI = Path(__file__).resolve().parents[1]
 if str(_SNIFFLE_CLI) not in sys.path:
     sys.path.insert(0, str(_SNIFFLE_CLI))
 
+from radar_tomography import (
+    RadarTomographyPipeline,
+    parse_radar_args,
+)
+from sniffle.radar.anomaly import (
+    RobustAnomalyEngine,
+    compute_wilson_hilferty,
+)
 from sniffle.radar.capture import (
-    LinkSample,
-    SnifflePacketSource,
-    HardwareSniffleSource,
-    MockSniffleSource,
     DualSnifferManager,
+    LinkSample,
 )
 from sniffle.radar.matrix import (
     AddressType,
-    classify_ble_mac,
-    LinkState,
-    LinkRecord,
     MxNLinkMatrixManager,
     PublicDeviceManager,
-)
-from sniffle.radar.anomaly import (
-    compute_wilson_hilferty,
-    RobustAnomalyEngine,
-    LinkAnomalyVector,
+    classify_ble_mac,
 )
 from sniffle.radar.tomography import (
     SpatialTomography2D,
     TargetTracker,
-    TomographyResult,
-)
-from sniffle.radar.visualizer import RadarVisualizer
-from radar_tomography import (
-    build_cli_parser,
-    parse_radar_args,
-    RadarTomographyPipeline,
 )
 from tests.harness import (
     create_synthetic_adv_packet,
     str_mac,
 )
-
 
 # ============================================================================
 # Section 1: Covariance Singularity & Collinearity
@@ -852,7 +838,7 @@ def test_adversarial_41_dynamic_coordinates_acceptance_criterion(standard_geomet
 
     steps = 10
     path_actual = np.linspace([4.0, 3.0], [16.0, 7.0], steps)
-    estimated_traj: List[Tuple[float, float]] = []
+    estimated_traj: list[tuple[float, float]] = []
 
     for true_pos in path_actual:
         anom_vec = np.zeros(K, dtype=np.float32)
@@ -911,7 +897,7 @@ def test_adversarial_42_curved_motion_dynamic_responsiveness(standard_geometry):
     path_x = np.linspace(3.0, 17.0, steps)
     path_y = 5.0 + 2.5 * np.sin(np.linspace(0, np.pi, steps))
     true_path = [np.array([x, y]) for x, y in zip(path_x, path_y)]
-    estimated_traj: List[Tuple[float, float]] = []
+    estimated_traj: list[tuple[float, float]] = []
 
     for true_pos in true_path:
         anom_vec = np.zeros(K, dtype=np.float32)
@@ -1132,7 +1118,7 @@ def test_adversarial_47_sudden_80_percent_link_dropout_mid_trajectory():
 
     path = [np.array([3.0 + 0.7 * i, 5.0]) for i in range(20)]
     surviving_macs = macs[:3]
-    tracked_positions: List[Optional[Tuple[float, float]]] = []
+    tracked_positions: list[tuple[float, float] | None] = []
 
     for step, true_pos in enumerate(path):
         current_macs = macs if step < 10 else surviving_macs

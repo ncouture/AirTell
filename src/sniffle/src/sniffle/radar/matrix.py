@@ -15,7 +15,7 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 
@@ -101,12 +101,12 @@ class MxNLinkMatrixManager:
     """
     def __init__(
         self,
-        rx_configs: Dict[str, Tuple[int, Tuple[float, float]]],
+        rx_configs: dict[str, tuple[int, tuple[float, float]]],
         inactivity_timeout: float = 30.0,
         occlusion_timeout: float = 3.0,
         min_activation_pkts: int = 3,
         window_size: int = 10,
-        room_dim: Tuple[float, float] = (20.0, 10.0),
+        room_dim: tuple[float, float] = (20.0, 10.0),
     ):
         self.rx_configs = rx_configs
         self.inactivity_timeout = inactivity_timeout
@@ -115,13 +115,13 @@ class MxNLinkMatrixManager:
         self.window_size = window_size
         self.room_dim = room_dim
 
-        self.tx_nodes: Dict[str, Tuple[float, float]] = {}
-        self.tx_addr_types: Dict[str, AddressType] = {}
-        self.tx_last_seen: Dict[str, float] = {}
-        self.tx_packet_counts: Dict[str, int] = {}
-        self.links: Dict[Tuple[str, str], LinkRecord] = {}
+        self.tx_nodes: dict[str, tuple[float, float]] = {}
+        self.tx_addr_types: dict[str, AddressType] = {}
+        self.tx_last_seen: dict[str, float] = {}
+        self.tx_packet_counts: dict[str, int] = {}
+        self.links: dict[tuple[str, str], LinkRecord] = {}
 
-    def register_sample(self, sample: LinkSample, tx_add: int = 0) -> Optional[LinkRecord]:
+    def register_sample(self, sample: LinkSample, tx_add: int = 0) -> LinkRecord | None:
         """Convenience method to register a LinkSample dataclass instance."""
         return self.register_packet(
             timestamp=sample.timestamp,
@@ -140,7 +140,7 @@ class MxNLinkMatrixManager:
         tx_mac: str,
         channel: int,
         tx_add: int = 0,
-    ) -> Optional[LinkRecord]:
+    ) -> LinkRecord | None:
         """
         Ingests a raw packet observation, updates link history, advances lifecycle,
         and computes features.
@@ -238,7 +238,7 @@ class MxNLinkMatrixManager:
         pdr_penalty = pdr_drop * 15.0
         rec.activity_score = attenuation_drop + (0.6 * reflection_boost) + (1.5 * turb) + pdr_penalty
 
-    def prune_inactive(self, current_time: float) -> List[str]:
+    def prune_inactive(self, current_time: float) -> list[str]:
         """
         Removes transmitters and links that have not been observed for > inactivity_timeout.
         Returns list of pruned MAC addresses.
@@ -262,7 +262,7 @@ class MxNLinkMatrixManager:
 
         return pruned_macs
 
-    def get_matrix(self) -> Tuple[np.ndarray, List[str], List[str]]:
+    def get_matrix(self) -> tuple[np.ndarray, list[str], list[str]]:
         """
         Returns M x N activity score matrix, along with sorted TX MACs and RX IDs.
         """
@@ -286,15 +286,15 @@ class MxNLinkMatrixManager:
 
         return mat, tx_list, rx_list
 
-    def get_active_matrix_snapshot(self) -> Tuple[List[str], np.ndarray, np.ndarray, np.ndarray]:
+    def get_active_matrix_snapshot(self) -> tuple[list[str], np.ndarray, np.ndarray, np.ndarray]:
         """
         Returns active link keys, current RSSI vector, PDR vector, and baseline RSSI vector.
         Matches interface contract for downstream Anomaly Engine (M3).
         """
-        link_keys: List[str] = []
-        curr_rssi: List[float] = []
-        pdr_list: List[float] = []
-        base_rssi: List[float] = []
+        link_keys: list[str] = []
+        curr_rssi: list[float] = []
+        pdr_list: list[float] = []
+        base_rssi: list[float] = []
 
         for (tx_mac, rx_id), rec in sorted(self.links.items()):
             if rec.state in (LinkState.ACTIVE, LinkState.DEGRADED):
@@ -317,10 +317,10 @@ class PublicDeviceManager:
     Tracks discovered ambient BLE advertiser nodes and their spatial positions.
     Guarantees deterministic coordinate mapping within room bounds and inactivity pruning.
     """
-    def __init__(self, room_dim: Tuple[float, float] = (20.0, 10.0), inactivity_timeout: float = 30.0):
+    def __init__(self, room_dim: tuple[float, float] = (20.0, 10.0), inactivity_timeout: float = 30.0):
         self.room_dim = room_dim
         self.inactivity_timeout = inactivity_timeout
-        self.nodes: Dict[str, Dict[str, Any]] = {}
+        self.nodes: dict[str, dict[str, Any]] = {}
 
     def register_sample(self, sample: LinkSample, tx_add: int = 0) -> Any:
         self.register_packet(sample.timestamp, sample.rssi, sample.rx_id, sample.tx_mac, sample.channel, tx_add)
@@ -355,7 +355,7 @@ class PublicDeviceManager:
             n["last_seen"] = timestamp
             n["packet_count"] += 1
 
-    def get_active_nodes(self) -> Dict[str, Any]:
+    def get_active_nodes(self) -> dict[str, Any]:
         from .models import Node, NodeType
         result = {}
         for mac, data in self.nodes.items():
@@ -363,7 +363,7 @@ class PublicDeviceManager:
             result[mac] = Node(node_id=mac, role=NodeType.TRANSMITTER, position=pos)
         return result
 
-    def prune_inactive(self, current_time: float) -> List[str]:
+    def prune_inactive(self, current_time: float) -> list[str]:
         pruned = [
             mac for mac, data in self.nodes.items()
             if (current_time - data["last_seen"]) > self.inactivity_timeout

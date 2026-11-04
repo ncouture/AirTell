@@ -3,37 +3,34 @@ Comprehensive Unit and Integration Tests for Hardware Ingestion & Channel Lockin
 """
 
 import dataclasses
-import queue
 import sys
 import time
-from unittest.mock import MagicMock, patch
-import pytest
-import os
 from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 _SNIFFLE_CLI = Path("/home/self/git/Sniffle/Sniffle/python_cli")
 if _SNIFFLE_CLI.exists() and str(_SNIFFLE_CLI) not in sys.path:
     sys.path.insert(0, str(_SNIFFLE_CLI))
 
-from sniffle.radar.capture import (
-    LinkSample,
-    SnifflePacketSource,
-    HardwareSniffleSource,
-    MockSniffleSource,
-    DualSnifferManager,
-    point_to_segment_distance,
-)
-from sniffle.sniffle_hw import SniffleHW, SnifferMode
+from sniffle.errors import UsageError
 from sniffle.packet_decoder import (
-    str_mac,
+    AdvExtIndMessage,
     AdvIndMessage,
     AdvNonconnIndMessage,
-    ScanRspMessage,
     AdvScanIndMessage,
-    AdvExtIndMessage,
+    ScanRspMessage,
+    str_mac,
 )
-from sniffle.errors import UsageError
-
+from sniffle.radar.capture import (
+    DualSnifferManager,
+    HardwareSniffleSource,
+    LinkSample,
+    MockSniffleSource,
+    point_to_segment_distance,
+)
+from sniffle.sniffle_hw import SnifferMode, SniffleHW
 
 # ===========================================================================
 # 1. LinkSample Tests

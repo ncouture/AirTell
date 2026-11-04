@@ -12,7 +12,7 @@ import logging
 import os
 import threading
 import time
-from typing import Any, Optional
+from typing import Any
 
 from airtell.extcap.parser import TsharkBleJsonParser
 from airtell.extcap.runner import TsharkConfig, TsharkExtcapRunner
@@ -124,7 +124,7 @@ class TsharkTopologyManager:
 
     def __init__(
         self,
-        event_queue: Optional[EventQueue] = None,
+        event_queue: EventQueue | None = None,
         ring_buffer_size: int = 2000,
         tshark_bin: str = "tshark",
     ) -> None:

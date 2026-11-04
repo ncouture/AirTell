@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
-from typing import Any, Optional
+from typing import Any
 
 import pandas as pd
 import streamlit as st
@@ -84,9 +84,9 @@ def decode_ad_structures(payload_hex: str) -> list[dict[str, Any]]:
 
 
 def render_packet_inspector(
-    conn: Optional[sqlite3.Connection],
-    event_queue: Optional[EventQueue] = None,
-    backend: Optional[Any] = None,
+    conn: sqlite3.Connection | None,
+    event_queue: EventQueue | None = None,
+    backend: Any | None = None,
 ) -> None:
     """Render the Deep Packet Inspector view."""
     st.subheader("🔍 Deep Packet Inspector & Protocol Dissection")

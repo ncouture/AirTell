@@ -290,3 +290,9 @@ class TestParseSniffleMessageDispatcher:
 
         state = StateMessage(state=STATE_STATIC)
         assert asdict(state)["state"] == STATE_STATIC
+
+        dm = DebugMessage(text="test_debug")
+        assert dm.text == "test_debug"
+        assert asdict(dm)["text"] == "test_debug"
+        dm_copy = DebugMessage(**asdict(dm))
+        assert dm_copy.text == "test_debug"

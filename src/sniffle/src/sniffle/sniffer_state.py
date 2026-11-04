@@ -4,6 +4,7 @@
 
 from enum import IntEnum
 
+
 class SnifferState(IntEnum):
     STATIC = 0
     ADVERT_SEEK = 1

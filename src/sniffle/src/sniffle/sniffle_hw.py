@@ -3,21 +3,24 @@
 # Released as open source under GPLv3
 
 import sys
-from serial import Serial, SerialTimeoutException
-from struct import pack, unpack
-from base64 import b64encode, b64decode
+from base64 import b64decode, b64encode
 from binascii import Error as BAError
-from time import time
-from random import randint, randrange
-from serial.tools.list_ports import comports
-from traceback import format_exception
 from os.path import realpath
-from .measurements import MeasurementMessage, VersionMeasurement
-from .constants import BLE_ADV_AA, BLE_ADV_CRCI, SnifferMode, PhyMode
-from .sniffer_state import StateMessage, SnifferState
+from random import randint, randrange
+from struct import pack, unpack
+from time import time
+from traceback import format_exception
+
+from serial import Serial, SerialTimeoutException
+from serial.tools.list_ports import comports
+
+from .constants import BLE_ADV_AA, BLE_ADV_CRCI, PhyMode, SnifferMode
 from .decoder_state import SniffleDecoderState
-from .packet_decoder import PacketMessage, DPacketMessage
 from .errors import SniffleHWPacketError, UsageError
+from .measurements import MeasurementMessage, VersionMeasurement
+from .packet_decoder import DPacketMessage, PacketMessage
+from .sniffer_state import StateMessage
+
 
 class TrivialLogger:
     def _log(self, msg, *args, exc_info=None, **kwargs):

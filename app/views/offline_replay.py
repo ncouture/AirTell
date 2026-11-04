@@ -6,7 +6,7 @@ import io
 import json
 import sqlite3
 import time
-from typing import Any, Optional
+from typing import Any
 
 import pandas as pd
 import streamlit as st
@@ -91,8 +91,8 @@ def parse_session_json(json_bytes: bytes) -> list[dict[str, Any]]:
 
 
 def render_offline_replay(
-    tracker_db: Optional[BLETrackerDB] = None,
-    conn: Optional[sqlite3.Connection] = None,
+    tracker_db: BLETrackerDB | None = None,
+    conn: sqlite3.Connection | None = None,
 ) -> None:
     """Render the Offline PCAP & Session Replay view."""
     st.subheader("📁 Offline PCAP & Session Replay")

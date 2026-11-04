@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import collections
 import sqlite3
-from typing import Any, Optional
+from typing import Any
 
 import pandas as pd
 import streamlit as st
@@ -50,9 +50,9 @@ def compute_telemetry_metrics(
 
 
 def render_telemetry_overview(
-    conn: Optional[sqlite3.Connection],
-    event_queue: Optional[EventQueue] = None,
-    backend: Optional[Any] = None,
+    conn: sqlite3.Connection | None,
+    event_queue: EventQueue | None = None,
+    backend: Any | None = None,
 ) -> None:
     """Render the Live Telemetry Overview dashboard view."""
     st.subheader("📡 Live Radio Telemetry & Signal Throughput")

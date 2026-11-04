@@ -2,9 +2,11 @@
 # Copyright (c) 2024, NCC Group plc
 # Released as open source under GPLv3
 
+from math import gcd
+
 import numpy
 import scipy.signal
-from math import gcd
+
 
 class PolyphaseResampler:
     def __init__(self, up, down, dtype=numpy.complex64, order=5, rel_bw=0.95):

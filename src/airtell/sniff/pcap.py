@@ -10,9 +10,10 @@ import io
 import struct
 import threading
 import time
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, BinaryIO, Iterator
+from typing import Any, BinaryIO
 
 # PCAP Constants
 PCAP_MAGIC_USEC: int = 0xA1B2C3D4  # Standard microsecond PCAP magic

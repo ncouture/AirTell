@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
-from typing import Any, Optional
+from typing import Any
 
 import pandas as pd
 import plotly.express as px
@@ -97,9 +97,9 @@ def build_rssi_figure(df: pd.DataFrame) -> go.Figure:
 
 
 def render_rssi_trends(
-    conn: Optional[sqlite3.Connection],
-    event_queue: Optional[EventQueue] = None,
-    backend: Optional[Any] = None,
+    conn: sqlite3.Connection | None,
+    event_queue: EventQueue | None = None,
+    backend: Any | None = None,
 ) -> None:
     """Render the RSSI Trends view with interactive filtering and Plotly graphs."""
     st.subheader("📈 RSSI Signal Strength & Tracker Trajectories")

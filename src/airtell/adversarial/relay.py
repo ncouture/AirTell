@@ -6,7 +6,6 @@ import collections
 import enum
 import threading
 from dataclasses import dataclass, field
-from typing import Optional
 
 
 class SMPPairingState(enum.Enum):
@@ -78,7 +77,7 @@ class PairingHandshakeEvent:
     event_type: str
     initiator_mac: str
     target_mac: str
-    failure_code: Optional[PairingFailureCode]
+    failure_code: PairingFailureCode | None
     timestamp_usec: int
     state: SMPPairingState
 
@@ -113,7 +112,7 @@ class PairingRelayBridge:
         with self._lock:
             self._relay_queue.append(packet)
 
-    def drain_next_packet(self) -> Optional[RelayedLinkLayerPacket]:
+    def drain_next_packet(self) -> RelayedLinkLayerPacket | None:
         """Pop the oldest packet from the relay queue for transmission by Device 2."""
         with self._lock:
             if self._relay_queue:
@@ -132,7 +131,7 @@ class PairingRelayBridge:
         target_mac: str,
         payload_bytes: bytes,
         timestamp_usec: int,
-    ) -> Optional[PairingHandshakeEvent]:
+    ) -> PairingHandshakeEvent | None:
         """Process incoming Link Layer / SMP frame and update handshake state machine.
 
         Args:

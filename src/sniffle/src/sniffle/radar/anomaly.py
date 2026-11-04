@@ -12,8 +12,9 @@ from __future__ import annotations
 
 import math
 from collections import deque
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any
 
 import numpy as np
 
@@ -39,7 +40,7 @@ class LinkAnomalyVector:
     """
     Anomaly output vector bridging Anomaly Engine and Spatial Tomography.
     """
-    link_keys: List[str]
+    link_keys: list[str]
     anomaly_scores: np.ndarray
     mahalanobis_score: float
     is_anomaly: bool
@@ -69,10 +70,10 @@ class RobustAnomalyEngine:
         self.min_mad = min_mad
         self.alpha_reg = alpha_reg
 
-        self.link_history: Dict[Any, deque[float]] = {}
+        self.link_history: dict[Any, deque[float]] = {}
         self.multivariate_history: deque[np.ndarray] = deque(maxlen=self.history_len)
-        self.tracked_link_keys: List[Any] = []
-        self.last_sigma_reg: Optional[np.ndarray] = None
+        self.tracked_link_keys: list[Any] = []
+        self.last_sigma_reg: np.ndarray | None = None
 
     def update_link_sample(
         self,
@@ -94,7 +95,7 @@ class RobustAnomalyEngine:
         channel: int,
         current_rssi: float,
         pdr: float = 1.0,
-    ) -> Tuple[float, float, float]:
+    ) -> tuple[float, float, float]:
         """
         Computes the robust Z-score using Median and Median Absolute Deviation (MAD):
         Z_robust = 0.6745 * |x - median| / MAD_eff
@@ -129,7 +130,7 @@ class RobustAnomalyEngine:
         self,
         active_keys: Sequence[Any],
         current_rssi_vec: np.ndarray,
-    ) -> Tuple[float, float, np.ndarray]:
+    ) -> tuple[float, float, np.ndarray]:
         """
         Computes multivariate Mahalanobis distance across active links:
         D_M(x) = sqrt((x - mu)^T * Sigma_reg^-1 * (x - mu))
@@ -187,7 +188,7 @@ class RobustAnomalyEngine:
 
     def process_matrix_snapshot(
         self,
-        link_keys: List[str],
+        link_keys: list[str],
         current_rssi: np.ndarray,
         pdr_vec: np.ndarray,
     ) -> LinkAnomalyVector:

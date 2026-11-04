@@ -13,19 +13,19 @@ Provides:
 from __future__ import annotations
 
 import os
-import sys
 import time
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from collections.abc import Sequence
+from typing import Any
 
 import numpy as np
 
+from .anomaly import RobustAnomalyEngine
 from .capture import LinkSample
 from .matrix import (
     LinkState,
     MxNLinkMatrixManager,
     PublicDeviceManager,
 )
-from .anomaly import RobustAnomalyEngine
 from .tomography import (
     SpatialTomography2D,
     TargetTracker,
@@ -34,7 +34,7 @@ from .tomography import (
 
 class _TargetMarkerStub:
     """Represents the dynamic target marker artist."""
-    def __init__(self, artist: Optional[Any] = None):
+    def __init__(self, artist: Any | None = None):
         self._artist = artist
         self.x: float = 0.0
         self.y: float = 0.0
@@ -48,7 +48,7 @@ class _TargetMarkerStub:
             except Exception:
                 pass
 
-    def get_data(self) -> Tuple[List[float], List[float]]:
+    def get_data(self) -> tuple[list[float], list[float]]:
         if self._artist is not None:
             try:
                 return self._artist.get_data()
@@ -65,24 +65,24 @@ class RadarVisualizer:
 
     def __init__(
         self,
-        room_dim: Tuple[float, float] = (20.0, 10.0),
+        room_dim: tuple[float, float] = (20.0, 10.0),
         headless: bool = False,
     ):
         self.room_dim = room_dim
         self.headless = headless or ("DISPLAY" not in os.environ)
 
-        self.fig: Optional[Any] = None
-        self.ax: Optional[Any] = None
-        self.im: Optional[Any] = None
-        self.cbar: Optional[Any] = None
+        self.fig: Any | None = None
+        self.ax: Any | None = None
+        self.im: Any | None = None
+        self.cbar: Any | None = None
 
-        self.rx_artists: List[Any] = []
-        self.tx_artists: List[Any] = []
-        self.chord_artists: List[Any] = []
-        self.trail_history: List[Tuple[float, float]] = []
+        self.rx_artists: list[Any] = []
+        self.tx_artists: list[Any] = []
+        self.chord_artists: list[Any] = []
+        self.trail_history: list[tuple[float, float]] = []
 
-        self._marker_artist: Optional[Any] = None
-        self._trail_artist: Optional[Any] = None
+        self._marker_artist: Any | None = None
+        self._trail_artist: Any | None = None
         self.target_marker: _TargetMarkerStub = _TargetMarkerStub()
 
         if self.headless:
@@ -168,7 +168,7 @@ class RadarVisualizer:
         except Exception:
             pass
 
-    def update_target(self, pos: Tuple[float, float]) -> None:
+    def update_target(self, pos: tuple[float, float]) -> None:
         """Updates current target position and appends to trajectory trail."""
         self.trail_history.append(pos)
         self.target_marker.set_data(pos[0], pos[1])
@@ -184,7 +184,7 @@ class RadarVisualizer:
     def update_frame(
         self,
         heatmap: np.ndarray,
-        target_coords: Optional[Tuple[float, float]],
+        target_coords: tuple[float, float] | None,
         active_links_count: int = 0,
         max_intensity: float = 0.0,
         anomaly_sigma: float = 0.0,
@@ -236,7 +236,7 @@ class RadarFrameProcessor:
 
     def __init__(
         self,
-        room_dim: Tuple[float, float] = (20.0, 10.0),
+        room_dim: tuple[float, float] = (20.0, 10.0),
         grid_res: float = 0.2,
         headless: bool = True,
         min_activation_pkts: int = 1,
@@ -247,7 +247,7 @@ class RadarFrameProcessor:
         self.grid_res = grid_res
         self.headless = headless
 
-        self.rx_configs: Dict[str, Tuple[int, Tuple[float, float]]] = {
+        self.rx_configs: dict[str, tuple[int, tuple[float, float]]] = {
             "R1": (37, (0.5, 0.5)),
             "R2": (38, (room_dim[0] - 0.5, 0.5)),
         }
@@ -276,14 +276,14 @@ class RadarFrameProcessor:
             room_dim=room_dim,
             headless=headless,
         )
-        self._current_link_keys: List[str] = []
+        self._current_link_keys: list[str] = []
         self._frame_count: int = 0
 
     def process_frame(
         self,
         samples: Sequence[LinkSample],
         headless: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Executes one full frame of real radar sensing logic:
         1. Ingests LinkSamples into MxNLinkMatrixManager & PublicDeviceManager.
@@ -335,7 +335,7 @@ class RadarFrameProcessor:
 
         if link_keys != self._current_link_keys:
             self._current_link_keys = list(link_keys)
-            active_links: List[Tuple[np.ndarray, np.ndarray]] = []
+            active_links: list[tuple[np.ndarray, np.ndarray]] = []
             center = (self.room_dim[0] / 2.0, self.room_dim[1] / 2.0)
             for k_str in link_keys:
                 parts = k_str.split("_")
@@ -394,8 +394,8 @@ class RadarFrameProcessor:
 def run_single_frame(
     samples: Sequence[LinkSample],
     headless: bool = True,
-    processor: Optional[RadarFrameProcessor] = None,
-) -> Dict[str, Any]:
+    processor: RadarFrameProcessor | None = None,
+) -> dict[str, Any]:
     """
     Processes a single telemetry frame using authentic radar sensing components:
     MxNLinkMatrixManager -> RobustAnomalyEngine -> SpatialTomography2D -> TargetTracker.

@@ -5,15 +5,15 @@
 # Released as open source under GPLv3
 
 from struct import pack, unpack
-from traceback import print_exception
 from time import time
-from .crc_ble import rbit24
+
 from .constants import BLE_ADV_AA
-from .sniffer_state import SnifferState
-from .decoder_state import SniffleDecoderState
 from .crc_ble import crc_ble_reverse, rbit24
+from .decoder_state import SniffleDecoderState
 from .errors import SniffleHWPacketError
 from .hexdump import hexdump
+from .sniffer_state import SnifferState
+
 
 def str_mac(mac):
     return ":".join(["%02X" % b for b in reversed(mac)])

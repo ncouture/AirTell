@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import numpy as np
-from typing import Optional
 
 
 class AlphaBetaTracker:
@@ -10,10 +11,10 @@ class AlphaBetaTracker:
     def __init__(self, alpha: float = 0.65, beta: float = 0.15):
         self.alpha = alpha
         self.beta = beta
-        self.state_x: Optional[np.ndarray] = None  # Position [x, y]
+        self.state_x: np.ndarray | None = None  # Position [x, y]
         self.state_v: np.ndarray = np.array([0.0, 0.0])  # Velocity [vx, vy]
 
-    def update(self, pos_measured: Optional[np.ndarray], dt: float = 0.1) -> Optional[np.ndarray]:
+    def update(self, pos_measured: np.ndarray | None, dt: float = 0.1) -> np.ndarray | None:
         if pos_measured is None:
             if self.state_x is not None:
                 # Predict forward with velocity

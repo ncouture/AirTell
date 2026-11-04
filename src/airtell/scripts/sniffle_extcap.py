@@ -25,24 +25,35 @@
 #       A Wireshark extcap plug-in for real time packet capture using Sniffle.
 #
 
-import sys
+import argparse
+import logging
 import os
 import os.path
-import argparse
 import re
-import threading
-import struct
-import logging
-import time
 import signal
+import struct
+import sys
+import threading
+import time
 import traceback
+
 from serial.tools.list_ports import comports
-from sniffle.constants import BLE_ADV_AA
-from sniffle.sniffle_hw import make_sniffle_hw, SniffleHW, PacketMessage, SnifferMode, PhyMode
-from sniffle.packet_decoder import (DataMessage, AdvaMessage, AdvDirectIndMessage,
-                            ScanRspMessage, AdvExtIndMessage, str_mac)
-from sniffle.pcap import PcapBleWriter
 from sniffle.errors import UsageError
+from sniffle.packet_decoder import (
+    AdvaMessage,
+    AdvDirectIndMessage,
+    AdvExtIndMessage,
+    ScanRspMessage,
+    str_mac,
+)
+from sniffle.pcap import PcapBleWriter
+from sniffle.sniffle_hw import (
+    PacketMessage,
+    PhyMode,
+    SnifferMode,
+    SniffleHW,
+    make_sniffle_hw,
+)
 
 scriptName = os.path.basename(sys.argv[0])
 

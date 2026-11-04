@@ -6,7 +6,9 @@
 
 import argparse
 from time import sleep
+
 from sniffle.sniffle_hw import SniffleHW
+
 
 def main():
     aparse = argparse.ArgumentParser(description="Firmware reset utility for Sniffle BLE5 sniffer")
