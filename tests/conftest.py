@@ -5,15 +5,13 @@ from pathlib import Path
 
 import pytest
 
-# Ensure src/ is on sys.path
+# Ensure src/ and in-tree sniffle are on sys.path
 SRC_DIR = Path(__file__).resolve().parent.parent / "src"
+SNIFFLE_SRC_DIR = SRC_DIR / "sniffle" / "src"
+if str(SNIFFLE_SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SNIFFLE_SRC_DIR))
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
-
-# Optionally add reference Sniffle library if present
-SNIFFLE_CLI_DIR = Path("/home/self/git/Sniffle/Sniffle/python_cli")
-if SNIFFLE_CLI_DIR.exists() and str(SNIFFLE_CLI_DIR) not in sys.path:
-    sys.path.insert(0, str(SNIFFLE_CLI_DIR))
 
 
 @pytest.fixture

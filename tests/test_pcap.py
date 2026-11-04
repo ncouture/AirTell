@@ -367,3 +367,33 @@ class TestPcapWriterReaderRoundTrip:
         assert packets[1].phy == 2  # flags phy bits (flags >> 14 & 0x03) sets 2 for coded
         assert packets[1].body == pdu
         reader.close()
+
+
+def test_sniffle_pcap_reader_malformed_packets_raise_value_error():
+    """Validate that sniffle.pcap.PcapBleReader raises ValueError instead of AssertionError on malformed inputs."""
+    import io
+    import struct
+
+    from sniffle.pcap import PcapBleReader as SnifflePcapReader
+
+    # Construct valid 24-byte PCAP header
+    global_hdr = struct.pack("<IHHiIII", 0xA1B2C3D4, 2, 4, 0, 0, 65535, 256)
+
+    # 1. Truncated packet record (< 16 bytes) -> raises EOFError
+    stream1 = io.BytesIO(global_hdr + b"\x00" * 10)
+    reader1 = SnifflePcapReader(stream1)
+    with pytest.raises(EOFError):
+        reader1.read_packet()
+
+    # 2. Mismatched size fields (size1 != size2)
+    stream2 = io.BytesIO(global_hdr + struct.pack("<IIII", 0, 0, 20, 30) + b"\x00" * 20)
+    reader2 = SnifflePcapReader(stream2)
+    with pytest.raises(ValueError, match="Mismatched packet size"):
+        reader2.read_packet()
+
+    # 3. Truncated payload (< 17 bytes)
+    stream3 = io.BytesIO(global_hdr + struct.pack("<IIII", 0, 0, 10, 10) + b"\x00" * 10)
+    reader3 = SnifflePcapReader(stream3)
+    with pytest.raises(ValueError, match="Truncated packet payload"):
+        reader3.read_packet()
+
