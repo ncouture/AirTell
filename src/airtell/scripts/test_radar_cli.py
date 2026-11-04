@@ -1,23 +1,19 @@
 #!/usr/bin/env python
 #
 
-import pytest
-import json
-import tempfile
-import os
 import io
+import os
 import sys
-import numpy as np
 
 from sniffle.radar.demuxer import StreamDemuxer
-from sniffle.radar.models import LinkSample
-from radar_tomography import build_parser, run_radar_pipeline, generate_simulated_samples
+
+from airtell.scripts.radar_tomography import build_parser, generate_simulated_samples, run_radar_pipeline
 
 
 def test_cli_parser_help_and_defaults():
     parser = build_parser()
     help_text = parser.format_help()
-    
+
     assert "--simulate" in help_text
     assert "--replay" in help_text
     assert "--port1" in help_text
@@ -32,6 +28,10 @@ def test_cli_parser_help_and_defaults():
 
 def test_packaged_sample_dataset_loading():
     dataset_path = os.path.join(os.path.dirname(__file__), "radar_sample_data.json")
+    if not os.path.exists(dataset_path):
+        dataset_path = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "..", "sniffle", "src", "sniffle", "radar_sample_data.json")
+        )
     assert os.path.exists(dataset_path)
 
     demuxer = StreamDemuxer()
@@ -44,7 +44,7 @@ def test_terminal_packet_logging_for_ports():
     samples = generate_simulated_samples()
     captured_output = io.StringIO()
     sys.stdout = captured_output
-    
+
     try:
         run_radar_pipeline(samples, headless=True, mode_name="Test Mode")
     finally:
