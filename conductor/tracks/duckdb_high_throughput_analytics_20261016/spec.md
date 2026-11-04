@@ -21,7 +21,7 @@ This track introduces a unified `DatabaseBackend` abstraction layer supporting b
   - Expose high-level aggregation methods on `BLETrackerDB`: `get_observations()`, `get_rssi_timeseries()`, `get_channel_distribution()`, `get_tracker_frequencies()`.
 
 ### FR3: Streamlit Dashboard Integration (Issue #46)
-- In `app/streamlit_app.py` and views (`views/packet_inspector.py`, `views/rssi_trends.py`, `views/alert_feed.py`, `views/telemetry_overview.py`):
+- In `app/streamlit_app.py` and views (`app/views/packet_inspector.py`, `app/views/rssi_trends.py`, `app/views/alert_feed.py`, `app/views/telemetry_overview.py`):
   - Cache the DuckDB analytical connection/backend in Streamlit session state or resource cache.
   - Accelerate packet search and filtering in Deep Packet Inspector, RSSI Trends time-series, and Threat Alerts views using vectorized queries.
   - Preserve backwards compatibility for callers passing standard SQLite connections or mock connections.
