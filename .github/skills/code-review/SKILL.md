@@ -86,7 +86,7 @@ Before emitting findings, enter deep internal reflection:
 Execute local verification checks before writing findings:
 ```bash
 # 1. Lint and style check
-uv run ruff check .
+ruff check .
 
 # 2. Type and syntax check
 python3 -m py_compile $(git diff --name-only origin/main...HEAD | grep '\.py$')
@@ -145,7 +145,7 @@ Every review report must follow this structure:
 ---
 
 ## 🧪 Verification & Test Health
-- [ ] Ruff lint clean (`uv run ruff check .`)
+- [ ] Ruff lint clean (`ruff check .`)
 - [ ] Unit & integration tests passing (`uv run pytest`)
 - [ ] Edge cases covered in tests (mock packet drops, invalid headers, port disconnects)
 
