@@ -1,6 +1,6 @@
 # Implementation Plan: Live Bluetooth JSON Streaming via Tshark & Sniffle Extcap
 
-## Phase 1: Asynchronous Tshark Extcap Process Manager & Stream Engine
+## Phase 1: Asynchronous Tshark Extcap Process Manager & Stream Engine [checkpoint: 8c402a4]
 - [x] Task: Write unit tests for command construction, extcap option formatting, and process lifecycle in `tests/test_tshark_runner.py` 79656aa
   - [x] Test formatting of `tshark -i sniffle -o "extcap.sniffle.<option>:<value>"` parameters
   - [x] Test line-buffered streaming, stderr capture, and non-blocking stdout reading
@@ -11,7 +11,7 @@
   - [x] Implement robust process lifecycle and signal management
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [checkpoint: 8c402a4]
 
-## Phase 2: Live BLE JSON Dissector & Field Normalization
+## Phase 2: Live BLE JSON Dissector & Field Normalization [checkpoint: 5a14469]
 - [x] Task: Write unit tests for JSON stream parsing in `tests/test_tshark_parser.py` 6545e1a
   - [x] Test extraction from Elasticsearch line-delimited JSON (`-T ek`)
   - [x] Test extraction from standard streaming JSON arrays (`-T json`)
@@ -23,7 +23,7 @@
   - [x] Enforce memory bounds and drop-oldest retention
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [checkpoint: 5a14469]
 
-## Phase 3: Multi-Dongle Topology Orchestration & Contention Guard
+## Phase 3: Multi-Dongle Topology Orchestration & Contention Guard [checkpoint: 7dd3839]
 - [x] Task: Write unit tests for port conflict detection and dual-channel aggregation in `tests/test_tshark_topology.py` ddb0dbd
   - [x] Test non-destructive device locking checks preventing collisions with active Sniffle processes
   - [x] Test concurrent dual-dongle aggregation across separate primary advertising channels
@@ -33,7 +33,7 @@
   - [x] Implement Topology B (Single-Channel / Cross-Band with cellular/SDR coexistence)
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [checkpoint: 7dd3839]
 
-## Phase 4: Streamlit UI Integration & Radio Controls View
+## Phase 4: Streamlit UI Integration & Radio Controls View [checkpoint: ab01525]
 - [x] Task: Write integration tests for Radio Controls live streaming UI in `tests/test_tshark_ui.py` 1b5069b
   - [x] Test widget parameter binding to extcap command configuration
   - [x] Test live packet table and metric counter updates
