@@ -70,7 +70,7 @@ Usage: airtell [-h] [-v] [--version] <subcommand> [subcommand-options]
 
 - `-h`, `--help`: Output top-level usage syntax, command descriptions, and list of available subcommands. Exit code `0`.
 - `-v`, `--verbose`: Enable detailed debug logging (`logging.DEBUG`). Format: `%(asctime)s [%(levelname)s] %(name)s: %(message)s`. Default level is `logging.INFO`.
-- `--version`: Output program version (`airtell 0.1.0`) and exit with code `0`.
+- `--version`: Output program version (`airtell 0.2.0`) and exit with code `0`.
 
 ### Subcommand Alias Directory
 

@@ -1134,4 +1134,4 @@ class TestFeature20CliAndHardwareLoopbackVerification:
         ret = main(["--version"])
         assert ret == 0
         captured = capsys.readouterr()
-        assert "bluetooth-sniffle 0.1.0" in captured.out or "bluetooth-sniffle 0.1.0" in captured.err
+        assert "bluetooth-sniffle 0.2.0" in captured.out or "bluetooth-sniffle 0.2.0" in captured.err
