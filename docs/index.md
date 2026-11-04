@@ -13,8 +13,12 @@ This repository pairs firmware for Texas Instruments CC1352 / CC26x2 wireless mi
   Interactive, copyable NotebookLM notebook indexing peer-reviewed research papers on Bluetooth Low Energy vulnerabilities, commercial tracking SDKs, and link-layer fingerprinting. Open for contributors to copy, explore, and query with AI.
 * [**PoPETs 2025-0103 Research Paper (PDF)**](AirTell-PoPETs.pdf)
   *"Your Signal, Their Data: An Empirical Privacy Analysis of Wireless-scanning SDKs in Android"* — The core empirical privacy research paper implemented and exercised by AirTell.
+* [**PoPETs Research Analysis & Methodology Guide**](AirTell-PoPETs.md)
+  Technical breakdown of wireless-scanning SDK privacy risks, empirical testbed methodology, and countermeasure evaluation workflows.
 
 ### 1. Specifications & Topologies
+* [**2D Radio Tomographic Sensing Engine**](2D_tomographic_sensing.md)
+  Technical architecture, mathematical models (Tikhonov regularization, Mahalanobis anomaly detection, alpha-beta tracking), and operational guide for device-free passive RF imaging and human localization using ambient BLE RSSI perturbations.
 * [**Link Layer Traffic Relay Specifications**](relay_specifications.md)
   Full architectural and protocol specifications to implement Link Layer Traffic Relay using a master/slave topology (`/dev/ttyUSB0` and `/dev/ttyUSB1`) across two Sniffle devices (`relay_master.py` and `relay_slave.py`). Includes PDU sequencing, fast connection interval tuning, XDS110 DMA latency workarounds, and security warnings.
 * [**Device Status & LSOF Validation**](device_status.md)
@@ -33,8 +37,12 @@ This repository pairs firmware for Texas Instruments CC1352 / CC26x2 wireless mi
 ### 3. Protocol Dissection & Analysis
 * [**Apple AirDrop Advertisement Analysis**](airdrop.md)
   Byte-level packet breakdown of Apple Continuity Nearby Info advertisements indicating "AirDrop receive enabled", with live TShark and Sniffle filters.
+* [**Bluetooth Vendor Contract & Forensic Correlation Report**](Bluetooth-Vendor-Contract-Analysis.md)
+  Forensic audit and RF sourcing correlation analyzing highway wardriving capture telemetry, reconciling law enforcement electronics, traffic controller mesh nodes, and headset signatures.
 * [**Crackle PCAP Analysis & Long-Term Device Attribution**](crackle_pcap_analysis.md)
   In-depth analysis of captured BLE PCAPs with `crackle`, tracing Resolvable Private Addresses (RPAs) against fixed peripheral anchors across multi-hour sessions.
+* [**Traffic Metadata & Law Enforcement Electronics Audit**](extract_traffic_metadata.md)
+  Comprehensive forensic investigation and quantitative reconciliation report for BLE link-layer traffic, selective allowlist probing, and scanner-peripheral dynamics across temporal windows.
 * [**Filtering BLE JSON with JQ**](json_jq.md)
   Techniques and recipes for processing Wireshark/TShark JSON streams (`tshark -T json`), handling dotted key syntax, hierarchical scan response trees, and extracting unique device identities.
 * [**Using TShark with Sniffle & PCAP Handling**](tshark.md)
