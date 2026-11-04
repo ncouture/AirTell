@@ -397,3 +397,15 @@ def test_sniffle_pcap_reader_malformed_packets_raise_value_error():
     with pytest.raises(ValueError, match="Truncated packet payload"):
         reader3.read_packet()
 
+
+def test_pcap_reader_truncated_global_header():
+    import io
+
+    from airtell.sniff.pcap import PcapBleReader
+
+    for length in [0, 4, 6, 12, 23]:
+        stream = io.BytesIO(b"\x00" * length)
+        with pytest.raises(ValueError, match="File too short for PCAP global header"):
+            PcapBleReader(stream)
+
+
