@@ -268,3 +268,25 @@ class TestParseSniffleMessageDispatcher:
         assert mtype == MESSAGE_DEBUG
         assert isinstance(obj, DebugMessage)
         assert "Firmware started" in obj.text
+
+    def test_dataclass_constructors_and_asdict(self) -> None:
+        from dataclasses import asdict
+
+        pm = PacketMessage(ts=12345, chan=37, rssi=-70, body=b"\x01\x02")
+        assert pm.ts == 12345
+        assert pm.chan == 37
+        assert pm.rssi == -70
+        d = asdict(pm)
+        assert d["ts"] == 12345
+        assert d["chan"] == 37
+
+        raw = PacketMessage.pack(body=b"\xaa\xbb", ts=999, chan=39)
+        pm_bytes = PacketMessage.from_bytes(raw)
+        assert pm_bytes.ts == 999
+        assert pm_bytes.chan == 39
+
+        marker = MarkerMessage(ts=500, marker_data=b"SYNC")
+        assert asdict(marker)["ts"] == 500
+
+        state = StateMessage(state=STATE_STATIC)
+        assert asdict(state)["state"] == STATE_STATIC
