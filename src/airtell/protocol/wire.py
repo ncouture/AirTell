@@ -204,32 +204,62 @@ class PacketMessage:
     - body: Link Layer PDU bytes
     """
 
-    ts: int
-    pkt_dir: int
-    crc_err: bool
-    event: int
-    rssi: int
-    chan: int
-    phy: int
-    body: bytes
-    raw: bytes
+    ts: int = 0
+    pkt_dir: int = 0
+    crc_err: bool = False
+    event: int = 0
+    rssi: int = 0
+    chan: int = 0
+    phy: int = 0
+    body: bytes = b""
+    raw: bytes = b""
 
-    def __init__(self, raw_msg: bytes) -> None:
-        """Parse raw PacketMessage body bytes (excluding msg_type)."""
-        if len(raw_msg) < 10:
-            raise ValueError(
-                f"PacketMessage body too short ({len(raw_msg)} bytes, expected >= 10)"
-            )
-        self.raw = raw_msg
-        ts, l_field, event, rssi, chan_phy = unpack("<LHHbB", raw_msg[:10])
-        self.ts = ts
-        self.pkt_dir = (l_field >> 15) & 1
-        self.crc_err = bool(l_field & 0x4000)
-        self.event = event
-        self.rssi = rssi
-        self.chan = chan_phy & 0x3F
-        self.phy = (chan_phy >> 6) & 0x03
-        self.body = raw_msg[10:]
+    def __init__(
+        self,
+        raw_msg_or_ts: bytes | int = 0,
+        pkt_dir: int = 0,
+        crc_err: bool = False,
+        event: int = 0,
+        rssi: int = 0,
+        chan: int = 0,
+        phy: int = 0,
+        body: bytes = b"",
+        raw: bytes = b"",
+        *,
+        ts: int | None = None,
+    ) -> None:
+        """Parse raw PacketMessage body bytes (excluding msg_type) or initialize with fields."""
+        if isinstance(raw_msg_or_ts, (bytes, bytearray)):
+            raw_msg = bytes(raw_msg_or_ts)
+            if len(raw_msg) < 10:
+                raise ValueError(
+                    f"PacketMessage body too short ({len(raw_msg)} bytes, expected >= 10)"
+                )
+            self.raw = raw_msg
+            ts_val, l_field, ev_val, rssi_val, chan_phy = unpack("<LHHbB", raw_msg[:10])
+            self.ts = ts_val
+            self.pkt_dir = (l_field >> 15) & 1
+            self.crc_err = bool(l_field & 0x4000)
+            self.event = ev_val
+            self.rssi = rssi_val
+            self.chan = chan_phy & 0x3F
+            self.phy = (chan_phy >> 6) & 0x03
+            self.body = raw_msg[10:]
+        else:
+            self.ts = ts if ts is not None else raw_msg_or_ts
+            self.pkt_dir = pkt_dir
+            self.crc_err = crc_err
+            self.event = event
+            self.rssi = rssi
+            self.chan = chan
+            self.phy = phy
+            self.body = body
+            self.raw = raw
+
+    @classmethod
+    def from_bytes(cls, raw_msg: bytes) -> PacketMessage:
+        """Parse PacketMessage from raw bytes."""
+        return cls(raw_msg)
 
     @property
     def direction(self) -> int:
@@ -263,16 +293,31 @@ class PacketMessage:
 class MarkerMessage:
     """Echoed sync marker message from Sniffle hardware (MESSAGE_MARKER)."""
 
-    ts: int
-    marker_data: bytes
+    ts: int = 0
+    marker_data: bytes = b""
 
-    def __init__(self, raw_msg: bytes) -> None:
-        if len(raw_msg) < 4:
-            raise ValueError(
-                f"MarkerMessage body too short ({len(raw_msg)} bytes, expected >= 4)"
-            )
-        self.ts = unpack("<L", raw_msg[:4])[0]
-        self.marker_data = raw_msg[4:]
+    def __init__(
+        self,
+        raw_msg_or_ts: bytes | int = 0,
+        marker_data: bytes = b"",
+        *,
+        ts: int | None = None,
+    ) -> None:
+        if isinstance(raw_msg_or_ts, (bytes, bytearray)):
+            raw_msg = bytes(raw_msg_or_ts)
+            if len(raw_msg) < 4:
+                raise ValueError(
+                    f"MarkerMessage body too short ({len(raw_msg)} bytes, expected >= 4)"
+                )
+            self.ts = unpack("<L", raw_msg[:4])[0]
+            self.marker_data = raw_msg[4:]
+        else:
+            self.ts = ts if ts is not None else raw_msg_or_ts
+            self.marker_data = marker_data
+
+    @classmethod
+    def from_bytes(cls, raw_msg: bytes) -> MarkerMessage:
+        return cls(raw_msg)
 
     @classmethod
     def pack(cls, marker_data: bytes, ts: int = 0) -> bytes:
@@ -284,12 +329,20 @@ class MarkerMessage:
 class StateMessage:
     """Sniffer state transition notification from Sniffle hardware (MESSAGE_STATE)."""
 
-    state: int
+    state: int = 0
 
-    def __init__(self, raw_msg: bytes) -> None:
-        if len(raw_msg) < 1:
-            raise ValueError("StateMessage body too short (expected >= 1 byte)")
-        self.state = raw_msg[0]
+    def __init__(self, raw_msg_or_state: bytes | int = 0, *, state: int | None = None) -> None:
+        if isinstance(raw_msg_or_state, (bytes, bytearray)):
+            raw_msg = bytes(raw_msg_or_state)
+            if len(raw_msg) < 1:
+                raise ValueError("StateMessage body too short (expected >= 1 byte)")
+            self.state = raw_msg[0]
+        else:
+            self.state = state if state is not None else raw_msg_or_state
+
+    @classmethod
+    def from_bytes(cls, raw_msg: bytes) -> StateMessage:
+        return cls(raw_msg)
 
     @classmethod
     def pack(cls, state: int) -> bytes:
@@ -301,23 +354,42 @@ class StateMessage:
 class MeasurementMessage:
     """Measurement telemetry or version report from Sniffle hardware (MESSAGE_MEASURE)."""
 
-    length: int
-    measure_type: int
-    data: bytes
+    length: int = 0
+    measure_type: int = 0
+    data: bytes = b""
     version: tuple[int, int, int, int] | None = None
 
-    def __init__(self, raw_msg: bytes) -> None:
-        if len(raw_msg) < 2:
-            raise ValueError(
-                f"MeasurementMessage body too short ({len(raw_msg)} bytes, expected >= 2)"
-            )
-        self.length = raw_msg[0]
-        self.measure_type = raw_msg[1]
-        self.data = raw_msg[2 : 2 + self.length]
-        if self.measure_type == MEASUREMENT_VERSION and len(self.data) >= 4:
-            self.version = unpack("<BBBB", self.data[:4])
+    def __init__(
+        self,
+        raw_msg_or_len: bytes | int = 0,
+        measure_type: int = 0,
+        data: bytes = b"",
+        version: tuple[int, int, int, int] | None = None,
+        *,
+        length: int | None = None,
+    ) -> None:
+        if isinstance(raw_msg_or_len, (bytes, bytearray)):
+            raw_msg = bytes(raw_msg_or_len)
+            if len(raw_msg) < 2:
+                raise ValueError(
+                    f"MeasurementMessage body too short ({len(raw_msg)} bytes, expected >= 2)"
+                )
+            self.length = raw_msg[0]
+            self.measure_type = raw_msg[1]
+            self.data = raw_msg[2 : 2 + self.length]
+            if self.measure_type == MEASUREMENT_VERSION and len(self.data) >= 4:
+                self.version = unpack("<BBBB", self.data[:4])
+            else:
+                self.version = None
         else:
-            self.version = None
+            self.length = length if length is not None else raw_msg_or_len
+            self.measure_type = measure_type
+            self.data = data
+            self.version = version
+
+    @classmethod
+    def from_bytes(cls, raw_msg: bytes) -> MeasurementMessage:
+        return cls(raw_msg)
 
     @classmethod
     def pack(cls, measure_type: int, data: bytes) -> bytes:
