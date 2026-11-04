@@ -301,10 +301,12 @@ class SniffleSDR:
                       ext_adv=False,
                       coded_phy=False,
                       rssi_min=-128,
-                      interval_preload=[],
+                      interval_preload=None,
                       phy_preload=PhyMode.PHY_2M,
                       pause_done=False,
                       validate_crc=True):
+        if interval_preload is None:
+            interval_preload = []
         if not mode in SnifferMode:
             raise ValueError("Invalid mode requested")
 
