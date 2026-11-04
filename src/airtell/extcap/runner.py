@@ -154,6 +154,12 @@ class TsharkExtcapRunner:
         with self._lock:
             return self._process.pid if self._process else None
 
+    @property
+    def errors_logged(self) -> int:
+        """Return total number of stderr error lines logged."""
+        with self._lock:
+            return self._errors_logged
+
     def is_running(self) -> bool:
         """Check if subprocess and worker threads are actively running."""
         with self._lock:
@@ -207,8 +213,6 @@ class TsharkExtcapRunner:
                     with self._lock:
                         self._stderr_buffer.append(clean)
                         self._errors_logged += 1
-                if self._stop_event.is_set():
-                    break
         except Exception as exc:
             logger.debug("Tshark stderr worker ended: %s", exc)
 

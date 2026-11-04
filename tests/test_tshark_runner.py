@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import signal
 import subprocess
+import sys
 import time
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -272,3 +274,29 @@ class TestTsharkExtcapRunner:
         with pytest.raises(FileNotFoundError):
             runner.start()
         assert runner.is_running() is False
+
+    def test_stderr_high_volume_draining_no_deadlock(self, tmp_path: Path) -> None:
+        """Runner must drain >128 KB of stderr without pipe buffer exhaustion deadlock."""
+        mock_script = tmp_path / "mock_tshark.py"
+        mock_script.write_text(
+            f"#!{sys.executable}\n"
+            "import sys, time\n"
+            "# Write 150 KB to stderr\n"
+            "for _ in range(1500):\n"
+            "    sys.stderr.write('E' * 100 + '\\n')\n"
+            "sys.stderr.flush()\n"
+            "sys.stdout.write('packet_1\\n')\n"
+            "sys.stdout.flush()\n"
+            "time.sleep(0.1)\n"
+        )
+        mock_script.chmod(0o755)
+
+        config = TsharkConfig(serport="/dev/ttyUSB0")
+        runner = TsharkExtcapRunner(config=config, tshark_bin=str(mock_script))
+        assert runner.start() is True
+        time.sleep(0.3)
+        lines = runner.drain_lines()
+        assert "packet_1" in lines
+        assert runner.errors_logged >= 1000
+        assert runner.stop() is True
+
