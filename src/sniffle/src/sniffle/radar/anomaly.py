@@ -10,9 +10,10 @@ Provides:
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import math
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from collections import deque
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -68,8 +69,8 @@ class RobustAnomalyEngine:
         self.min_mad = min_mad
         self.alpha_reg = alpha_reg
 
-        self.link_history: Dict[Any, List[float]] = {}
-        self.multivariate_history: List[np.ndarray] = []
+        self.link_history: Dict[Any, deque[float]] = {}
+        self.multivariate_history: deque[np.ndarray] = deque(maxlen=self.history_len)
         self.tracked_link_keys: List[Any] = []
         self.last_sigma_reg: Optional[np.ndarray] = None
 
@@ -83,11 +84,8 @@ class RobustAnomalyEngine:
         """Appends a new RSSI sample to the historical buffer for the given link."""
         key = (rx_id, tx_mac, channel)
         if key not in self.link_history:
-            self.link_history[key] = []
-        hist = self.link_history[key]
-        hist.append(float(rssi))
-        if len(hist) > self.history_len:
-            hist.pop(0)
+            self.link_history[key] = deque(maxlen=self.history_len)
+        self.link_history[key].append(float(rssi))
 
     def compute_link_robust_z(
         self,
@@ -184,8 +182,6 @@ class RobustAnomalyEngine:
 
         if Z_M < 3.0:
             self.multivariate_history.append(current_rssi_vec.copy())
-            if len(self.multivariate_history) > self.history_len:
-                self.multivariate_history.pop(0)
 
         return (float(D_M), float(Z_M), diff)
 
