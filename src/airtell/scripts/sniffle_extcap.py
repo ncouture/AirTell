@@ -133,7 +133,7 @@ class SniffleExtcapPlugin():
         except SystemExit as ex:
             ret = ex.code
 
-        except:
+        except Exception:
             self.logger.exception('INTERNAL ERROR')
             ret = 1
 
@@ -209,13 +209,13 @@ class SniffleExtcapPlugin():
         self.args.advchan = self.args.advchan.lower()
         try:
             self.args.advchan = int(self.args.advchan)
-        except:
+        except (ValueError, TypeError):
             pass
 
         # Parse --rssi argument
         try:
             self.args.rssi = int(self.args.rssi)
-        except:
+        except (ValueError, TypeError):
             pass
         if not isinstance(self.args.rssi, int):
             raise UsageError('Invalid value specified for minimum RSSI: %s' % (self.args.rssi))
@@ -251,7 +251,7 @@ class SniffleExtcapPlugin():
                         pair = (int(pair[0]), int(pair[1]))
                         preload.append(pair)
                         continue
-                    except:
+                    except (ValueError, TypeError):
                         pass
                 raise UsageError('Invalid value specified for preload option: %s' % (self.args.preload))
             if len(preload) > SniffleHW.max_interval_preload_pairs:
@@ -479,7 +479,7 @@ class SniffleExtcapPlugin():
         except EOFError:
             # Wireshark closed the control FIFO, indicating it is done capturing
             pass
-        except:
+        except Exception:
             self.logger.exception('INTERNAL ERROR')
         finally:
             self.stopCapture()
@@ -543,11 +543,11 @@ class SniffleExtcapLogHandler(logging.Handler):
     def emit(self, record):
         try:
             logMsg = self.format(record) + '\n'
-        except:
+        except Exception:
             logMsg = traceback.format_exc() + '\n'
         try:
             self.plugin.writeControlMessage(CTRL_CMD_ADD, CTRL_NUM_LOGGER, logMsg)
-        except:
+        except Exception:
             pass
 
 class ArgumentParser(argparse.ArgumentParser):

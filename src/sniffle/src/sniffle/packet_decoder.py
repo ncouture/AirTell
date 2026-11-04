@@ -146,7 +146,7 @@ class DPacketMessage(PacketMessage):
     def str_decode(self):
         try:
             return self._str_decode()
-        except:
+        except Exception:
             return "Decode error"
 
     def __str__(self):
