@@ -4,7 +4,9 @@
 # Copyright (c) 2020-2025, NCC Group plc
 # Released as open source under GPLv3
 
-import argparse, sys
+import argparse
+import sys
+
 from sniffle.constants import BLE_ADV_AA
 from sniffle.sniffle_hw import SniffleHW
 
@@ -68,6 +70,15 @@ def main():
         devName = b'NCC Goat'
     elif isinstance(devName, str):
         devName = devName.encode('utf-8')
+
+    if len(devName) > 29:
+        print(
+            f"Warning: Device name exceeds 29 bytes ({len(devName)} bytes). "
+            "Truncating to 29 bytes to fit in 31-byte legacy BLE advertisement limit.",
+            file=sys.stderr,
+        )
+        devName = devName[:29]
+
     scanRspData = bytes([len(devName) + 1, 0x09]) + devName
 
     # now enter advertiser mode
