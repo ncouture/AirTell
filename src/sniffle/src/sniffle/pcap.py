@@ -73,10 +73,8 @@ class PcapBleWriter:
             self.output = BytesIO()
         elif isinstance(output, (BufferedIOBase, RawIOBase)):
             self.output = output
-        elif os.path.isfile(output):
-            self.output = open(output,'wb')
         else:
-            self.output = open(output,'wb', buffering=0)
+            self.output = open(output, 'wb')
 
         # write headers
         self.write_header()
@@ -178,10 +176,22 @@ class PcapBleWriter:
         self.write_packet(int(pkt.ts_epoch * 1000000), pkt.aa, pkt.chan, pkt.rssi,
                 pkt.body, pkt.phy, pdu_type, aux_type, pkt.crc_rev, pkt.crc_err)
 
+    def flush(self):
+        """Flush internal output buffer."""
+        if hasattr(self.output, "flush"):
+            self.output.flush()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
     def close(self):
         """
         Close PCAP.
         """
+        self.flush()
         if not isinstance(self.output, BytesIO):
             self.output.close()
 
@@ -191,13 +201,21 @@ class PcapBleReader:
     def __init__(self, _input=None):
         if isinstance(_input, (BufferedIOBase, RawIOBase)):
             self.input = _input
-        elif os.path.isfile(_input):
-            self.input = open(_input,'rb')
         else:
-            self.input = open(_input,'rb', buffering=0)
+            self.input = open(_input, 'rb')
 
         self.read_header()
         self.decoder_state = SniffleDecoderState()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+    def close(self):
+        if hasattr(self.input, "close") and not isinstance(self.input, BytesIO):
+            self.input.close()
 
     def read_header(self):
         expected_header = pack(
