@@ -5,9 +5,8 @@ Style Guide.
 
 ## 1. Python Language Rules
 
--   **Linting:** Run `pylint` on your code to catch bugs and style issues.
--   **Imports:** Use `import x` for packages/modules. Use `from x import y` only
-    when `y` is a submodule.
+-   **Linting:** Run `ruff check` on your code to catch bugs, formatting, and style issues.
+-   **Imports:** Follow standard PEP 8 import idioms. Both `import x` and `from x import y` (classes, functions, constants, or submodules) are standard. Group imports into standard library, third-party, and first-party application imports, sorted via `ruff` (isort).
 -   **Exceptions:** Use built-in exception classes. Do not use bare `except:`
     clauses.
 -   **Global State:** Avoid mutable global state. Module-level constants are
@@ -22,7 +21,7 @@ Style Guide.
 
 ## 2. Python Style Rules
 
--   **Line Length:** Maximum 80 characters.
+-   **Line Length:** Maximum 120 characters (aligned with `pyproject.toml` ruff configuration).
 -   **Indentation:** 4 spaces per indentation level. Never use tabs.
 -   **Blank Lines:** Two blank lines between top-level definitions (classes,
     functions). One blank line between method definitions.
