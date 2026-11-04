@@ -29,13 +29,13 @@ SOFTWARE.
 """
 
 import os.path
-from io import BytesIO, BufferedIOBase, RawIOBase
+from io import BufferedIOBase, BytesIO, RawIOBase
 from struct import pack, unpack
-from .sniffle_hw import PhyMode
-from .packet_decoder import (PacketMessage, DPacketMessage, DataMessage,
-                             AuxChainIndMessage, AuxScanRspMessage)
-from .constants import BLE_ADV_AA
+
 from .decoder_state import SniffleDecoderState
+from .packet_decoder import AuxChainIndMessage, AuxScanRspMessage, DataMessage, DPacketMessage, PacketMessage
+from .sniffle_hw import PhyMode
+
 
 def rf_to_ble_chan(chan):
     if chan == 0:
@@ -220,29 +220,40 @@ class PcapBleReader:
         if len(hdr) < 16:
             raise EOFError
         ts_sec, ts_usec, size1, size2 = unpack('<IIII', hdr)
-        assert size1 == size2
+        if size1 != size2:
+            raise ValueError(f"Mismatched packet size fields: {size1} != {size2}")
 
         payload = self.input.read(size1)
+        if len(payload) < size1 or len(payload) < 17:
+            raise ValueError("Truncated packet payload")
 
         # Parse payload header
         rf_chan, rssi, _, _, aa, flags, _ = unpack('<BbbBIHI', payload[:14])
-        assert (flags & 0x0413) == 0x0413
+        if (flags & 0x0413) != 0x0413:
+            raise ValueError(f"Invalid packet flags: {hex(flags)}")
         crc_err = False if (flags & 0x0800) else True
         phy = PhyMode(flags >> 14)
         pdu_type = (flags & 0x0380) >> 15
-        assert pdu_type < 4 # isochronous unsupported for now
+        if pdu_type >= 4:
+            raise ValueError(f"Unsupported isochronous PDU type: {pdu_type}")
 
         body_idx = 14
         if phy == PhyMode.PHY_CODED:
+            if len(payload) <= body_idx:
+                raise ValueError("Truncated payload for PHY_CODED")
             coding = payload[body_idx]
             body_idx += 1
-            assert coding <= 1
+            if coding > 1:
+                raise ValueError(f"Invalid coding indicator: {coding}")
             if coding == 1:
                 phy = PhyMode.PHY_CODED_S2
 
+        if len(payload) < body_idx + 3:
+            raise ValueError("Truncated packet payload")
         body = payload[body_idx:-3]
         crc_rev = payload[-3] + (payload[-2] << 8) + (payload[-1] << 16)
-        assert len(body) == body[1] + 2
+        if len(body) < 2 or len(body) != body[1] + 2:
+            raise ValueError("Truncated or corrupted PDU body")
 
         ts32 = (ts_sec*1000000 + ts_usec) & 0x3FFFFFFF
         chan = rf_to_ble_chan(rf_chan)
@@ -252,7 +263,7 @@ class PcapBleReader:
                                         crc_rev, crc_err, self.decoder_state, peripheral_send)
         try:
             return DPacketMessage.decode(pkt, self.decoder_state)
-        except BaseException as e:
+        except BaseException:
             return pkt
 
     def __iter__(self):
