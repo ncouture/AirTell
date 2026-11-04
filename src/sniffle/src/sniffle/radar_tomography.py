@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.13
+#!/usr/bin/env python3
 """
 Passive BLE Human Radar - 2D Radio Tomographic Imaging Engine CLI Entrypoint.
 Uses Sniffle BLE5 sniffers, static beacon anchors, and ambient BLE devices
