@@ -21,12 +21,12 @@ class AppleMSDRecord(ManufacturerSpecificDataRecord):
         while i < len(self.company_data):
             t = self.company_data[i]
             if t != 0x01:
-                l = self.company_data[i+1]
+                sub_len = self.company_data[i+1]
             else:
                 # I don't know what these messages are
-                l = len(self.company_data) - i - 2
-            v = self.company_data[i+2:i+2+l]
-            i += 2 + l
+                sub_len = len(self.company_data) - i - 2
+            v = self.company_data[i+2:i+2+sub_len]
+            i += 2 + sub_len
             self.messages.append(decode_apple_message(t, v))
 
     def str_lines(self):
