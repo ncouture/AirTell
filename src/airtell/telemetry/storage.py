@@ -695,7 +695,8 @@ class DuckDBBackend(DatabaseBackend):
                 con = duckdb.connect(":memory:")
                 # Attach SQLite database file
                 abs_path = os.path.abspath(self.db_path)
-                con.execute(f"ATTACH '{abs_path}' AS sqlite_db (TYPE SQLITE);")
+                escaped_path = abs_path.replace("'", "''")
+                con.execute(f"ATTACH '{escaped_path}' AS sqlite_db (TYPE SQLITE);")
                 # Expose views in default schema for direct table access
                 con.execute("CREATE OR REPLACE VIEW observations AS SELECT * FROM sqlite_db.observations;")
                 con.execute("CREATE OR REPLACE VIEW alerts AS SELECT * FROM sqlite_db.alerts;")
