@@ -15,7 +15,7 @@ AirTell is a modular security and privacy testbed coordinating two Sniffle-enabl
 
 ## Core Capabilities
 1. **Dual-Device Orchestration**:
-   - **Topology A (Stimulator + Observer)**: Device 1 broadcasts synthesized beacon streams and replay sequences, while Device 2 captures scan requests, connection attempts, and peripheral advertisements.
+   - **Topology A (Stimulator + Observer / Single-Dongle Passive Observer)**: Device 1 broadcasts synthesized beacon streams while Device 2 captures traffic, or Device 1 operates standalone in single-dongle passive observation mode (`--single-dongle` / `--dev1` only) when a second radio is absent.
    - **Topology B (Dual-Channel Passive Observer)**: Both devices sniff simultaneously on separate primary advertising channels (Ch 37 and Ch 38/39) with microsecond timestamp-monotonic watermark sorting to eliminate channel-hop blindness.
 2. **Beacon Synthesis & Active Probing**:
    - Bit-for-bit frame builders for Apple iBeacon, AltBeacon, Google Eddystone (UID/URL/TLM), and Google/Apple Exposure Notification (GAEN `0xFD6F`).
