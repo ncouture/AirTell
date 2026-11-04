@@ -1,10 +1,10 @@
 # Implementation Plan: Complete CLI Adversarial Ingestion and Live UART Injection
 
 ## Phase 1: Conductor Track Scaffolding & Registry Indexing [checkpoint: 07cdd92]
-- [x] Task: Scaffold Track 2 Conductor track directory and documentation (Issue #55) [07cdd92]
+- [x] Task: Scaffold Track 5 (Milestone 2 Track 2: cli_adversarial_completion_20261016) Conductor track directory and documentation (Issue #55) [07cdd92]
   - [x] Create `conductor/tracks/cli_adversarial_completion_20261016/`
   - [x] Create `metadata.json`, `index.md`, `spec.md`, and `plan.md`
-- [x] Task: Update `conductor/tracks.md` registry with Track 2 entry [07cdd92]
+- [x] Task: Update `conductor/tracks.md` registry with Track 5 (Milestone 2 Track 2) entry [07cdd92]
 
 ## Phase 2: PCAP Ingestion & Translation for `airtell deanonymize` [checkpoint: 07cdd92]
 - [x] Task: Implement Link-Layer packet dissection into `LinkabilityObservation` in `src/airtell/cli.py` (Issue #25) [07cdd92]
@@ -41,7 +41,7 @@
   - [x] Test `airtell rogue-inject --mock` with burst parameters, counts, and profiles
   - [x] Test `airtell rogue-inject --port` with mock serial/controller verifying UART frame dispatch
 - [x] Task: Run full regression test suite (`uv run pytest`) and linter (`uv run ruff check .`) [07cdd92]
-- [x] Task: Close all Track 2 GitHub issues (#55, #13, #25, #26, #42, #14, #27, #28, #41, #37, #48, #8) [07cdd92]
+- [x] Task: Close all Track 5 (Milestone 2 Track 2) GitHub issues (#55, #13, #25, #26, #42, #14, #27, #28, #41, #37, #48, #8) [07cdd92]
 
 ## Git & GitHub Traceability
 

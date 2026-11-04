@@ -1,10 +1,10 @@
 # Implementation Plan: Webhook and OS Desktop Notification Dispatchers
 
 ## Phase 1: Conductor Track Scaffolding & Registry Indexing [checkpoint: 5d525b8]
-- [x] Task: Scaffold Track 4 Conductor track directory and documentation (Issue #10) [5d525b8]
+- [x] Task: Scaffold Track 7 (Milestone 2 Track 4: webhook_desktop_notifications_20261016) Conductor track directory and documentation (Issue #10) [5d525b8]
   - [x] Create `conductor/tracks/webhook_desktop_notifications_20261016/`
   - [x] Create `metadata.json`, `index.md`, `spec.md`, and `plan.md`
-- [x] Task: Update `conductor/tracks.md` registry with Track 4 entry [5d525b8]
+- [x] Task: Update `conductor/tracks.md` registry with Track 7 (Milestone 2 Track 4) entry [5d525b8]
 
 ## Phase 2: HTTP Webhook Alert Dispatcher [checkpoint: 5d525b8]
 - [x] Task: Implement `format_webhook_payload()` and `dispatch_webhook_alert()` in `src/airtell/scripts/ble_antistalking_tracker.py` (Issue #16) [5d525b8]
