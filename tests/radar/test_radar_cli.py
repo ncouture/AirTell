@@ -7,7 +7,11 @@ import sys
 
 from sniffle.radar.demuxer import StreamDemuxer
 
-from airtell.scripts.radar_tomography import build_parser, generate_simulated_samples, run_radar_pipeline
+from airtell.scripts.radar_tomography import (
+    build_parser,
+    generate_simulated_samples,
+    run_radar_pipeline,
+)
 
 
 def test_cli_parser_help_and_defaults():

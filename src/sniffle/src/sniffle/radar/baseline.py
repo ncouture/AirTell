@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 from collections import deque
-from typing import Dict, Tuple
 
 import numpy as np
 
@@ -13,9 +14,9 @@ class BaselineTracker:
         self.alpha = alpha
         self.outlier_threshold = outlier_threshold
         self.history_size = history_size
-        self.baselines: Dict[Tuple[str, str, int], float] = {}
-        self.variances: Dict[Tuple[str, str, int], float] = {}
-        self.history: Dict[Tuple[str, str, int], deque[float]] = {}
+        self.baselines: dict[tuple[str, str, int], float] = {}
+        self.variances: dict[tuple[str, str, int], float] = {}
+        self.history: dict[tuple[str, str, int], deque[float]] = {}
 
     def update(self, rx_id: str, tx_mac: str, rssi: float, channel: int = 37) -> float:
         key = (rx_id, tx_mac, channel)

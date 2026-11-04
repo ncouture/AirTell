@@ -2,19 +2,15 @@
 Unit Tests for Link Lifecycle & Ambient Device Matrix (sniffle.radar.matrix).
 """
 
-import math
 import numpy as np
-import pytest
-
 from sniffle.radar.capture import LinkSample
 from sniffle.radar.matrix import (
     AddressType,
-    NodeType,
-    LinkState,
     LinkRecord,
-    classify_ble_mac,
+    LinkState,
     MxNLinkMatrixManager,
     PublicDeviceManager,
+    classify_ble_mac,
 )
 
 

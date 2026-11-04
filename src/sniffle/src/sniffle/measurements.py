@@ -2,9 +2,11 @@
 # Copyright (c) 2024, NCC Group plc
 # Released as open source under GPLv3
 
-from struct import unpack
 from enum import IntEnum
+from struct import unpack
+
 from .errors import SniffleHWPacketError
+
 
 class MeasurementType(IntEnum):
     INTERVAL = 0

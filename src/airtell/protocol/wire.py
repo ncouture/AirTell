@@ -407,10 +407,25 @@ class MeasurementMessage:
 class DebugMessage:
     """Debug text output from firmware (MESSAGE_DEBUG)."""
 
-    text: str
+    text: str = ""
 
-    def __init__(self, raw_msg: bytes) -> None:
-        self.text = raw_msg.decode("latin-1", errors="replace")
+    def __init__(
+        self,
+        raw_msg_or_text: bytes | str = "",
+        *,
+        text: str | None = None,
+    ) -> None:
+        """Parse raw DebugMessage body bytes or initialize from keyword string."""
+        if isinstance(raw_msg_or_text, (bytes, bytearray)):
+            self.text = bytes(raw_msg_or_text).decode("latin-1", errors="replace")
+        elif text is not None:
+            self.text = text
+        else:
+            self.text = str(raw_msg_or_text)
+
+    @classmethod
+    def from_bytes(cls, raw_msg: bytes) -> DebugMessage:
+        return cls(raw_msg)
 
     @classmethod
     def pack(cls, text: str) -> bytes:

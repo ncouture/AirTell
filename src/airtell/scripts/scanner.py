@@ -4,13 +4,19 @@
 # Copyright (c) 2020-2025, NCC Group plc
 # Released as open source under GPLv3
 
-import argparse, sys, signal
-from sniffle.constants import BLE_ADV_AA
-from sniffle.sniffle_hw import make_sniffle_hw, PhyMode, SnifferMode, PacketMessage, DebugMessage
-from sniffle.packet_decoder import *
-from sniffle.pcap import PcapBleWriter
+import argparse
+import signal
+
 from sniffle.advdata.decoder import decode_adv_data
 from sniffle.errors import SourceDone
+from sniffle.packet_decoder import *
+from sniffle.pcap import PcapBleWriter
+from sniffle.sniffle_hw import (
+    DebugMessage,
+    PacketMessage,
+    SnifferMode,
+    make_sniffle_hw,
+)
 
 # global variables
 hw = None

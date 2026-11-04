@@ -7,14 +7,10 @@ with at least 5 distinct, rigorous test cases per feature (85+ tests).
 
 from __future__ import annotations
 
-import argparse
 import math
-import os
-import queue
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -24,37 +20,31 @@ _SNIFFLE_CLI = Path(__file__).resolve().parents[1]
 if str(_SNIFFLE_CLI) not in sys.path:
     sys.path.insert(0, str(_SNIFFLE_CLI))
 
-import sniffle
-import sniffle.sniffle_hw
-from sniffle.sniffle_hw import SniffleHW, SnifferMode, make_sniffle_hw
-from sniffle.packet_decoder import (
-    str_mac,
-    AdvIndMessage,
-    AdvNonconnIndMessage,
-    ScanRspMessage,
-    AdvScanIndMessage,
-    AdvExtIndMessage,
+from radar_tomography import (
+    parse_radar_args,
 )
 from sniffle.errors import UsageError
-
-from sniffle.radar.capture import (
-    LinkSample,
-    HardwareSniffleSource,
-    MockSniffleSource,
-    DualSnifferManager,
-    point_to_segment_distance,
-)
-from sniffle.radar.matrix import (
-    AddressType,
-    classify_ble_mac,
-    LinkState,
-    LinkRecord,
-    MxNLinkMatrixManager,
-    PublicDeviceManager,
+from sniffle.packet_decoder import (
+    AdvExtIndMessage,
+    AdvIndMessage,
+    AdvNonconnIndMessage,
+    AdvScanIndMessage,
+    ScanRspMessage,
+    str_mac,
 )
 from sniffle.radar.anomaly import (
     compute_wilson_hilferty,
-    RobustAnomalyEngine,
+)
+from sniffle.radar.capture import (
+    DualSnifferManager,
+    HardwareSniffleSource,
+    LinkSample,
+    MockSniffleSource,
+)
+from sniffle.radar.matrix import (
+    AddressType,
+    LinkState,
+    classify_ble_mac,
 )
 from sniffle.radar.tomography import (
     SpatialTomography2D,
@@ -62,17 +52,10 @@ from sniffle.radar.tomography import (
 )
 from sniffle.radar.visualizer import (
     RadarVisualizer,
-    RadarFrameProcessor,
-    run_single_frame,
     run_radar_pipeline,
+    run_single_frame,
 )
-from radar_tomography import (
-    build_cli_parser,
-    parse_radar_args,
-    RadarTomographyPipeline,
-)
-from tests.harness import create_synthetic_adv_packet
-
+from sniffle.sniffle_hw import SnifferMode, SniffleHW
 
 # ============================================================================
 # F1: Dual Fixed-Channel Locking

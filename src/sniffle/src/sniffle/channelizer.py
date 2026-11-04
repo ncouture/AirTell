@@ -2,11 +2,13 @@
 # Copyright (c) 2024, NCC Group plc
 # Released as open source under GPLv3
 
-import numpy
-import scipy.signal
-import scipy.fft
 import concurrent.futures
 import os
+
+import numpy
+import scipy.fft
+import scipy.signal
+
 
 class PolyphaseChannelizer:
     def __init__(self, channel_count: int, taps_per_chan: int = 16, chan_rel_bw: float = 0.8,

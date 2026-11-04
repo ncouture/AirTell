@@ -15,7 +15,6 @@ import csv
 import re
 import shlex
 from pathlib import Path
-from typing import List, Set, Tuple
 
 import pytest
 
@@ -51,7 +50,7 @@ VALID_COMMAND_PREFIXES = {
 }
 
 
-def extract_markdown_links(file_path: Path) -> List[Tuple[str, str]]:
+def extract_markdown_links(file_path: Path) -> list[tuple[str, str]]:
     """Extract all markdown links [text](target) from a markdown file."""
     content = file_path.read_text(encoding="utf-8")
     # Matches [anchor_text](target) while ignoring images ![alt](url)
@@ -59,7 +58,7 @@ def extract_markdown_links(file_path: Path) -> List[Tuple[str, str]]:
     return re.findall(pattern, content)
 
 
-def slugify_heading(heading: str) -> Set[str]:
+def slugify_heading(heading: str) -> set[str]:
     """Convert a markdown heading into possible GitHub-compatible anchor slugs."""
     clean = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", heading)  # strip links inside headings
     clean = clean.lower().strip()
@@ -74,7 +73,7 @@ def slugify_heading(heading: str) -> Set[str]:
     return {slug1, slug2}
 
 
-def extract_markdown_anchors(file_path: Path) -> Set[str]:
+def extract_markdown_anchors(file_path: Path) -> set[str]:
     """Extract all heading anchor slugs from a markdown file."""
     content = file_path.read_text(encoding="utf-8")
     anchors = set()
@@ -87,15 +86,15 @@ def extract_markdown_anchors(file_path: Path) -> Set[str]:
     return anchors
 
 
-def extract_cli_commands(file_path: Path) -> List[str]:
+def extract_cli_commands(file_path: Path) -> list[str]:
     """Extract all executable bluetooth-sniffle commands from markdown files."""
     content = file_path.read_text(encoding="utf-8")
-    commands: List[str] = []
+    commands: list[str] = []
 
     # 1. Extract from fenced code blocks
     lines = content.splitlines()
     in_code_block = False
-    current_cmd: List[str] = []
+    current_cmd: list[str] = []
 
     for line in lines:
         stripped = line.strip()
@@ -141,7 +140,7 @@ def extract_cli_commands(file_path: Path) -> List[str]:
             commands.append(cleaned)
 
     # 3. Filter for valid command snippets
-    runnable_commands: List[str] = []
+    runnable_commands: list[str] = []
     for cmd in commands:
         # Skip BNF synopsis containing placeholder syntax [<|
         if any(char in cmd for char in ["[", "<", "(", "|"]):

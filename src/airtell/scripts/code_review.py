@@ -20,7 +20,6 @@ import subprocess
 import sys
 import urllib.request
 from pathlib import Path
-from typing import Optional
 
 try:
     import google.antigravity as agy
@@ -30,7 +29,7 @@ except ImportError:
 DEFAULT_NOTEBOOKLM_URL = "https://notebook.google.com/notebook/26cd837a-4d66-4ab1-94c7-128105718ad6"
 
 
-def get_git_diff(base: Optional[str] = None, head: Optional[str] = None, staged: bool = False) -> str:
+def get_git_diff(base: str | None = None, head: str | None = None, staged: bool = False) -> str:
     """Retrieve git diff for the target revision range or staged changes."""
     cmd = ["git", "diff"]
     if staged:
@@ -47,7 +46,7 @@ def get_git_diff(base: Optional[str] = None, head: Optional[str] = None, staged:
     return result.stdout.strip()
 
 
-def get_changed_files(base: Optional[str] = None, head: Optional[str] = None, staged: bool = False) -> list[str]:
+def get_changed_files(base: str | None = None, head: str | None = None, staged: bool = False) -> list[str]:
     """Retrieve list of modified filenames."""
     cmd = ["git", "diff", "--name-only"]
     if staged:
@@ -85,8 +84,8 @@ def get_codeowners(codeowners_path: Path) -> set[str]:
 
 def verify_codeowner_authorization(
     project_root: Path,
-    requester: Optional[str],
-    pr_author: Optional[str],
+    requester: str | None,
+    pr_author: str | None,
 ) -> tuple[bool, str]:
     """Verify that both the PR author and review requester are repository codeowners."""
     codeowners_path = project_root / ".github" / "CODEOWNERS"
@@ -124,7 +123,7 @@ def verify_codeowner_authorization(
     return True, f"Authorized: PR author '@{pr_author}' and requester '@{requester}' are verified codeowners."
 
 
-def load_notebooklm_context(context_path: Optional[Path]) -> str:
+def load_notebooklm_context(context_path: Path | None) -> str:
     """Load local synchronized snapshot of the NotebookLM research workspace if present."""
     if context_path and context_path.exists():
         try:

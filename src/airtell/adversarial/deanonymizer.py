@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import collections
 from dataclasses import dataclass, field
-from typing import Optional
 
 
 @dataclass
@@ -122,7 +121,7 @@ class RotationDesyncAnalyzer:
         self._last_obs_by_key: dict[str, LinkabilityObservation] = {}
         self._last_obs_by_mac: dict[str, LinkabilityObservation] = {}
 
-    def feed(self, obs: LinkabilityObservation) -> Optional[RotationDesyncEvent]:
+    def feed(self, obs: LinkabilityObservation) -> RotationDesyncEvent | None:
         """Feed a new observation and check for rotation desynchronization.
 
         Args:
@@ -134,7 +133,7 @@ class RotationDesyncAnalyzer:
         mac = obs.mac_address.upper()
         key = obs.ephemeral_key
 
-        event: Optional[RotationDesyncEvent] = None
+        event: RotationDesyncEvent | None = None
 
         # Case 1: Key was previously seen with a DIFFERENT MAC address (MAC rotated, key persisted)
         if key and key in self._last_obs_by_key:

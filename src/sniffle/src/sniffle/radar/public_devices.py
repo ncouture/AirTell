@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import numpy as np
-from typing import Dict, Tuple, Optional
-from .models import Node, NodeType, LinkSample, RFLink
+
+from .models import LinkSample, Node, NodeType
 
 
 class PublicDeviceManager:
@@ -9,11 +11,11 @@ class PublicDeviceManager:
     estimates anchor positions across the monitored 2D space, and prunes dormant
     MACs after an inactivity timeout.
     """
-    def __init__(self, inactivity_timeout: float = 30.0, room_dim: Tuple[float, float] = (20.0, 10.0)):
+    def __init__(self, inactivity_timeout: float = 30.0, room_dim: tuple[float, float] = (20.0, 10.0)):
         self.inactivity_timeout = inactivity_timeout
         self.room_dim = room_dim
-        self.nodes: Dict[str, Node] = {}
-        self.last_seen: Dict[str, float] = {}
+        self.nodes: dict[str, Node] = {}
+        self.last_seen: dict[str, float] = {}
 
     def register_sample(self, sample: LinkSample) -> Node:
         mac = sample.tx_mac
@@ -44,5 +46,5 @@ class PublicDeviceManager:
             self.nodes.pop(mac, None)
             self.last_seen.pop(mac, None)
 
-    def get_active_nodes(self) -> Dict[str, Node]:
+    def get_active_nodes(self) -> dict[str, Node]:
         return self.nodes

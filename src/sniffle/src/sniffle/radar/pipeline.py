@@ -10,7 +10,7 @@ import argparse
 import queue
 import signal
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 
@@ -79,7 +79,7 @@ Step-by-Step Command Examples:
 build_parser = build_cli_parser
 
 
-def parse_radar_args(args: Optional[List[str]] = None) -> argparse.Namespace:
+def parse_radar_args(args: list[str] | None = None) -> argparse.Namespace:
     """Parses and validates CLI arguments."""
     parser = build_cli_parser()
     parsed = parser.parse_args(args)
@@ -100,7 +100,7 @@ def capture_from_hardware(
     port_name: str,
     multi_channel: bool = False,
     max_packets: int = 15,
-) -> List[LinkSample]:
+) -> list[LinkSample]:
     """Connects to physical Sniffle hardware to capture live over-the-air packets."""
     try:
         from sniffle.packet_decoder import str_mac
@@ -111,7 +111,7 @@ def capture_from_hardware(
         hw.setup_sniffer(mode=SnifferMode.PASSIVE_SCAN, chan=channel, hop3=False)
         hw.mark_and_flush()
 
-        samples: List[LinkSample] = []
+        samples: list[LinkSample] = []
         for _ in range(max_packets):
             try:
                 msg = hw.recv_and_decode()
@@ -136,7 +136,7 @@ def capture_from_hardware(
         return []
 
 
-def generate_simulated_samples() -> List[LinkSample]:
+def generate_simulated_samples() -> list[LinkSample]:
     """Generates multi-channel simulated packet samples representing public BLE devices."""
     now = time.time()
     samples = []
@@ -149,7 +149,7 @@ def generate_simulated_samples() -> List[LinkSample]:
 
 
 def run_radar_pipeline(
-    samples: List[LinkSample],
+    samples: list[LinkSample],
     room_width: float = 20.0,
     room_height: float = 10.0,
     grid_res: float = 0.1,
@@ -181,9 +181,9 @@ def run_radar_pipeline(
     print("\n[+] Ingesting & Demultiplexing Public BLE Device Packets Across Channels 37, 38, 39:")
     print("-" * 75)
 
-    all_nodes: Dict[str, Node] = dict(rx_nodes)
-    links: List[RFLink] = []
-    link_activations: Dict[tuple, float] = {}
+    all_nodes: dict[str, Node] = dict(rx_nodes)
+    links: list[RFLink] = []
+    link_activations: dict[tuple, float] = {}
 
     for sample in samples:
         port_label = "port1" if sample.rx_id == "R1" else "port2"
@@ -257,7 +257,7 @@ class RadarTomographyPipeline:
         self.args = args
         self.running = False
 
-        self.rx_configs: Dict[str, Tuple[int, Tuple[float, float]]] = {
+        self.rx_configs: dict[str, tuple[int, tuple[float, float]]] = {
             "R1": (args.chan1, (0.5, 0.5)),
             "R2": (args.chan2, (args.room_width - 0.5, 0.5)),
         }
@@ -303,7 +303,7 @@ class RadarTomographyPipeline:
             headless=args.headless,
         )
 
-        self._current_link_keys: List[str] = []
+        self._current_link_keys: list[str] = []
         self._frame_count = 0
 
     def start(self) -> None:
@@ -323,7 +323,7 @@ class RadarTomographyPipeline:
         self.visualizer.close()
         print("[RADAR] Stopped pipeline cleanly.")
 
-    def step(self, timeout: float = 0.05) -> Optional[Dict[str, Any]]:
+    def step(self, timeout: float = 0.05) -> dict[str, Any] | None:
         """
         Drains available packets from queue, updates link matrix and anomaly engine,
         solves tomography, and updates tracker and visualizer.
@@ -350,7 +350,7 @@ class RadarTomographyPipeline:
 
         if link_keys != self._current_link_keys:
             self._current_link_keys = list(link_keys)
-            active_links: List[Tuple[np.ndarray, np.ndarray]] = []
+            active_links: list[tuple[np.ndarray, np.ndarray]] = []
             center = (self.args.room_width / 2.0, self.args.room_height / 2.0)
             for k_str in link_keys:
                 parts = k_str.split("_")
@@ -415,7 +415,7 @@ class RadarTomographyPipeline:
         return 0
 
 
-def main(cli_args: Optional[List[str]] = None) -> int:
+def main(cli_args: list[str] | None = None) -> int:
     parser = build_cli_parser()
     args = parser.parse_args(cli_args)
 

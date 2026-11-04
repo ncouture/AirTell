@@ -6,21 +6,9 @@ and bridges to the core radar package.
 
 from __future__ import annotations
 
-import argparse
-from dataclasses import dataclass, field
-from enum import Enum
-import io
-import math
-import os
-from pathlib import Path
-import queue
-import random
 import sys
-import threading
-import time
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
-
-import numpy as np
+from pathlib import Path
+from typing import Any
 
 # Ensure python_cli is on sys.path
 _SNIFFLE_CLI = Path(__file__).resolve().parents[1]
@@ -28,27 +16,27 @@ if str(_SNIFFLE_CLI) not in sys.path:
     sys.path.insert(0, str(_SNIFFLE_CLI))
 
 from sniffle.radar.capture import (
-    LinkSample,
-    SnifflePacketSource,
-    HardwareSniffleSource,
-    MockSniffleSource,
     DualSnifferManager,
+    HardwareSniffleSource,
+    LinkSample,
+    MockSniffleSource,
+    SnifflePacketSource,
     point_to_segment_distance,
 )
 
 try:
-    from sniffle.sniffle_hw import make_sniffle_hw, SnifferMode, SniffleHW
+    from sniffle.errors import SniffleHWPacketError, UsageError
     from sniffle.packet_decoder import (
-        str_mac,
-        PacketMessage,
-        AdvIndMessage,
-        AdvNonconnIndMessage,
-        ScanRspMessage,
-        AdvScanIndMessage,
         AdvDirectIndMessage,
         AdvExtIndMessage,
+        AdvIndMessage,
+        AdvNonconnIndMessage,
+        AdvScanIndMessage,
+        PacketMessage,
+        ScanRspMessage,
+        str_mac,
     )
-    from sniffle.errors import UsageError, SniffleHWPacketError
+    from sniffle.sniffle_hw import SnifferMode, SniffleHW, make_sniffle_hw
 except ImportError:
     make_sniffle_hw = None  # type: ignore
     SnifferMode = None  # type: ignore
@@ -67,39 +55,35 @@ except ImportError:
         return ":".join(["%02X" % b for b in reversed(mac)])
 
 
-from sniffle.radar.matrix import (
-    NodeType,
-    AddressType,
-    classify_ble_mac,
-    LinkState,
-    LinkRecord,
-    MxNLinkMatrixManager,
-    PublicDeviceManager,
+from radar_tomography import (
+    RadarTomographyPipeline,
+    build_cli_parser,
+    parse_radar_args,
 )
-
 from sniffle.radar.anomaly import (
-    compute_wilson_hilferty,
-    RobustAnomalyEngine,
     LinkAnomalyVector,
+    RobustAnomalyEngine,
+    compute_wilson_hilferty,
 )
-
+from sniffle.radar.matrix import (
+    AddressType,
+    LinkRecord,
+    LinkState,
+    MxNLinkMatrixManager,
+    NodeType,
+    PublicDeviceManager,
+    classify_ble_mac,
+)
 from sniffle.radar.tomography import (
     SpatialTomography2D,
     TargetTracker,
     TomographyResult,
 )
-
 from sniffle.radar.visualizer import (
-    RadarVisualizer,
     RadarFrameProcessor,
-    run_single_frame,
+    RadarVisualizer,
     run_radar_pipeline,
-)
-
-from radar_tomography import (
-    build_cli_parser,
-    parse_radar_args,
-    RadarTomographyPipeline,
+    run_single_frame,
 )
 
 

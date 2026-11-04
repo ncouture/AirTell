@@ -14,8 +14,8 @@ Provides:
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -28,7 +28,7 @@ class TomographyResult:
     Result of a tomographic reconstruction solve.
     """
     heatmap: np.ndarray
-    target_coords: Optional[Tuple[float, float]]
+    target_coords: tuple[float, float] | None
     max_intensity: float
 
 
@@ -42,7 +42,7 @@ class SpatialTomography2D:
 
     def __init__(
         self,
-        room_dim: Tuple[float, float] = (20.0, 10.0),
+        room_dim: tuple[float, float] = (20.0, 10.0),
         resolution: float = 0.2,
         wavelength: float = 0.125,
         lambda_eff: float = 0.25,
@@ -62,11 +62,11 @@ class SpatialTomography2D:
         y = np.linspace(0, room_dim[1], self.ny, dtype=np.float32)
         self.gx, self.gy = np.meshgrid(x, y)
 
-        self.links: List[Tuple[np.ndarray, np.ndarray]] = []
-        self.W: Optional[np.ndarray] = None
-        self.Gram_inv: Optional[np.ndarray] = None
+        self.links: list[tuple[np.ndarray, np.ndarray]] = []
+        self.W: np.ndarray | None = None
+        self.Gram_inv: np.ndarray | None = None
 
-    def update_geometry(self, links: Sequence[Tuple[np.ndarray, np.ndarray]]) -> None:
+    def update_geometry(self, links: Sequence[tuple[np.ndarray, np.ndarray]]) -> None:
         """
         Precomputes W (K x P) matrix for the given link coordinates.
         W_ij = 1 / sqrt(excess + eps) inside Fresnel zone excess <= lambda_eff.
@@ -120,7 +120,7 @@ class SpatialTomography2D:
         self,
         heatmap: np.ndarray,
         percentile: float = 93.0,
-    ) -> Optional[Tuple[float, float]]:
+    ) -> tuple[float, float] | None:
         """
         Estimates dynamic target coordinates (X, Y) via spatial centroid above percentile.
         Clamps result within room dimensions.
@@ -173,7 +173,7 @@ class TargetTracker:
     def __init__(self, alpha: float = 0.65, beta: float = 0.15):
         self.alpha = alpha
         self.beta = beta
-        self.pos: Optional[np.ndarray] = None
+        self.pos: np.ndarray | None = None
         self.vel: np.ndarray = np.zeros(2, dtype=np.float64)
 
     def reset(self) -> None:
@@ -183,9 +183,9 @@ class TargetTracker:
 
     def update(
         self,
-        measurement: Optional[Tuple[float, float]],
+        measurement: tuple[float, float] | None,
         dt: float = 0.1,
-    ) -> Optional[Tuple[float, float]]:
+    ) -> tuple[float, float] | None:
         """
         Updates the target state with a new position measurement.
         If measurement is None, coasts the state forward along estimated velocity.
@@ -227,10 +227,10 @@ class LinkTomographyGrid:
     """
     def __init__(
         self,
-        room_dim: Tuple[float, float],
+        room_dim: tuple[float, float],
         resolution: float,
-        nodes: Dict[str, Node],
-        links: List[RFLink],
+        nodes: dict[str, Node],
+        links: list[RFLink],
         ellipse_width: float = 0.4
     ):
         self.room_dim = room_dim
@@ -269,7 +269,7 @@ class LinkTomographyGrid:
 
         return np.array(tensors)
 
-    def reconstruct_heatmap(self, link_activations: Dict[Tuple[str, str], float]) -> np.ndarray:
+    def reconstruct_heatmap(self, link_activations: dict[tuple[str, str], float]) -> np.ndarray:
         heatmap = np.zeros((self.ny, self.nx), dtype=np.float64)
         for i, link in enumerate(self.links):
             key = link.key

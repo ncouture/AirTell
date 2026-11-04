@@ -2,8 +2,9 @@
 # Copyright (c) 2024, NCC Group plc
 # Released as open source under GPLv3
 
-from uuid import UUID
 from struct import unpack
+from uuid import UUID
+
 from .ad_types import ManufacturerSpecificDataRecord
 
 # Decoders for the Apple Continuity protocol

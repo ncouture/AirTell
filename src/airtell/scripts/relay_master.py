@@ -4,20 +4,36 @@
 # Copyright (c) 2020-2025, NCC Group plc
 # Released as open source under GPLv3
 
-import argparse, sys
+import argparse
+import sys
 from binascii import unhexlify
-from queue import Queue
-from time import time
 from select import select
 from struct import pack, unpack
+from time import time
 
+from sniffle.packet_decoder import (
+    AdvDirectIndMessage,
+    AdvertMessage,
+    AdvIndMessage,
+    ConnectIndMessage,
+    DataMessage,
+    DPacketMessage,
+    LlControlMessage,
+    LlDataContMessage,
+    ScanRspMessage,
+    str_mac,
+)
 from sniffle.pcap import PcapBleWriter
-from sniffle.sniffle_hw import SniffleHW, BLE_ADV_AA, PacketMessage, DebugMessage, \
-        StateMessage, MeasurementMessage, SnifferState
-from sniffle.packet_decoder import DPacketMessage, DataMessage, LlDataContMessage, \
-        AdvIndMessage, AdvDirectIndMessage, ScanRspMessage, ConnectIndMessage, \
-        str_mac, LlControlMessage, AdvertMessage
-from sniffle.relay_protocol import RelayServer, MessageType, ErrorCode
+from sniffle.relay_protocol import ErrorCode, MessageType, RelayServer
+from sniffle.sniffle_hw import (
+    BLE_ADV_AA,
+    DebugMessage,
+    MeasurementMessage,
+    PacketMessage,
+    SnifferState,
+    SniffleHW,
+    StateMessage,
+)
 
 """
 Relay attack principles:

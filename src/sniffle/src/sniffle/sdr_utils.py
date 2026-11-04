@@ -2,11 +2,11 @@
 # Copyright (c) 2024, NCC Group plc
 # Released as open source under GPLv3
 
+from re import finditer
+from struct import pack
+
 import numpy
 import scipy.signal
-from struct import pack
-from re import finditer
-from math import gcd
 
 DEFAULT_BURST_THRESH = 0.002
 DEFAULT_BURST_PAD = 10

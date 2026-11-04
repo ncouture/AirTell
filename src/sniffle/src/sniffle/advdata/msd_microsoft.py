@@ -4,6 +4,7 @@
 
 from binascii import hexlify
 from struct import unpack
+
 from .ad_types import ManufacturerSpecificDataRecord
 
 # Decoder for Microsoft BLE Beacon

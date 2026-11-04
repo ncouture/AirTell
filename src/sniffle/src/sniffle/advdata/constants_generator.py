@@ -7,6 +7,7 @@
 import os
 import urllib.request
 
+
 # Overly simplistic YAML parser for Bluetooth Assigned Numbers
 # I made this to avoid adding a dependency
 # This is not a general purpose parser

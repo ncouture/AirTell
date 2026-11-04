@@ -7,12 +7,8 @@ out-of-bounds coordinates, deep occlusion, and high churn (25+ tests).
 
 from __future__ import annotations
 
-import math
-import os
 import sys
-import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pytest
@@ -21,29 +17,14 @@ _SNIFFLE_CLI = Path(__file__).resolve().parents[1]
 if str(_SNIFFLE_CLI) not in sys.path:
     sys.path.insert(0, str(_SNIFFLE_CLI))
 
-from sniffle.radar.capture import (
-    LinkSample,
-    MockSniffleSource,
-    point_to_segment_distance,
-)
 from sniffle.radar.matrix import (
-    AddressType,
-    classify_ble_mac,
     LinkState,
-    LinkRecord,
     MxNLinkMatrixManager,
-    PublicDeviceManager,
-)
-from sniffle.radar.anomaly import (
-    compute_wilson_hilferty,
-    RobustAnomalyEngine,
 )
 from sniffle.radar.tomography import (
     SpatialTomography2D,
     TargetTracker,
-    TomographyResult,
 )
-
 
 # ============================================================================
 # 1. Zero Active Devices / Empty Room Handling

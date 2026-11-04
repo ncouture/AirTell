@@ -5,10 +5,17 @@
 # Released as open source under GPLv3
 
 import argparse
-from sniffle.pcap import PcapBleReader
-from sniffle.packet_decoder import (AdvaMessage, AdvDirectIndMessage, AdvExtIndMessage,
-                                    ScanRspMessage, DataMessage)
+
 from sniffle.advdata.decoder import decode_adv_data
+from sniffle.packet_decoder import (
+    AdvaMessage,
+    AdvDirectIndMessage,
+    AdvExtIndMessage,
+    DataMessage,
+    ScanRspMessage,
+)
+from sniffle.pcap import PcapBleReader
+
 
 def main():
     aparse = argparse.ArgumentParser(description="PCAP decoder for Sniffle BLE5 sniffer")

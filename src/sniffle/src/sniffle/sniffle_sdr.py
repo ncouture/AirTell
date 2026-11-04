@@ -2,30 +2,29 @@
 # Copyright (c) 2024, NCC Group plc
 # Released as open source under GPLv3
 
-from struct import pack, unpack
-from binascii import Error as BAError
-from time import time
-from queue import Queue
-from threading import Thread, Semaphore
 from concurrent.futures import ThreadPoolExecutor
 from os import cpu_count
+from queue import Queue
+from struct import pack
+from threading import Semaphore, Thread
+from time import time
 
-from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_CF32
+from numpy import complex64, frombuffer, zeros
+from SoapySDR import SOAPY_SDR_CF32, SOAPY_SDR_RX
 from SoapySDR import Device as SoapyDevice
-from numpy import zeros, complex64, frombuffer, reshape
 
-from .constants import BLE_ADV_AA, BLE_ADV_CRCI, SnifferMode, PhyMode
-from .decoder_state import SniffleDecoderState
-from .packet_decoder import PacketMessage, DPacketMessage, AdvertMessage, DataMessage
-from .errors import SniffleHWPacketError, UsageError
-from .sniffle_hw import TrivialLogger
-from .sdr_utils import decimate, unpack_syms, calc_rssi, resample, fm_demod2, ExactSyncDetector
-from .whitening_ble import le_dewhiten
-from .crc_ble import rbit24, crc_ble_reverse
-from .pcap import rf_to_ble_chan, ble_to_rf_chan
 from .channelizer import PolyphaseChannelizer
+from .constants import BLE_ADV_AA, BLE_ADV_CRCI, PhyMode, SnifferMode
+from .crc_ble import crc_ble_reverse, rbit24
+from .decoder_state import SniffleDecoderState
+from .errors import SourceDone, UsageError
+from .packet_decoder import DataMessage, DPacketMessage, PacketMessage
+from .pcap import ble_to_rf_chan, rf_to_ble_chan
 from .resampler import PolyphaseResampler
-from .errors import SourceDone
+from .sdr_utils import ExactSyncDetector, calc_rssi, fm_demod2, unpack_syms
+from .sniffle_hw import TrivialLogger
+from .whitening_ble import le_dewhiten
+
 
 def freq_from_chan(chan):
     rf = ble_to_rf_chan(chan)

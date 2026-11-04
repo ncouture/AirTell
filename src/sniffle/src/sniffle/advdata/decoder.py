@@ -3,6 +3,7 @@
 # Released as open source under GPLv3
 
 from struct import unpack
+
 from .ad_types import *
 from .msd_apple import AppleMSDRecord
 from .msd_microsoft import MicrosoftMSDRecord

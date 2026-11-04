@@ -14,7 +14,7 @@ import re
 import threading
 import time
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from app.queue_bridge import EventQueue
 
@@ -81,7 +81,7 @@ class TsharkBleJsonParser:
 
     def __init__(
         self,
-        event_queue: Optional[EventQueue] = None,
+        event_queue: EventQueue | None = None,
         default_channel: int = 37,
         max_buffered_records: int = 2000,
     ) -> None:
@@ -92,7 +92,7 @@ class TsharkBleJsonParser:
             default_channel: Fallback channel if packet does not encode radio channel.
             max_buffered_records: Maximum internal observations retained before dropping oldest.
         """
-        self.event_queue: Optional[EventQueue] = event_queue
+        self.event_queue: EventQueue | None = event_queue
         self.default_channel: int = default_channel
         self.max_buffered_records: int = max_buffered_records
 

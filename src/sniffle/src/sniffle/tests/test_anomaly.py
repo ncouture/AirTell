@@ -3,13 +3,12 @@ Unit Tests for Robust Anomaly Detection Engine (sniffle.radar.anomaly).
 """
 
 import math
-import numpy as np
-import pytest
 
+import numpy as np
 from sniffle.radar.anomaly import (
-    compute_wilson_hilferty,
-    RobustAnomalyEngine,
     LinkAnomalyVector,
+    RobustAnomalyEngine,
+    compute_wilson_hilferty,
 )
 
 

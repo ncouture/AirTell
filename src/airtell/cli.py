@@ -53,7 +53,9 @@ from airtell.topology.topology_b import TopologyBOrchestrator
 try:
     from airtell.scripts.ble_antistalking_tracker import classify_payload
 except ImportError:
-    from scripts.ble_antistalking_tracker import classify_payload  # type: ignore[no-redef]
+    from scripts.ble_antistalking_tracker import (
+        classify_payload,  # type: ignore[no-redef]
+    )
 
 logger = logging.getLogger(__name__)
 

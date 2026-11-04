@@ -4,12 +4,25 @@
 # Copyright (c) 2020-2025, NCC Group plc
 # Released as open source under GPLv3
 
-import argparse, sys
+import argparse
+import sys
 from binascii import unhexlify
+
 from sniffle.constants import BLE_ADV_AA
-from sniffle.sniffle_hw import SniffleHW, PacketMessage, DebugMessage, StateMessage, SnifferState
-from sniffle.packet_decoder import (AdvaMessage, AdvDirectIndMessage, AdvExtIndMessage,
-                                    ScanRspMessage, str_mac)
+from sniffle.packet_decoder import (
+    AdvaMessage,
+    AdvDirectIndMessage,
+    AdvExtIndMessage,
+    ScanRspMessage,
+    str_mac,
+)
+from sniffle.sniffle_hw import (
+    DebugMessage,
+    PacketMessage,
+    SnifferState,
+    SniffleHW,
+    StateMessage,
+)
 
 # global variable to access hardware
 hw = None

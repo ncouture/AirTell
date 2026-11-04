@@ -28,12 +28,17 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-import os.path
 from io import BufferedIOBase, BytesIO, RawIOBase
 from struct import pack, unpack
 
 from .decoder_state import SniffleDecoderState
-from .packet_decoder import AuxChainIndMessage, AuxScanRspMessage, DataMessage, DPacketMessage, PacketMessage
+from .packet_decoder import (
+    AuxChainIndMessage,
+    AuxScanRspMessage,
+    DataMessage,
+    DPacketMessage,
+    PacketMessage,
+)
 from .sniffle_hw import PhyMode
 
 
@@ -179,7 +184,8 @@ class PcapBleWriter:
     def flush(self):
         """Flush internal output buffer."""
         if hasattr(self.output, "flush"):
-            self.output.flush()
+            if not getattr(self.output, "closed", False):
+                self.output.flush()
 
     def __enter__(self):
         return self
@@ -191,6 +197,8 @@ class PcapBleWriter:
         """
         Close PCAP.
         """
+        if getattr(self.output, "closed", False):
+            return
         self.flush()
         if not isinstance(self.output, BytesIO):
             self.output.close()

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 import time
-from typing import Any, Optional
+from typing import Any
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -43,7 +43,7 @@ except ImportError:
     from scripts.ble_antistalking_tracker import BLETrackerDB
 
 
-def validate_and_parse_csrk(csrk_input: Optional[str]) -> tuple[Optional[bytes], Optional[str]]:
+def validate_and_parse_csrk(csrk_input: str | None) -> tuple[bytes | None, str | None]:
     """Validate and parse a user-supplied CSRK hex string.
 
     Returns:
@@ -66,8 +66,8 @@ def validate_and_parse_csrk(csrk_input: Optional[str]) -> tuple[Optional[bytes],
 def cached_analyze_pcap(
     file_bytes: bytes,
     analyzers_tuple: tuple[str, ...],
-    target_mac: Optional[str] = None,
-    csrk_hex: Optional[str] = None,
+    target_mac: str | None = None,
+    csrk_hex: str | None = None,
 ) -> SideChannelSuiteReport:
     """Run SideChannelAnalysisRunner against an offline PCAP buffer with caching."""
     if not file_bytes:
@@ -82,7 +82,7 @@ def cached_analyze_pcap(
     return runner.run_pcap(file_bytes)
 
 
-def queue_item_to_packet_record(item: Any) -> Optional[BlePacketRecord]:
+def queue_item_to_packet_record(item: Any) -> BlePacketRecord | None:
     """Convert an arbitrary EventQueue entry to a unified BlePacketRecord."""
     if isinstance(item, BlePacketRecord):
         return item
@@ -127,8 +127,8 @@ def queue_item_to_packet_record(item: Any) -> Optional[BlePacketRecord]:
 
 
 def build_timing_oracle_figure(
-    report: Optional[SideChannelSuiteReport] = None,
-    data_points: Optional[list[dict[str, Any]]] = None,
+    report: SideChannelSuiteReport | None = None,
+    data_points: list[dict[str, Any]] | None = None,
     x_axis: str = "seq",
 ) -> go.Figure:
     """Build interactive Plotly scatter plot visualizing Link-Layer T_IFS timing oracle distribution.
@@ -325,8 +325,8 @@ def build_timing_oracle_figure(
 
 
 def build_csrk_trajectory_figure(
-    report: Optional[SideChannelSuiteReport] = None,
-    data_points: Optional[list[dict[str, Any]]] = None,
+    report: SideChannelSuiteReport | None = None,
+    data_points: list[dict[str, Any]] | None = None,
 ) -> go.Figure:
     """Build interactive Plotly trajectory chart plotting 32-bit SignCounter across rotating RPAs."""
     fig = go.Figure()
@@ -461,7 +461,7 @@ def build_csrk_trajectory_figure(
 
 
 def build_handshake_classification_df(
-    report: Optional[SideChannelSuiteReport] = None,
+    report: SideChannelSuiteReport | None = None,
 ) -> pd.DataFrame:
     """Construct structured DataFrame classifying encryption handshakes into PAIRED_SHARED_LTK vs REJECTED_UNTRUSTED."""
     columns = [
@@ -575,8 +575,8 @@ def render_sidechannel_metrics(report: SideChannelSuiteReport) -> None:
 
 
 def render_sidechannel_tab(
-    conn: Optional[sqlite3.Connection] = None,
-    event_queue: Optional[EventQueue] = None,
+    conn: sqlite3.Connection | None = None,
+    event_queue: EventQueue | None = None,
 ) -> None:
     """Render dedicated Exclusive-Use Side-Channel Visualizer view."""
     st.markdown("#### ⚡ Exclusive-Use Side-Channel Visualizer & Deanonymization Suite")
@@ -629,7 +629,7 @@ def render_sidechannel_tab(
     if "BAT Allowlist" in analyzers_selected:
         analyzer_keys.append("bat")
 
-    active_report: Optional[SideChannelSuiteReport] = None
+    active_report: SideChannelSuiteReport | None = None
 
     # --- Mode 1: Offline PCAP/PCAPNG File Upload ---
     if ingestion_mode == "📁 Offline PCAP/PCAPNG Upload":
@@ -866,9 +866,9 @@ def render_sidechannel_tab(
 
 
 def render_adversarial_evaluation(
-    conn: Optional[sqlite3.Connection],
-    tracker_db: Optional[BLETrackerDB] = None,
-    event_queue: Optional[EventQueue] = None,
+    conn: sqlite3.Connection | None,
+    tracker_db: BLETrackerDB | None = None,
+    event_queue: EventQueue | None = None,
 ) -> None:
     """Render the Adversarial Testbed view in the Streamlit dashboard."""
     st.subheader("⚡ Adversarial Testbed & Protocol Evaluation")

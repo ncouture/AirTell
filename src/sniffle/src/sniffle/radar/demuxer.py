@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import json
 import sys
-from typing import List, Tuple, Dict, Any, Optional
+
 from .models import LinkSample
 
 
@@ -13,7 +15,7 @@ class StreamDemuxer:
         self.samples_processed = 0
         self.verbose = verbose
 
-    def process_sample(self, sample: LinkSample, port_name: Optional[str] = None) -> Tuple[Tuple[str, str], float, float]:
+    def process_sample(self, sample: LinkSample, port_name: str | None = None) -> tuple[tuple[str, str], float, float]:
         self.samples_processed += 1
         link_key = (sample.rx_id, sample.tx_mac)
         
@@ -26,7 +28,7 @@ class StreamDemuxer:
 
         return link_key, sample.rssi, sample.timestamp
 
-    def load_json_replay(self, filepath: str) -> List[LinkSample]:
+    def load_json_replay(self, filepath: str) -> list[LinkSample]:
         """
         Loads pre-recorded packet log JSON file containing a list of sample dicts:
         [{"timestamp": float, "rssi": float, "rx_id": str, "tx_mac": str, "channel": int}]
@@ -34,7 +36,7 @@ class StreamDemuxer:
         with open(filepath, "r") as f:
             raw_data = json.load(f)
 
-        samples: List[LinkSample] = []
+        samples: list[LinkSample] = []
         for item in raw_data:
             samples.append(
                 LinkSample(
