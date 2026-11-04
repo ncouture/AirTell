@@ -402,30 +402,31 @@ Validates link-layer transmission using two Sniffle boards connected to the same
 Deploys `ble_antistalking_tracker.py` to monitor crowdsourced BLE tracking beacons (Apple Find My, Google Find Hub, Tile, Samsung SmartThings Find) on primary advertising channel 37, record observations in SQLite, and dispatch alerts to a security webhook endpoint and local desktop notifications:
 
 1. Start a local or remote webhook endpoint to receive threat alerts (example receiver below):
-   ```python
-   # webhook_receiver.py
-   import hashlib
-   import hmac
-   from http.server import BaseHTTPRequestHandler, HTTPServer
 
-   SECRET = "s3cr3t_antistalking_k3y"
+```python
+# webhook_receiver.py
+import hashlib
+import hmac
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
-   class AlertHandler(BaseHTTPRequestHandler):
-       def do_POST(self):
-           length = int(self.headers.get("Content-Length", 0))
-           body = self.rfile.read(length)
-           sig = self.headers.get("X-Signature-SHA256", "")
-           expected = hmac.new(SECRET.encode(), body, hashlib.sha256).hexdigest()
-           if hmac.compare_digest(sig, expected):
-               print(f"[+] Verified threat alert received: {body.decode()}")
-               self.send_response(200)
-           else:
-               print("[-] Invalid signature!")
-               self.send_response(403)
-           self.end_headers()
+SECRET = "s3cr3t_antistalking_k3y"
 
-   HTTPServer(("0.0.0.0", 8080), AlertHandler).serve_forever()
-   ```
+class AlertHandler(BaseHTTPRequestHandler):
+    def do_POST(self):
+        length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(length)
+        sig = self.headers.get("X-Signature-SHA256", "")
+        expected = hmac.new(SECRET.encode(), body, hashlib.sha256).hexdigest()
+        if hmac.compare_digest(sig, expected):
+            print(f"[+] Verified threat alert received: {body.decode()}")
+            self.send_response(200)
+        else:
+            print("[-] Invalid signature!")
+            self.send_response(403)
+        self.end_headers()
+
+HTTPServer(("0.0.0.0", 8080), AlertHandler).serve_forever()
+```
 
 2. Launch the anti-stalking tracker with webhook and desktop alerts enabled:
    ```bash

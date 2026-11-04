@@ -83,12 +83,14 @@ This document provides a comprehensive operational and technical reference for a
 
 * **HMAC Signature Verification**:
   Receiving webhook endpoints can verify authenticity by computing the HMAC-SHA256 hex digest of the raw HTTP request body against the shared secret:
-  ```python
-  import hmac, hashlib
 
-  computed_sig = hmac.new(secret.encode("utf-8"), request_body_bytes, hashlib.sha256).hexdigest()
-  is_valid = hmac.compare_digest(computed_sig, request.headers.get("X-Signature-SHA256", ""))
-  ```
+```python
+import hashlib
+import hmac
+
+computed_sig = hmac.new(secret.encode("utf-8"), request_body_bytes, hashlib.sha256).hexdigest()
+is_valid = hmac.compare_digest(computed_sig, request.headers.get("X-Signature-SHA256", ""))
+```
 
 * **Desktop Notifications & Headless Fallback**:
   - **Linux**: Dispatches high-urgency notifications using `notify-send -u critical`. Gracefully falls back (skips execution without error) when running headlessly without `DISPLAY` or `WAYLAND_DISPLAY`, or when the binary is not installed.
