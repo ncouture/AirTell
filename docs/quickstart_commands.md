@@ -8,6 +8,22 @@ This guide centralizes standard commands and operational playbooks for single an
 
 ## 1. Quickstart Commands
 
+### Environment Setup (`uv` or `pip`)
+
+AirTell supports both `uv` (recommended) and standard `pip` / `virtualenv`:
+
+```bash
+# Using uv (fast, automated lockfile sync)
+uv sync --extra test
+
+# Using standard virtualenv
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .[test]
+```
+
+All scripts can be executed directly with `python3 scripts/...` or via `uv run python3 scripts/...`.
+
 ### Checking Device Availability (`lsof`)
 
 Always verify that the hardware device nodes are not in use before launching a sniffer:
