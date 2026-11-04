@@ -47,7 +47,7 @@ flowchart TD
 
 ### Layer 3: Robust Anomaly Detection Engine ([`anomaly.py`](../src/sniffle/src/sniffle/radar/anomaly.py))
 
-* **Robust Z-Score ([`compute_link_robust_z`](../src/sniffle/src/sniffle/radar/anomaly.py#L92)):** Uses median and Median Absolute Deviation (MAD) rather than mean/standard deviation to reject impulsive RF bursts: $$Z_{\text{robust}} = 0.6745 \cdot \frac{|x - \text{median}|}{\text{MAD}_{\text{eff}}}\$$
+* **Robust Z-Score ([`compute_link_robust_z`](../src/sniffle/src/sniffle/radar/anomaly.py#L92)):** Uses median and Median Absolute Deviation (MAD) rather than mean/standard deviation to reject impulsive RF bursts: $$Z_{\text{robust}} = 0.6745 \cdot \frac{|x - \text{median}|}{\text{MAD}_{\text{eff}}}$$
   Enforces a noise floor of $\text{MAD}_{\text{eff}} \ge 0.5\text{ dBm}$. Appends a PDR drop penalty up to $6.0\sigma$.
 * **Multivariate Mahalanobis Distance ([`compute_mahalanobis_anomaly`](../src/sniffle/src/sniffle/radar/anomaly.py#L130)):** Computes spatial covariance across all $K$ active links:
   $$D_M(x) = \sqrt{(x - \mu)^T \Sigma_{\text{reg}}^{-1} (x - \mu)}$$
