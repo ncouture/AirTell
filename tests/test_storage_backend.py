@@ -449,3 +449,30 @@ def test_factory_environment_variables(temp_sqlite_path: str, monkeypatch: pytes
     assert be.memory_limit == "1GB"
     be.close()
 
+
+def test_sqlite_backend_close_multi_threaded(temp_sqlite_path: str) -> None:
+    """Validate that SQLiteBackend.close() closes connections opened by background threads."""
+    import sqlite3
+    import threading
+
+    backend = SQLiteBackend(temp_sqlite_path)
+    backend.connect()
+
+    other_conn: sqlite3.Connection | None = None
+
+    def worker() -> None:
+        nonlocal other_conn
+        other_conn = backend.connect()
+        other_conn.execute("SELECT 1")
+
+    t = threading.Thread(target=worker)
+    t.start()
+    t.join()
+
+    assert other_conn is not None
+    backend.close()
+
+    with pytest.raises(sqlite3.ProgrammingError):
+        other_conn.execute("SELECT 1")
+
+

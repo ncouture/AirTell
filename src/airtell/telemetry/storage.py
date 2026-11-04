@@ -164,6 +164,7 @@ class SQLiteBackend(DatabaseBackend):
             Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.RLock()
         self._local = threading.local()
+        self._all_conns: set[sqlite3.Connection] = set()
         self._mem_conn: Optional[sqlite3.Connection] = None
         if self.db_path == ":memory:":
             self._mem_conn = sqlite3.connect(":memory:", check_same_thread=False, timeout=self.timeout)
@@ -181,6 +182,8 @@ class SQLiteBackend(DatabaseBackend):
             conn = sqlite3.connect(self.db_path, timeout=self.timeout)
             conn.row_factory = sqlite3.Row
             self._local.conn = conn
+            with self._lock:
+                self._all_conns.add(conn)
         return conn
 
     def close(self) -> None:
@@ -191,11 +194,13 @@ class SQLiteBackend(DatabaseBackend):
                 except Exception:
                     pass
                 self._mem_conn = None
-            if hasattr(self._local, "conn") and self._local.conn is not None:
+            for conn in list(self._all_conns):
                 try:
-                    self._local.conn.close()
+                    conn.close()
                 except Exception:
                     pass
+            self._all_conns.clear()
+            if hasattr(self._local, "conn") and self._local.conn is not None:
                 self._local.conn = None
 
     def init_db(self) -> None:
