@@ -4,15 +4,6 @@ Dual-device Sniffle orchestration, active beacon synthesis, passive sniffing,
 and protocol analysis for Bluetooth Low Energy tracking research (PoPETs 2025-0103).
 """
 
-import sys
-
-try:
-    from airtell import scripts as _scripts
-
-    sys.modules.setdefault("scripts", _scripts)
-except ImportError:
-    pass
-
 from airtell.device import (
     MockSerialInterface,
     SniffleDeviceController,
