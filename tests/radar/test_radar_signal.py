@@ -1,14 +1,15 @@
 #/usr/bin/env python
 #
 
-import pytest
-import numpy as np
 import time
 
-# Import radar modules (to be implemented)
-from sniffle.radar.models import Node, RFLink, LinkSample, NodeType
+import numpy as np
+import pytest
 from sniffle.radar.baseline import BaselineTracker
 from sniffle.radar.features import FeatureExtractor
+
+# Import radar modules (to be implemented)
+from sniffle.radar.models import LinkSample, Node, NodeType, RFLink
 
 
 def test_node_models():
@@ -39,7 +40,7 @@ def test_link_sample():
 
 def test_baseline_tracker():
     tracker = BaselineTracker(alpha=0.1, outlier_threshold=15.0)
-    
+
     # Feeding steady -60 dBm signal
     for _ in range(20):
         tracker.update(rx_id="R1", tx_mac="T1", rssi=-60.0)
