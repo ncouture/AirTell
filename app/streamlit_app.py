@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 import sqlite3
-import time
 from pathlib import Path
 from typing import Any, Optional
 
@@ -76,6 +75,18 @@ def get_db_connection() -> Optional[sqlite3.Connection]:
         return None
 
 
+def _fragment_if_in_streamlit(**kwargs: Any) -> Any:
+    """Apply st.fragment in live Streamlit sessions while passing through directly in test runners."""
+    try:
+        from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+
+        if get_script_run_ctx() is None:
+            return lambda f: f
+    except Exception:
+        return lambda f: f
+    return st.fragment(**kwargs)
+
+
 def main() -> None:
     """Main dashboard entrypoint routing views through M3 Navigation Rail."""
     conn = get_db_connection()
@@ -138,27 +149,27 @@ def main() -> None:
         with st.expander("📁 Offline Replay"):
             render_offline_replay(tracker_db=tracker_db, conn=conn)
 
-    # Route active operational view with live real-time event queue
-    try:
-        if active_view == "telemetry":
-            render_telemetry_overview(conn=conn, event_queue=event_queue, backend=backend)
-        elif active_view == "rssi":
-            render_rssi_trends(conn=conn, event_queue=event_queue, backend=backend)
-        elif active_view == "alerts":
-            render_alert_feed(conn=conn, tracker_db=tracker_db, event_queue=event_queue, backend=backend)
-        elif active_view == "inspector":
-            render_packet_inspector(conn=conn, event_queue=event_queue, backend=backend)
-        elif active_view == "controls":
-            render_radio_controls(tracker_db=tracker_db, event_queue=event_queue)
-        elif active_view == "adversarial":
-            render_adversarial_evaluation(conn=conn, tracker_db=tracker_db, event_queue=event_queue)
-    finally:
-        if conn:
-            conn.close()
+    # Route active operational view with live real-time event queue using Streamlit native fragment auto-refresh
+    @_fragment_if_in_streamlit(run_every=refresh_rate if auto_refresh else None)
+    def render_active_view() -> None:
+        try:
+            if active_view == "telemetry":
+                render_telemetry_overview(conn=conn, event_queue=event_queue, backend=backend)
+            elif active_view == "rssi":
+                render_rssi_trends(conn=conn, event_queue=event_queue, backend=backend)
+            elif active_view == "alerts":
+                render_alert_feed(conn=conn, tracker_db=tracker_db, event_queue=event_queue, backend=backend)
+            elif active_view == "inspector":
+                render_packet_inspector(conn=conn, event_queue=event_queue, backend=backend)
+            elif active_view == "controls":
+                render_radio_controls(tracker_db=tracker_db, event_queue=event_queue)
+            elif active_view == "adversarial":
+                render_adversarial_evaluation(conn=conn, tracker_db=tracker_db, event_queue=event_queue)
+        finally:
+            if conn:
+                conn.close()
 
-    if auto_refresh:
-        time.sleep(refresh_rate)
-        st.rerun()
+    render_active_view()
 
 
 if __name__ == "__main__":
