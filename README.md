@@ -7,7 +7,7 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
-[![Status](https://img.shields.io/badge/status-active-brightgreen.svg)]()
+[![Status](https://img.shields.io/badge/status-active-brightgreen.svg)](https://github.com/ncouture/AirTell)
 
 Modern mobile operating systems treat Bluetooth Low Energy (BLE) privacy as an address-randomization problem. It isn't. Across advertising intervals, scan request timings, and proprietary payload structures, devices broadcast a continuous, identifiable "body language" long before a connection is ever established.
 
