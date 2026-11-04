@@ -104,7 +104,7 @@ class AdStructure:
 class BeaconInfo:
     """Base class for parsed beacon identity and telemetry data."""
 
-    beacon_type: str
+    beacon_type: str = field(init=False, default="")
 
 
 @dataclass
@@ -116,12 +116,8 @@ class IBeaconInfo(BeaconInfo):
     minor: int
     tx_power: int
 
-    def __init__(self, uuid: UUID, major: int, minor: int, tx_power: int):
-        super().__init__(beacon_type="iBeacon")
-        self.uuid = uuid
-        self.major = major
-        self.minor = minor
-        self.tx_power = tx_power
+    def __post_init__(self) -> None:
+        self.beacon_type = "iBeacon"
 
 
 @dataclass
@@ -134,20 +130,8 @@ class AltBeaconInfo(BeaconInfo):
     ref_rssi: int
     mfg_reserved: int = 0
 
-    def __init__(
-        self,
-        mfg_id: int,
-        beacon_code: int,
-        beacon_id: bytes,
-        ref_rssi: int,
-        mfg_reserved: int = 0,
-    ):
-        super().__init__(beacon_type="AltBeacon")
-        self.mfg_id = mfg_id
-        self.beacon_code = beacon_code
-        self.beacon_id = beacon_id
-        self.ref_rssi = ref_rssi
-        self.mfg_reserved = mfg_reserved
+    def __post_init__(self) -> None:
+        self.beacon_type = "AltBeacon"
 
 
 @dataclass
@@ -158,11 +142,8 @@ class EddystoneUidInfo(BeaconInfo):
     instance: bytes
     tx_power: int
 
-    def __init__(self, namespace: bytes, instance: bytes, tx_power: int):
-        super().__init__(beacon_type="Eddystone-UID")
-        self.namespace = namespace
-        self.instance = instance
-        self.tx_power = tx_power
+    def __post_init__(self) -> None:
+        self.beacon_type = "Eddystone-UID"
 
 
 @dataclass
@@ -172,10 +153,8 @@ class EddystoneUrlInfo(BeaconInfo):
     url: str
     tx_power: int
 
-    def __init__(self, url: str, tx_power: int):
-        super().__init__(beacon_type="Eddystone-URL")
-        self.url = url
-        self.tx_power = tx_power
+    def __post_init__(self) -> None:
+        self.beacon_type = "Eddystone-URL"
 
 
 @dataclass
@@ -188,20 +167,8 @@ class EddystoneTlmInfo(BeaconInfo):
     adv_cnt: int
     sec_cnt: int
 
-    def __init__(
-        self,
-        version: int,
-        vbatt_mv: int,
-        temp_c: float | None,
-        adv_cnt: int,
-        sec_cnt: int,
-    ):
-        super().__init__(beacon_type="Eddystone-TLM")
-        self.version = version
-        self.vbatt_mv = vbatt_mv
-        self.temp_c = temp_c
-        self.adv_cnt = adv_cnt
-        self.sec_cnt = sec_cnt
+    def __post_init__(self) -> None:
+        self.beacon_type = "Eddystone-TLM"
 
 
 @dataclass
@@ -211,10 +178,8 @@ class GaenInfo(BeaconInfo):
     rpi: bytes
     aem: bytes
 
-    def __init__(self, rpi: bytes, aem: bytes):
-        super().__init__(beacon_type="GAEN")
-        self.rpi = rpi
-        self.aem = aem
+    def __post_init__(self) -> None:
+        self.beacon_type = "GAEN"
 
 
 @dataclass
