@@ -92,7 +92,7 @@ ruff check .
 python3 -m py_compile $(git diff --name-only origin/main...HEAD | grep '\.py$')
 
 # 3. Targeted test execution
-uv run pytest tests/
+pytest tests/
 ```
 
 ### Step 4: Structured Review Synthesis
@@ -146,7 +146,7 @@ Every review report must follow this structure:
 
 ## 🧪 Verification & Test Health
 - [ ] Ruff lint clean (`ruff check .`)
-- [ ] Unit & integration tests passing (`uv run pytest`)
+- [ ] Unit & integration tests passing (`pytest`)
 - [ ] Edge cases covered in tests (mock packet drops, invalid headers, port disconnects)
 
 ---
