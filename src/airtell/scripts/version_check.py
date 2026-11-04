@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Written by Sultan Qasim Khan
 # Copyright (c) 2024-2025, NCC Group plc
