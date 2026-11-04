@@ -16,9 +16,11 @@
 
 ## Modeling & Storage
 - **Data Modeling & Validation**: `pydantic>=2.0.0` (Packet headers, dissected PDU records, and telemetry session schemas)
-- **Database Abstraction**: `SQLAlchemy` / `SQLModel` ORM layer providing a unified abstraction across storage backends
-- **Current Primary Engine**: `sqlite3` (Thread-safe observations & alerts logging, indexed query windows, plus persistent `whitelists` and `alert_actions` tables for triage)
-- **Roadmap Engines**: PostgreSQL, TimescaleDB, and DuckDB supported via SQLAlchemy dialect drivers
+- **Database Abstraction**: `DatabaseBackend(ABC)` architecture (`src/airtell/telemetry/storage.py`) providing a lean, high-throughput abstraction over native DB-API connections without third-party ORM overhead
+- **Production Storage Engines**:
+  - `SQLiteBackend`: Thread-safe observations & alerts logging via standard library `sqlite3`, thread-local connection management, indexed query windows, and persistent `whitelists` and `alert_actions` tables
+  - `DuckDBBackend`: High-throughput columnar analytical engine (`duckdb>=1.5.6`) with zero-copy vectorized aggregation, parity-compatible schema, and read-through SQLite attachment
+- **Roadmap Engines**: PostgreSQL and TimescaleDB planned via native DB-API drivers implementing `DatabaseBackend`
 
 ## Frontend, Dashboard & Visualization
 - **Application Framework**: `streamlit>=1.64.0` (Strictly utilizing official Streamlit components)
