@@ -61,30 +61,18 @@ All tasks follow a strict lifecycle:
 8.  **Commit Code Changes:**
 
     -   Stage all code changes related to the task.
-    -   Propose a clear, concise commit message e.g, `feat(ui): Create basic
-        HTML structure for calculator`.
+    -   Propose a clear, concise commit message following Conventional Commits, e.g.,
+        `feat(telemetry): Add sliding-window heuristic evaluation for anti-stalking tracker`.
     -   Perform the commit.
 
-9.  **Attach Task Summary with Git Notes:**
+9.  **Get and Record Task Commit SHA:**
 
-    -   **Step 9.1: Get Commit Hash:** Obtain the hash of the *just-completed
-        commit* (`git log -1 --format="%H"`).
-    -   **Step 9.2: Draft Note Content:** Create a detailed summary for the
-        completed task. This should include the task name, a summary of changes,
-        a list of all created/modified files, and the core "why" for the change.
-    -   **Step 9.3: Attach Note:** Use the `git notes` command to attach the
-        summary to the commit. `bash # The note content from the previous step
-        is passed via the -m flag. git notes add -m "<note content>"
-        <commit_hash>`
-
-10. **Get and Record Task Commit SHA:**
-
-    -   **Step 10.1: Update Plan:** Read `plan.md`, find the line for the
+    -   **Step 9.1: Update Plan:** Read `plan.md`, find the line for the
         completed task, update its status from `[~]` to `[x]`, and append the
         first 7 characters of the *just-completed commit's* commit hash.
-    -   **Step 10.2: Write Plan:** Write the updated content back to `plan.md`.
+    -   **Step 9.2: Write Plan:** Write the updated content back to `plan.md`.
 
-11. **Commit Plan Update:**
+10. **Commit Plan Update:**
 
     -   **Action:** Stage the modified `plan.md` file.
     -   **Action:** Commit this change with a descriptive message (e.g.,
@@ -144,7 +132,7 @@ that also concludes a phase in `plan.md`.
     -   Before execution, you **must** announce the exact shell command you will
         use to run the tests.
     -   **Example Announcement:** "I will now run the automated test suite to
-        verify the phase. **Command:** `CI=true npm test`"
+        verify the phase. **Command:** `uv run pytest`"
     -   Execute the announced command.
     -   If tests fail, you **must** inform the user and begin debugging. You may
         attempt to propose a fix a **maximum of two times**. If the tests still
@@ -161,21 +149,21 @@ that also concludes a phase in `plan.md`.
         expected outcomes.
     -   The plan you present to the user **must** follow this format:
 
-        **For a Frontend Change:** ``` The automated tests have passed. For
+        **For a Frontend / Dashboard Change:** ``` The automated tests have passed. For
         manual verification, please follow these steps:
 
-        **Manual Verification Steps:** 1. **Start the development server with
-        the command:** `npm run dev` 2. **Open your browser to:**
-        `http://localhost:3000` 3. **Confirm that you see:** The new user
-        profile page, with the user's name and email displayed correctly. ```
+        **Manual Verification Steps:** 1. **Start the Streamlit dashboard with
+        the command:** `streamlit run app/streamlit_app.py` 2. **Open your browser to:**
+        `http://localhost:8501` 3. **Confirm that you see:** The tactical BLE
+        telemetry views and controls updating cleanly. ```
 
-        **For a Backend Change:** ``` The automated tests have passed. For
+        **For a Backend / CLI Change:** ``` The automated tests have passed. For
         manual verification, please follow these steps:
 
-        **Manual Verification Steps:** 1. **Ensure the server is running.** 2.
-        **Execute the following command in your terminal:** `curl -X POST
-        http://localhost:8080/api/v1/users -d '{"name": "test"}'` 3. **Confirm
-        that you receive:** A JSON response with a status of `201 Created`. ```
+        **Manual Verification Steps:** 1. **Ensure your environment is active.** 2.
+        **Execute the following command in your terminal:** `python3 -m airtell.cli --help`
+        or `python3 -m airtell.cli topology-a --mock` 3. **Confirm that you receive:**
+        A clean exit code 0 and expected telemetry output. ```
 
 5.  **Await Explicit User Feedback:**
 
@@ -190,12 +178,12 @@ that also concludes a phase in `plan.md`.
     -   Do NOT create a new empty commit for checkpointing.
     -   Identify the hash of the last functional commit made during this phase. This will be the target for the verification report.
 
-7.  **Attach Auditable Verification Report using Git Notes:**
+7.  **Record Phase Verification Report:**
 
-    -   **Step 7.1: Draft Note Content:** Create a detailed verification report
+    -   **Step 7.1: Draft Report Content:** Create a detailed verification report
         including the automated test command, the manual verification steps, and
         the user's confirmation.
-    -   **Step 7.2: Attach Note:** Use the `git notes` command to attach the full report to the target commit identified in step 6.
+    -   **Step 7.2: Record Report:** Document the verification report in the phase summary.
 
 8.  **Get and Record Phase Checkpoint SHA:**
 
@@ -213,8 +201,7 @@ that also concludes a phase in `plan.md`.
         format `conductor(plan): Mark phase '<PHASE NAME>' as complete`.
 
 10. **Announce Completion:** Inform the user that the phase is complete and the
-    checkpoint has been created, with the detailed verification report attached
-    as a git note.
+    checkpoint has been created.
 
 ### Quality Gates
 
@@ -224,42 +211,50 @@ Before marking any task complete, verify:
 -   [ ] Code coverage meets requirements (>80%)
 -   [ ] Code follows project's code style guidelines (as defined in
     `code_styleguides/`)
--   [ ] All public functions/methods are documented (e.g., docstrings, JSDoc,
-    GoDoc)
--   [ ] Type safety is enforced (e.g., type hints, TypeScript types, Go types)
--   [ ] No linting or static analysis errors (using the project's configured
-    tools)
--   [ ] Works correctly on mobile (if applicable)
+-   [ ] All public functions/methods are documented (e.g., docstrings)
+-   [ ] Type safety is enforced (e.g., Python type hints)
+-   [ ] No linting or static analysis errors (using ruff check)
+-   [ ] Hardware / radio simulation tests pass (e.g., VirtualRadioBus, packet decoders)
 -   [ ] Documentation updated if needed
 -   [ ] No security vulnerabilities introduced
 
 ## Development Commands
 
-**AI AGENT INSTRUCTION: This section should be adapted to the project's specific
-language, framework, and build tools.**
-
 ### Setup
 
 ```bash
-# Example: Commands to set up the development environment (e.g., install dependencies, configure database)
-# e.g., for a Node.js project: npm install
-# e.g., for a Go project: go mod tidy
+# Virtual environment setup
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e .[test]
+
+# Or with uv:
+uv sync
 ```
 
 ### Daily Development
 
 ```bash
-# Example: Commands for common daily tasks (e.g., start dev server, run tests, lint, format)
-# e.g., for a Node.js project: npm run dev, npm test, npm run lint
-# e.g., for a Go project: go run main.go, go test ./..., go fmt ./...
+# Run pytest test suite
+uv run pytest -v tests/
+
+# Run linter
+uv run ruff check .
+
+# Run tactical Streamlit dashboard
+streamlit run app/streamlit_app.py
+
+# Run AirTell CLI
+python3 -m airtell.cli --help
 ```
 
 ### Before Committing
 
 ```bash
-# Example: Commands to run all pre-commit checks (e.g., format, lint, type check, run tests)
-# e.g., for a Node.js project: npm run check
-# e.g., for a Go project: make check (if a Makefile exists)
+# Full regression test run
+uv run pytest tests/ --ignore=tests/benchmarks
+
+# Lint validation across codebase
+uv run ruff check .
 ```
 
 ## Testing Requirements
@@ -279,13 +274,12 @@ language, framework, and build tools.**
 -   Test authentication and authorization
 -   Check form submissions
 
-### Mobile Testing
+### Hardware & Simulation Testing
 
--   Test on actual iPhone when possible
--   Use Safari developer tools
--   Test touch interactions
--   Verify responsive layouts
--   Check performance on 3G/4G
+-   Test against `VirtualRadioBus` mock interfaces for zero-device verification
+-   Validate dual CC2652P serial dongles (`/dev/ttyUSB0` & `/dev/ttyUSB1`) when hardware is present
+-   Verify multi-channel capture, hopping sequence, and PCAP output integrity
+-   Verify Streamlit tactical telemetry rendering and WebSocket/queue bridges
 
 ## Code Review Process
 
@@ -325,12 +319,11 @@ Before requesting review:
     -   Images optimized
     -   Caching implemented where needed
 
-6.  **Mobile Experience**
+6.  **Telemetry & Hardware Experience**
 
-    -   Touch targets adequate (44x44px)
-    -   Text readable without zooming
-    -   Performance acceptable on mobile
-    -   Interactions feel native
+    -   Streamlit tactical UI renders cleanly without layout overflow
+    -   RSSI charts, radar tomographic heatmaps, and threat lists refresh smoothly
+    -   Serial communication handles disconnects and re-enumerations gracefully
 
 ## Commit Guidelines
 
@@ -357,10 +350,10 @@ Before requesting review:
 ### Examples
 
 ```bash
-git commit -m "feat(auth): Add remember me functionality"
-git commit -m "fix(posts): Correct excerpt generation for short posts"
-git commit -m "test(comments): Add tests for emoji reaction limits"
-git commit -m "style(mobile): Improve button touch targets"
+git commit -m "feat(telemetry): Add sliding-window heuristic evaluation for anti-stalking tracker"
+git commit -m "fix(extcap): Prevent subprocess deadlock on unconsumed stderr in tshark runner"
+git commit -m "test(dissector): Add unit tests for Apple Find My payload unpacking"
+git commit -m "refactor(storage): Implement DatabaseBackend abstraction protocol for DuckDB"
 ```
 
 ## Definition of Done
@@ -372,10 +365,9 @@ A task is complete when:
 3.  Code coverage meets project requirements
 4.  Documentation complete (if applicable)
 5.  Code passes all configured linting and static analysis checks
-6.  Works beautifully on mobile (if applicable)
+6.  Hardware & simulation verification passes (if applicable)
 7.  Implementation notes added to `plan.md`
 8.  Changes committed with proper message
-9.  Git note with task summary attached to the commit
 
 ## Emergency Procedures
 
@@ -384,7 +376,7 @@ A task is complete when:
 1.  Create hotfix branch from main
 2.  Write failing test for bug
 3.  Implement minimal fix
-4.  Test thoroughly including mobile
+4.  Test thoroughly with automated test suite and simulation
 5.  Deploy immediately
 6.  Document in plan.md
 
@@ -411,7 +403,7 @@ A task is complete when:
 -   [ ] All tests passing
 -   [ ] Coverage >80%
 -   [ ] No linting errors
--   [ ] Mobile testing complete
+-   [ ] Hardware / simulation test validation complete
 -   [ ] Environment variables configured
 -   [ ] Database migrations ready
 -   [ ] Backup created
