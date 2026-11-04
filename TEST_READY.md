@@ -34,7 +34,7 @@ The validation suite is partitioned into five distinct End-to-End tiers in addit
 
 ## 3. 20-Feature Coverage Checklist
 
-Every feature defined in `TEST_INFRA.md` is covered across both Tier 1 (Isolation) and Tier 2 (Boundaries):
+Every feature defined in the test architecture specification (and tracked in `conductor/tech-stack.md`) is covered across both Tier 1 (Isolation) and Tier 2 (Boundaries):
 
 - [x] **F01**: Base64 Framing & Word Count Calculation (`test_f01_*`)
 - [x] **F02**: Host-to-Dongle Command Serialization (`test_f02_*`)
