@@ -6,9 +6,9 @@
 - **Package & Environment Management**: `uv` first (`uv sync`, `uv run`) with full standard `pip` / `virtualenv` PEP 517/621 fallback
 
 ## Hardware & Communications
-- **Serial Interface**: `pyserial>=3.5` (UART communication with TI CC2652P Sniffle radios, baud rates up to 921,600)
+- **Serial Interface**: `pyserial>=3.5` (UART communication with TI CC2652P / CC1352 Sniffle radios, default 2,000,000 baud with automatic capping to 921,600 baud on legacy CP2102 bridges)
 - **Firmware Base**: Sniffle BLE5 sniffer firmware (Texas Instruments CC2652 / CC1352)
-- **Hardware Discovery**: Automatic USB serial port discovery for Sonoff CC2652P (CH340 / CP2102) and TI XDS110 debug probes with mock hardware fallback
+- **Hardware Discovery**: Automatic USB serial port discovery for Sonoff CC2652P (CP2102 / CP2102N) and TI XDS110 debug probes with mock hardware fallback
 
 ## Cryptography & Data Integrity
 - **Cryptographic Primitives**: `cryptography>=40.0.0` (AES-128, key derivation, and token evaluation)
