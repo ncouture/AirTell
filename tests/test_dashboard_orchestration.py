@@ -140,3 +140,24 @@ def test_radio_orchestrator_serial_port_discovery() -> None:
         assert discovered[1]["device"] == "/dev/ttyUSB1"
         assert discovered[1]["is_sniffle"] is True
 
+
+def test_streamlit_app_conn_closed_on_view_exception() -> None:
+    """Validate that Streamlit main() closes the SQLite connection even if a view raises an exception."""
+    from unittest.mock import MagicMock, patch
+
+    import pytest
+
+    from app import streamlit_app
+
+    mock_conn = MagicMock()
+    with patch.object(streamlit_app, "get_db_connection", return_value=mock_conn), \
+         patch.object(streamlit_app, "get_event_queue", return_value=MagicMock()), \
+         patch.object(streamlit_app, "render_top_app_bar"), \
+         patch.object(streamlit_app, "render_navigation", return_value="telemetry"), \
+         patch.object(streamlit_app, "render_telemetry_overview", side_effect=RuntimeError("Simulated view rendering failure")):
+        with pytest.raises(RuntimeError, match="Simulated view rendering failure"):
+            streamlit_app.main()
+
+    mock_conn.close.assert_called_once()
+
+

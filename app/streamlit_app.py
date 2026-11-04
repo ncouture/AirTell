@@ -139,22 +139,22 @@ def main() -> None:
             render_offline_replay(tracker_db=tracker_db, conn=conn)
 
     # Route active operational view with live real-time event queue
-    if active_view == "telemetry":
-        render_telemetry_overview(conn=conn, event_queue=event_queue, backend=backend)
-    elif active_view == "rssi":
-        render_rssi_trends(conn=conn, event_queue=event_queue, backend=backend)
-    elif active_view == "alerts":
-        render_alert_feed(conn=conn, tracker_db=tracker_db, event_queue=event_queue, backend=backend)
-    elif active_view == "inspector":
-        render_packet_inspector(conn=conn, event_queue=event_queue, backend=backend)
-    elif active_view == "controls":
-        render_radio_controls(tracker_db=tracker_db, event_queue=event_queue)
-
-    elif active_view == "adversarial":
-        render_adversarial_evaluation(conn=conn, tracker_db=tracker_db, event_queue=event_queue)
-
-    if conn:
-        conn.close()
+    try:
+        if active_view == "telemetry":
+            render_telemetry_overview(conn=conn, event_queue=event_queue, backend=backend)
+        elif active_view == "rssi":
+            render_rssi_trends(conn=conn, event_queue=event_queue, backend=backend)
+        elif active_view == "alerts":
+            render_alert_feed(conn=conn, tracker_db=tracker_db, event_queue=event_queue, backend=backend)
+        elif active_view == "inspector":
+            render_packet_inspector(conn=conn, event_queue=event_queue, backend=backend)
+        elif active_view == "controls":
+            render_radio_controls(tracker_db=tracker_db, event_queue=event_queue)
+        elif active_view == "adversarial":
+            render_adversarial_evaluation(conn=conn, tracker_db=tracker_db, event_queue=event_queue)
+    finally:
+        if conn:
+            conn.close()
 
     if auto_refresh:
         time.sleep(refresh_rate)
