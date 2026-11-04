@@ -33,6 +33,9 @@ bluetooth-sniffle = "airtell.cli:main"
 test = [
     "pytest>=7.0.0",
 ]
+notifications = [
+    "twilio>=8.0.0",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
