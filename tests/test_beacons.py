@@ -8,6 +8,7 @@ Asserts bit-for-bit exact compliance with:
 """
 
 import sys
+from pathlib import Path
 from uuid import UUID
 
 import pytest
@@ -25,9 +26,10 @@ from airtell.protocol.beacons import (
     build_ibeacon,
 )
 
-# Optional reference Sniffle decoder check
-if "/home/self/git/Sniffle/Sniffle/python_cli" not in sys.path:
-    sys.path.insert(0, "/home/self/git/Sniffle/Sniffle/python_cli")
+# ensure sniffle scripts are importable
+SRC_DIR = Path(__file__).resolve().parent.parent / "src/airtell/scripts/"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 
 try:
     from sniffle.advdata.ad_types import (
