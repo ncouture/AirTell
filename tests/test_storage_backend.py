@@ -476,3 +476,19 @@ def test_sqlite_backend_close_multi_threaded(temp_sqlite_path: str) -> None:
         other_conn.execute("SELECT 1")
 
 
+def test_duckdb_sqlite_attach_path_with_single_quote(tmp_path: Path) -> None:
+    """Validate that DuckDBBackend attaches SQLite database files with single quotes without SQL syntax errors."""
+    special_db_path = str(tmp_path / "test_'db.sqlite")
+    # Initialize SQLiteBackend first to create file and schema
+    sqlite_be = SQLiteBackend(special_db_path)
+    sqlite_be.close()
+
+    duck_be = DuckDBBackend(special_db_path)
+    # Check that query succeeds
+    df = duck_be.query_df("SELECT 1 as val;")
+    assert len(df) == 1
+    assert df["val"].iloc[0] == 1
+    duck_be.close()
+
+
+
