@@ -1,10 +1,10 @@
 # Implementation Plan: Single-Dongle Passive Sniffing Mode for topology-a
 
 ## Phase 1: Conductor Track Scaffolding & Registry Indexing [checkpoint: 4140e98]
-- [x] Task: Scaffold Track 3 Conductor track directory and documentation (Issue #56) [4140e98]
+- [x] Task: Scaffold Track 6 (Milestone 2 Track 3: single_dongle_topology_a_20261016) Conductor track directory and documentation (Issue #56) [4140e98]
   - [x] Create `conductor/tracks/single_dongle_topology_a_20261016/`
   - [x] Create `metadata.json`, `index.md`, `spec.md`, and `plan.md`
-- [x] Task: Update `conductor/tracks.md` registry with Track 3 entry [4140e98]
+- [x] Task: Update `conductor/tracks.md` registry with Track 6 (Milestone 2 Track 3) entry [4140e98]
 
 ## Phase 2: Serial Port Fallback Refactor [checkpoint: 4140e98]
 - [x] Task: Update `allocate_dual_ports()` in `src/airtell/device/serial_port.py` (Issue #31) [4140e98]
