@@ -261,7 +261,9 @@ class SniffleHW:
     # Preload expected hop interval changes for encrypted connections.
     # pairs should be a list of 2-tuples of integers, where each 2-tuple is:
     #   (Interval, delta_Instant)
-    def cmd_interval_preload(self, pairs=[]):
+    def cmd_interval_preload(self, pairs=None):
+        if pairs is None:
+            pairs = []
         if len(pairs) > SniffleHW.max_interval_preload_pairs:
             raise ValueError("Too many preload pairs")
         cmd_bytes = [0x21]
@@ -450,11 +452,13 @@ class SniffleHW:
                       ext_adv=False,
                       coded_phy=False,
                       rssi_min=-128,
-                      interval_preload=[],
+                      interval_preload=None,
                       phy_preload=PhyMode.PHY_2M,
                       pause_done=False,
                       validate_crc=True,
                       txPower=5):
+        if interval_preload is None:
+            interval_preload = []
         if not mode in SnifferMode:
             raise ValueError("Invalid mode requested")
 

@@ -378,7 +378,9 @@ def scan_target(mac):
     return advPkt, scanRspPkt
 
 def connect_target(targ_mac, chan=37, targ_random=True, initiator_mac=None, initiator_random=True,
-        interval=24, latency=1, preloads=[]):
+        interval=24, latency=1, preloads=None):
+    if preloads is None:
+        preloads = []
     hw.cmd_chan_aa_phy(chan, BLE_ADV_AA, 0)
     hw.cmd_pause_done(True)
     hw.cmd_follow(False)
