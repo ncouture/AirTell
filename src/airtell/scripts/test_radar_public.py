@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 #
 
-import pytest
 import time
-import numpy as np
 
-from sniffle.radar.models import LinkSample, NodeType
-from sniffle.radar.public_devices import PublicDeviceManager
+import pytest
 from sniffle.radar.baseline import BaselineTracker
 from sniffle.radar.features import FeatureExtractor
-from radar_tomography import build_parser, run_radar_pipeline, generate_simulated_samples
+from sniffle.radar.models import LinkSample, NodeType
+from sniffle.radar.public_devices import PublicDeviceManager
+
+from airtell.scripts.radar_tomography import build_parser
 
 
 def test_public_device_manager_discovery_and_pruning():
