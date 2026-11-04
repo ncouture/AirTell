@@ -459,20 +459,33 @@ def test_sqlite_backend_close_multi_threaded(temp_sqlite_path: str) -> None:
     backend.connect()
 
     other_conn: sqlite3.Connection | None = None
+    worker_error: Exception | None = None
+    ready_event = threading.Event()
+    closed_event = threading.Event()
 
     def worker() -> None:
-        nonlocal other_conn
+        nonlocal other_conn, worker_error
         other_conn = backend.connect()
         other_conn.execute("SELECT 1")
+        ready_event.set()
+        closed_event.wait(timeout=5.0)
+        try:
+            other_conn.execute("SELECT 1")
+        except Exception as exc:
+            worker_error = exc
 
     t = threading.Thread(target=worker)
     t.start()
-    t.join()
+    assert ready_event.wait(timeout=5.0) is True
 
     assert other_conn is not None
     backend.close()
+    closed_event.set()
+    t.join(timeout=5.0)
 
-    with pytest.raises(sqlite3.ProgrammingError):
+    assert isinstance(worker_error, sqlite3.ProgrammingError)
+    assert "closed database" in str(worker_error).lower()
+    with pytest.raises(sqlite3.ProgrammingError, match="(?i)closed database"):
         other_conn.execute("SELECT 1")
 
 
