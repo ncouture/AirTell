@@ -29,9 +29,10 @@ def test_cli_parser_help_and_defaults():
 def test_packaged_sample_dataset_loading():
     dataset_path = os.path.join(os.path.dirname(__file__), "radar_sample_data.json")
     if not os.path.exists(dataset_path):
-        dataset_path = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "..", "..", "sniffle", "src", "sniffle", "radar_sample_data.json")
-        )
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+        dataset_path = os.path.join(repo_root, "src", "airtell", "scripts", "radar_sample_data.json")
+    if not os.path.exists(dataset_path):
+        dataset_path = os.path.join(repo_root, "src", "sniffle", "src", "sniffle", "radar_sample_data.json")
     assert os.path.exists(dataset_path)
 
     demuxer = StreamDemuxer()
