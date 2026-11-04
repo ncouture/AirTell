@@ -221,7 +221,7 @@ class SniffleHW:
             raise ValueError("advData too long!")
         if len(scanRspData) > 31:
             raise ValueError("scanRspData too long!")
-        if not (mode in (0, 2, 3)):
+        if mode not in (0, 2, 3):
             raise ValueError("Mode must be 0 (connectable), 2 (non-connectable), or 3 (scannable)")
         paddedAdvData = [len(advData), *advData] + [0]*(31 - len(advData))
         paddedScnData = [len(scanRspData), *scanRspData] + [0]*(31 - len(scanRspData))
@@ -302,7 +302,7 @@ class SniffleHW:
             raise ValueError("advData too long!")
         if not (0 <= mode <= 2):
             raise ValueError("Mode must be 0 (non-connectable), 1 (connectable), or 2 (scannable)")
-        if not (phy1 in (PhyMode.PHY_1M, PhyMode.PHY_CODED_S8, PhyMode.PHY_CODED_S2)):
+        if phy1 not in (PhyMode.PHY_1M, PhyMode.PHY_CODED_S8, PhyMode.PHY_CODED_S2):
             raise ValueError("Primary PHY must be 0 (1M), 2 (coded S=8), or 3 (coded S=2)")
         if not (PhyMode.PHY_1M <= phy2 <= PhyMode.PHY_CODED_S2):
             raise ValueError("Secondary PHY must be 0 (1M), 1 (2M), 2 (coded S=8), "
@@ -462,7 +462,7 @@ class SniffleHW:
                       txPower=5):
         if interval_preload is None:
             interval_preload = []
-        if not mode in SnifferMode:
+        if mode not in SnifferMode:
             raise ValueError("Invalid mode requested")
 
         if not (37 <= chan <= 39):

@@ -66,11 +66,11 @@ def decode_adv_data(data):
 
     while i < len(data):
         try:
-            l = data[i]
+            rec_length = data[i]
             t = data[i+1]
-            d = data[i+2:i+1+l]
+            d = data[i+2:i+1+rec_length]
             records.append(record_from_type_data(t, d))
-            i += 1+l
+            i += 1+rec_length
         except (IndexError, ValueError):
             break
 

@@ -36,15 +36,15 @@ TS_WRAP_PERIOD = 0x100000000 / 4E6
 
 class PacketMessage:
     def __init__(self, raw_msg, dstate: SniffleDecoderState, crc_rev=None):
-        ts, l, event, rssi, chan = unpack("<LHHbB", raw_msg[:10])
+        ts, raw_len, event, rssi, chan = unpack("<LHHbB", raw_msg[:10])
         body = raw_msg[10:]
 
         # MSB of length is actually packet direction
-        pkt_dir = l >> 15
-        crc_err = True if (l & 0x4000) else False
-        l &= 0x3FFF
+        pkt_dir = raw_len >> 15
+        crc_err = True if (raw_len & 0x4000) else False
+        body_len = raw_len & 0x3FFF
 
-        if len(body) != l:
+        if len(body) != body_len:
             raise SniffleHWPacketError("Incorrect length field!")
 
         phy = chan >> 6

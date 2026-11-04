@@ -228,7 +228,7 @@ def main():
     print(conn_req)
 
     global pcwriter
-    if not (args.output is None):
+    if args.output is not None:
         pcwriter = PcapBleWriter(args.output)
 
         pcwriter.write_packet(int(adv.ts_epoch * 1000000), adv.aa, adv.chan,
