@@ -1173,7 +1173,7 @@ def create_parser(prog: str = "airtell") -> argparse.ArgumentParser:
         description="AirTell: Dual-Device Bluetooth Low Energy Sniffle Testbed Framework (PoPETs 2025-0103)",
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose debug logging")
-    ver_str = f"{prog} 0.1.0 (bluetooth-sniffle 0.1.0)" if prog != "bluetooth-sniffle" else "bluetooth-sniffle 0.1.0 (airtell 0.1.0)"
+    ver_str = f"{prog} 0.2.0 (bluetooth-sniffle 0.2.0)" if prog != "bluetooth-sniffle" else "bluetooth-sniffle 0.2.0 (airtell 0.2.0)"
     parser.add_argument("--version", action="version", version=ver_str)
 
     subparsers = parser.add_subparsers(dest="command", help="Available subcommands")
