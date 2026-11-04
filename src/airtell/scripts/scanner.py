@@ -12,7 +12,6 @@ from sniffle.errors import SourceDone
 from sniffle.packet_decoder import (
     AdvaMessage,
     AdvDirectIndMessage,
-    Advertiser,
     AdvertMessage,
     AdvExtIndMessage,
     AuxScanRspMessage,
@@ -32,6 +31,29 @@ hw = None
 pcwriter = None
 advertisers = {}
 done_scan = False
+
+
+class Advertiser:
+    def __init__(self):
+        self.adv = None
+        self.scan_rsp = None
+        self.rssi_min = -128
+        self.rssi_max = -128
+        self.rssi_avg = -128.0
+        self.hits = 0
+
+    def add_hit(self, rssi):
+        if self.hits == 0:
+            self.rssi_min = rssi
+            self.rssi_max = rssi
+            self.rssi_avg = float(rssi)
+        else:
+            if rssi < self.rssi_min:
+                self.rssi_min = rssi
+            elif rssi > self.rssi_max:
+                self.rssi_max = rssi
+            self.rssi_avg = (self.rssi_avg * self.hits + rssi) / (self.hits + 1)
+        self.hits += 1
 
 
 class ScannerSession:
