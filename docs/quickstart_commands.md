@@ -92,12 +92,8 @@ Coordinate Dongle 1 (`relay_master.py`) and Dongle 2 (`relay_slave.py`) to tunne
 
 ## 4. Live Wireshark Streaming via Extcap
 
-1. Locate your Wireshark personal extcap folder:
-   - Wireshark $\rightarrow$ **Help** $\rightarrow$ **About Wireshark** $\rightarrow$ **Folders** $\rightarrow$ **Extcap path**.
-2. Create a symlink to `sniffle_extcap.py`:
-   ```bash
-   mkdir -p ~/.local/lib/wireshark/extcap
-   ln -s $(pwd)/scripts/sniffle_extcap.py ~/.local/lib/wireshark/extcap/
-   chmod +x scripts/sniffle_extcap.py
-   ```
-3. Restart Wireshark. Each attached Sniffle dongle appears as a distinct capture interface (e.g., `Sniffle /dev/ttyUSB0`), allowing channel and target filtering directly from the GUI gear icon.
+For comprehensive installation instructions, platform-specific directory paths (Linux, macOS, Windows), and TShark configuration options, see the canonical guide in [`docs/tshark.md`](tshark.md#part-2-using-sniffle_extcappy-with-tshark-live-capture).
+
+Quick symlink setup:
+1. Symlink `scripts/sniffle_extcap.py` to your Wireshark extcap directory per [`docs/tshark.md`](tshark.md#1-installation--verification).
+2. Restart Wireshark or launch `tshark -D | grep sniffle`. Each attached Sniffle dongle appears as an available capture interface (`sniffle`).
