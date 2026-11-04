@@ -179,7 +179,7 @@ class SQLiteBackend(DatabaseBackend):
             return self._mem_conn
         conn = getattr(self._local, "conn", None)
         if conn is None:
-            conn = sqlite3.connect(self.db_path, timeout=self.timeout)
+            conn = sqlite3.connect(self.db_path, timeout=self.timeout, check_same_thread=False)
             conn.row_factory = sqlite3.Row
             self._local.conn = conn
             with self._lock:
