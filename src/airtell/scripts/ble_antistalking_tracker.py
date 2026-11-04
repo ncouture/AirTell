@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 
 """BLE Anti-Stalking Tracker & Multi-Channel Offline Finding Logger.
