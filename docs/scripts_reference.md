@@ -9,8 +9,8 @@ This document provides a comprehensive operational and technical reference for a
 | Script / Tool | Type | Role | Key Arguments | Primary Input | Output |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | [`advertiser.py`](#1-advertiserpy) | Python CLI | Peripheral transmitter & emulator | `-s`, `-b`, `-n` | Serial UART | Over-the-air BLE advertisements |
-| [`ble_antistalking_tracker.py`](#2-ble_antistalking_trackerpy) | Python CLI | SQLite logger & threat heuristics | `-p`, `-c`, `-db`, `--twilio-*` | `sniff_receiver` stdout | SQLite DB & SMS alerts |
-| [`ble_parser.py`](#3-ble_parserpy) | Python CLI | Offline Finding key extractor | `-p`, `-c` | Live RF or stdout lines | Classified tracker public keys |
+| [`ble_antistalking_tracker.py`](#2-ble_antistalking_trackerpy) | Python CLI | SQLite logger & threat heuristics | `-s`, `-c`, `-db`, `--twilio-*` | `sniff_receiver` stdout | SQLite DB & SMS alerts |
+| [`ble_parser.py`](#3-ble_parserpy) | Python CLI | Offline Finding key extractor | `[port]`, `[channel]` | Live RF or stdout lines | Classified tracker public keys |
 | [`crackle`](#4-crackle) | C ELF Executable | BLE legacy encryption cracker | `-i`, `-o`, `-v`, `-l` | Captured PCAP file | Decrypted PCAP / PCAPNG file |
 | [`initiator.py`](#5-initiatorpy) | Python CLI | Central connection initiator & tester | `-s`, `-m`, `-i`, `-S`, `-P` | Live RF & Serial UART | `CONNECT_IND`, ping & updates |
 | [`pcap_decoder.py`](#6-pcap_decoderpy) | Python CLI | Offline PCAP advertisement dissector | `pcap`, `-d`, `-q` | PCAP capture file | Dissected AD structures & hexdump |
@@ -105,7 +105,7 @@ is_valid = hmac.compare_digest(computed_sig, request.headers.get("X-Signature-SH
 * **Mechanism**: Parses raw hex payloads from `sniff_receiver.py`. Matches Apple Find My (`0x004C`, type `0x12`), Google Fast Pair (`0xFE9F`), Tile (`0xFEED`), and Samsung SmartThings Find (`0x0075`).
 * **Usage**:
   ```bash
-  python3 scripts/ble_parser.py -p /dev/ttyUSB0 -c 37
+  python3 scripts/ble_parser.py /dev/ttyUSB0 37
   ```
 
 ---

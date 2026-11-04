@@ -31,10 +31,10 @@ Deploy both SONOFF CC2652P dongles concurrently across different primary adverti
 
 ```bash
 # Terminal 1: Monitor Channel 37 via Dongle 1
-python3 ble_antistalking_tracker.py -p /dev/ttyUSB0 -c 37 -db ble_tracker.db
+python3 scripts/ble_antistalking_tracker.py -s /dev/ttyUSB0 -c 37 -db ble_tracker.db
 
 # Terminal 2: Monitor Channel 38 via Dongle 2
-python3 ble_antistalking_tracker.py -p /dev/ttyUSB1 -c 38 -db ble_tracker.db
+python3 scripts/ble_antistalking_tracker.py -s /dev/ttyUSB1 -c 38 -db ble_tracker.db
 ```
 
 ### 2. Launch the Streamlit Web Dashboard
