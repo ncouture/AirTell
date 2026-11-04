@@ -10,9 +10,9 @@ payloads and isolates ephemeral public keys used by crowdsourced tracking networ
 """
 
 import argparse
+import os
 import subprocess
 import sys
-import os
 
 try:
     from airtell.scripts.ble_antistalking_tracker import SniffleLineParser
@@ -59,12 +59,12 @@ def analyze_ble_payload(mac: str, rssi: int, payload_hex: str):
 
 def run_sniffle_sniffer(port: str = "/dev/ttyUSB0", channel: int = 37):
     """Spawns sniff_receiver process on specified serial port and BLE channel."""
-    base_dir = os.path.dirname(sys.argv[0])
-    exe = os.path.join(f"{base_dir}", "sniff_receiver.py")
-    cmd = [exe, "-s", port, "-c", str(channel)]
+    script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sniff_receiver.py")
+    cmd = [sys.executable, script_path, "-s", port, "-c", str(channel)]
     print(cmd)
     print(f"[*] Starting Sniffle on {port} (Channel {channel})...")
 
+    proc = None
     try:
         proc = subprocess.Popen(
             cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
@@ -79,6 +79,14 @@ def run_sniffle_sniffer(port: str = "/dev/ttyUSB0", channel: int = 37):
         print("[-] 'sniff_receiver' command not found. Ensure Sniffle tools are in your PATH.")
     except KeyboardInterrupt:
         print("\n[*] Sniffing stopped.")
+    finally:
+        if proc is not None and proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait()
 
 
 def main():
