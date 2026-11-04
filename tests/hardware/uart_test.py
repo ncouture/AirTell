@@ -4,8 +4,13 @@
 # Copyright (c) 2024-2025, NCC Group plc
 # Released as open source under GPLv3
 
-import argparse, random, time, serial
-from sniffle.sniffle_hw import SniffleHW, MarkerMessage
+import argparse
+import random
+import time
+
+import serial
+from sniffle.sniffle_hw import MarkerMessage, SniffleHW
+
 
 def main():
     aparse = argparse.ArgumentParser(description="UART echo test for Sniffle BLE5 sniffer")
