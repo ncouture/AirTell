@@ -396,15 +396,13 @@ class PcapBleReader:
 
     def _read_global_header(self) -> None:
         hdr = self.input.read(24)
-        if len(hdr) < 4:
+        if len(hdr) < 24:
             raise ValueError("File too short for PCAP global header")
 
         magic = struct.unpack("<I", hdr[:4])[0]
         if magic == 0x0A0D0D0A:
             # PCAPNG format
             self._is_pcapng = True
-            if len(hdr) < 12:
-                raise ValueError("Truncated PCAPNG Section Header Block")
             bom = hdr[8:12]
             if bom == b"\x1a\x2b\x3c\x4d":
                 self._endian = ">"
@@ -419,8 +417,6 @@ class PcapBleReader:
             self._iface_ts_factor = {}
         elif magic in (PCAP_MAGIC_USEC, PCAP_MAGIC_NANO, 0xD4C3B2A1, 0x4D3CB2A1):
             self._is_pcapng = False
-            if len(hdr) < 24:
-                raise ValueError("File too short for PCAP global header")
             self._is_nano = magic in (PCAP_MAGIC_NANO, 0x4D3CB2A1)
             self._endian = "<" if magic in (PCAP_MAGIC_USEC, PCAP_MAGIC_NANO) else ">"
             major, minor, _, _, _, dlt = struct.unpack(f"{self._endian}HHIIII", hdr[4:])
@@ -429,8 +425,6 @@ class PcapBleReader:
                     f"Unsupported LinkType: {dlt}, expected {DLT_BLUETOOTH_LE_LL_WITH_PHDR}"
                 )
         else:
-            if len(hdr) < 24:
-                raise ValueError("File too short for PCAP global header")
             raise ValueError(f"Invalid PCAP magic: 0x{magic:08X}")
 
     def _parse_ble_packet_payload(
