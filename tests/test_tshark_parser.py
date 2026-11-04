@@ -332,3 +332,31 @@ class TestTsharkBleJsonParser:
         assert obs["company_id"] == "0x004c"
         assert obs["network_type"] == "Unknown"
 
+    def test_multiline_json_buffer_accumulation_linear(self) -> None:
+        """Verify multi-line streaming JSON chunks accumulate in list buffer without quadratic concatenation."""
+        parser = TsharkBleJsonParser(default_channel=37)
+        lines = [
+            "  {\n",
+            '    "_index": "packets",\n',
+            '    "_source": {\n',
+            '      "layers": {\n',
+            '        "frame": {"frame_frame_time_epoch": "1790000000.000"},\n',
+            '        "btle": {"btle_btle_advertising_address": "11:22:33:44:55:66"},\n',
+            '        "btle_rf": {"btle_rf_btle_rf_signal_dbm": "-65", "btle_rf_btle_rf_channel": "37"}\n',
+            "      }\n",
+            "    }\n",
+            "  },\n",
+        ]
+
+        obs = None
+        for line in lines:
+            res = parser.parse_line(line)
+            if res is not None:
+                obs = res
+
+        assert obs is not None
+        assert obs["mac_address"] == "11:22:33:44:55:66"
+        assert obs["rssi"] == -65
+        assert parser._brace_depth == 0
+        assert len(parser._json_buffer) == 0
+
