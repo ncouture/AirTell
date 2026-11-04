@@ -1,12 +1,10 @@
 # Implementation Plan: Complete CLI Adversarial Ingestion and Live UART Injection
 
-## Phase 1: Conductor Track Scaffolding & Registry Indexing [checkpoint: 07cdd92]
+## Phase 1: PCAP Ingestion & Translation for airtell deanonymize [checkpoint: 07cdd92]
 - [x] Task: Scaffold Track 5 (Milestone 2 Track 2: cli_adversarial_completion_20261016) Conductor track directory and documentation (Issue #55) [07cdd92]
   - [x] Create `conductor/tracks/cli_adversarial_completion_20261016/`
   - [x] Create `metadata.json`, `index.md`, `spec.md`, and `plan.md`
-- [x] Task: Update `conductor/tracks.md` registry with Track 5 (Milestone 2 Track 2) entry [07cdd92]
-
-## Phase 2: PCAP Ingestion & Translation for `airtell deanonymize` [checkpoint: 07cdd92]
+  - [x] Update `conductor/tracks.md` registry with Track 5 (Milestone 2 Track 2) entry
 - [x] Task: Implement Link-Layer packet dissection into `LinkabilityObservation` in `src/airtell/cli.py` (Issue #25) [07cdd92]
   - [x] Extract MAC address, classification (`Public`, `Random Static`, `NRPA`, `RPA`), network type, and ephemeral keys
   - [x] Re-use and harmonize dissection logic with `classify_address()` and `classify_payload()`
@@ -18,7 +16,7 @@
   - [x] Validate file presence, accessibility, and non-zero size
   - [x] Catch PCAP header corruption and unsupported DLT formats with clear diagnostics and exit code 2
 
-## Phase 3: Live Hardware UART Injection for `airtell rogue-inject` [checkpoint: 07cdd92]
+## Phase 2: Live Hardware UART Injection for airtell rogue-inject [checkpoint: 07cdd92]
 - [x] Task: Add burst count, interval, and channel hopping parameters to `rogue-inject` parser (Issue #41) [07cdd92]
   - [x] Add `--interval-ms`, `--jitter-ms`, and `--channels` arguments
   - [x] Update `RogueBeaconGenerator.generate_burst()` to support channel sequences and hopping
@@ -28,13 +26,11 @@
   - [x] Support Apple Find My, Google Find Hub, Samsung SmartThings Find, and Tile profiles
   - [x] Implement graceful teardown on SIGINT/Ctrl+C or completion resetting device state
 
-## Phase 4: Documentation Reconciliation & Validation [checkpoint: 07cdd92]
+## Phase 3: Automated Testing, Documentation Reconciliation & Full Verification [checkpoint: 07cdd92]
 - [x] Task: Reconcile CLI handler options and examples with documentation (Issue #37) [07cdd92]
   - [x] Update `docs/CLI.md` options tables, synopses, and usage examples for `deanonymize` and `rogue-inject`
   - [x] Update `README.md` references to CLI documentation
   - [x] Verify markdown links and CLI snippet syntax via `tests/test_docs_cli_validation.py`
-
-## Phase 5: Automated Integration Testing, Full Verification & Issue Closure [checkpoint: 07cdd92]
 - [x] Task: Implement comprehensive CLI integration tests in `tests/test_cli_adversarial.py` (Issue #48) [07cdd92]
   - [x] Test `airtell deanonymize --pcap <valid.pcap>` verifying trajectory output, desync analysis, and leakage detection
   - [x] Test `airtell deanonymize --pcap <missing/empty/corrupted>` verifying error messages and non-zero exit codes
