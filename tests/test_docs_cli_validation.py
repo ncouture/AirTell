@@ -228,6 +228,8 @@ class TestCliSnippetsSyntax:
             try:
                 parsed_args = parser.parse_args(args)
             except SystemExit as exc:
+                if exc.code == 0 and any(a in args for a in ["-h", "--help", "-v", "--verbose", "--version"]):
+                    continue
                 pytest.fail(f"Failed to parse snippet from {doc_rel_path}: '{cmd_str}' -> Exit {exc.code}")
 
             assert parsed_args.command is not None or any(

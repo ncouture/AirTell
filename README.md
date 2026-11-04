@@ -199,8 +199,15 @@ Packets received by the radio unpack a 10-byte header:
 git clone https://github.com/ncouture/AirTell.git
 cd AirTell
 
-# Install in editable mode with development dependencies
+# Option A: Using uv (recommended)
+uv sync --extra test
+uv run airtell --help
+
+# Option B: Using standard pip / virtualenv
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -e .[test]
+airtell --help
 ```
 
 ### AI Code Review (Local Execution)
@@ -236,13 +243,13 @@ airtell rogue-inject --port /dev/ttyUSB0 --network "Google Find Hub" --count 10 
 Execute the automated test suite with strict warning trapping:
 
 ```bash
-# Run all unit tests
+# Run with uv:
+uv run pytest -v -W error tests/
+uv run ruff check src tests
+
+# Run with standard venv:
 pytest -v -W error tests/
-
-# Run with coverage report
 pytest --cov=airtell --cov-report=term-missing tests/
-
-# Run linter
 ruff check src tests
 ```
 
