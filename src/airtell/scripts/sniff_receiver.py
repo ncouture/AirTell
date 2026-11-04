@@ -91,7 +91,7 @@ def main():
     elif args.mac:
         try:
             mac = [int(h, 16) for h in reversed(args.mac.split(":"))]
-        except:
+        except (ValueError, TypeError):
             raise UsageError("MAC must be 6 colon-separated hex bytes")
     elif args.string:
         search_str = args.string.encode('latin-1').decode('unicode_escape').encode('latin-1')

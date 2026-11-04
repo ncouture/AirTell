@@ -41,7 +41,7 @@ def record_from_type_data(data_type: int, data: bytes):
     if data_type in ad_type_classes:
         try:
             return ad_type_classes[data_type](data_type, data)
-        except:
+        except Exception:
             return AdvDataRecord(data_type, data, malformed=True)
     else:
         return AdvDataRecord(data_type, data)
@@ -57,7 +57,7 @@ def decode_adv_data(data):
             d = data[i+2:i+1+l]
             records.append(record_from_type_data(t, d))
             i += 1+l
-        except:
+        except (IndexError, ValueError):
             break
 
     return records
