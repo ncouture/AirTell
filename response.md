@@ -1,6 +1,6 @@
 # Traffic Metadata, Law Enforcement Electronics & Quebec Signal Control Audit (10:00–10:05 Window)
 
-**Analysis Target**: [`merged.json`](file:///home/self/git/AirTell/merged.json) (Correlated against [`app/data/merged.pcap`](file:///home/self/git/AirTell/app/data/merged.pcap))  
+**Analysis Target**: [`merged.json`](merged.json) (Correlated against [`app/data/merged.pcap`](app/data/merged.pcap))  
 **Capture Window**: May 21, 2026 — 10:00:00 to 10:05:59 EDT (`1779372000.000` to `1779372360.000` Epoch)  
 **Geographical Context**: Boulevard des Entreprises / Autoroute 640 Corridor, Terrebonne, Quebec, Canada  
 **Jurisdiction**: Sûreté du Québec (SQ), Service de police de la Ville de Montréal (SPVM), and Royal Canadian Mounted Police (RCMP / GRC)  
@@ -78,6 +78,6 @@
 ---
 
 ## 5. Project Artifacts
-- **Full Report**: [`docs/extract_traffic_metadata.md`](file:///home/self/git/AirTell/docs/extract_traffic_metadata.md)
-- **Extraction & Canonicalization Tool**: [`scripts/extract_traffic_metadata.py`](file:///home/self/git/AirTell/scripts/extract_traffic_metadata.py)
-- **Complete Extracted JSON Dataset**: [`scratch/extracted_traffic_metadata_1000_1005.json`](file:///home/self/.gemini/antigravity-cli/brain/f56f4b66-5e32-45cf-b8bb-5e2d0fda0b6c/scratch/extracted_traffic_metadata_1000_1005.json)
+- **Full Report**: [`docs/extract_traffic_metadata.md`](docs/extract_traffic_metadata.md)
+- **Extraction & Canonicalization Tool**: [`src/airtell/scripts/extract_traffic_metadata.py`](src/airtell/scripts/extract_traffic_metadata.py)
+- **Complete Extracted JSON Dataset**: `scratch/extracted_traffic_metadata_1000_1005.json` (ephemeral analysis extract)
