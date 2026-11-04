@@ -91,6 +91,38 @@ hw = None
 # global variable for pcap writer
 pcwriter = None
 
+
+class RelayMasterSession:
+    """Encapsulates Sniffle relay master hardware and PCAP writer lifecycle."""
+
+    def __init__(self, serport=None) -> None:
+        self.serport = serport
+        self.hw = None
+        self.pcwriter = None
+
+    def close(self) -> None:
+        if self.pcwriter is not None:
+            self.pcwriter.close()
+            self.pcwriter = None
+        global pcwriter
+        pcwriter = None
+
+    def reset(self) -> None:
+        self.close()
+        self.hw = None
+        global hw
+        hw = None
+
+
+def reset_globals() -> None:
+    """Reset module-level global hardware state."""
+    global hw, pcwriter
+    if pcwriter is not None:
+        pcwriter.close()
+    hw = None
+    pcwriter = None
+
+
 def main():
     aparse = argparse.ArgumentParser(description="Relay master script for Sniffle BLE5 sniffer")
     aparse.add_argument("-s", "--serport", default=None, help="Sniffer serial port name")

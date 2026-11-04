@@ -24,6 +24,30 @@ from sniffle.sniffle_hw import (
 hw = None
 _aa = 0
 
+
+class RelaySlaveSession:
+    """Encapsulates Sniffle relay slave hardware session."""
+
+    def __init__(self, serport=None) -> None:
+        self.serport = serport
+        self.hw = None
+        self._aa = 0
+
+    def reset(self) -> None:
+        self.hw = None
+        self._aa = 0
+        global hw, _aa
+        hw = None
+        _aa = 0
+
+
+def reset_globals() -> None:
+    """Reset module-level global hardware state."""
+    global hw, _aa
+    hw = None
+    _aa = 0
+
+
 def main():
     aparse = argparse.ArgumentParser(description="Relay slave script for Sniffle BLE5 sniffer")
     aparse.add_argument("-s", "--serport", default=None, help="Sniffer serial port name")

@@ -17,9 +17,9 @@ from serial.tools.list_ports import comports
 from .constants import BLE_ADV_AA, BLE_ADV_CRCI, PhyMode, SnifferMode
 from .decoder_state import SniffleDecoderState
 from .errors import SniffleHWPacketError, UsageError
-from .measurements import MeasurementMessage, VersionMeasurement
+from .measurements import MeasurementMessage
 from .packet_decoder import DPacketMessage, PacketMessage
-from .sniffer_state import StateMessage
+from .sniffer_state import SnifferState as SnifferState, StateMessage
 
 
 class TrivialLogger:

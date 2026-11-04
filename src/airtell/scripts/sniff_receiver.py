@@ -35,6 +35,159 @@ hw = None
 # global variable for pcap writer
 pcwriter = None
 
+
+class SniffReceiverSession:
+    """Manages Sniffle hardware receiver lifecycle and PCAP logging."""
+
+    def __init__(self, serport=None, baudrate=None) -> None:
+        self.serport = serport
+        self.baudrate = baudrate
+        self.hw = None
+        self.pcwriter = None
+
+    def setup(self, args) -> None:
+        global hw
+        self.hw = make_sniffle_hw(args.serport, baudrate=args.baudrate)
+        hw = self.hw
+
+        targ_specs = bool(args.mac) + bool(args.irk) + bool(args.string)
+        if args.hop and targ_specs < 1:
+            raise UsageError("Primary adv. channel hop requires a target MAC, IRK, or ad string specified!")
+        if args.longrange and args.hop:
+            raise UsageError("Primary ad channel hopping unsupported on long range PHY!")
+        if targ_specs > 1:
+            raise UsageError("MAC, IRK, and advertisement string filters are mutually exclusive!")
+        if args.advchan != 40 and args.hop:
+            raise UsageError("Don't specify an advertising channel if you want advertising channel hopping!")
+
+        hop3 = True if targ_specs else False
+        if args.advchan == 40:
+            args.advchan = 37
+        else:
+            hop3 = False
+
+        if args.extadv and not args.hop:
+            hop3 = False
+
+        mac = None
+        irk = None
+        if args.irk:
+            irk = unhexlify(args.irk)
+        elif args.mac:
+            try:
+                parts = args.mac.split(":")
+                if len(parts) != 6:
+                    raise ValueError("MAC must contain exactly 6 colon-separated hex bytes")
+                mac = [int(h, 16) for h in reversed(parts)]
+            except (ValueError, TypeError) as exc:
+                raise UsageError("MAC must be 6 colon-separated hex bytes") from exc
+        elif args.string:
+            search_str = args.string.encode('latin-1').decode('unicode_escape').encode('latin-1')
+            print("Waiting for advertisement containing specified string...")
+            mac, _ = self.get_mac_from_string(search_str, args.longrange)
+            print("Found target MAC: %s" % str_mac(mac))
+
+        preload_pairs = []
+        if args.preload:
+            for tstr in args.preload.split(','):
+                tsplit = tstr.split(':')
+                tup = (int(tsplit[0]), int(tsplit[1]))
+                preload_pairs.append(tup)
+
+        if args.scan:
+            sniffer_mode = SnifferMode.ACTIVE_SCAN
+        elif args.advonly:
+            sniffer_mode = SnifferMode.PASSIVE_SCAN
+        else:
+            sniffer_mode = SnifferMode.CONN_FOLLOW
+
+        self.hw.setup_sniffer(
+            mode=sniffer_mode,
+            chan=args.advchan,
+            targ_mac=mac,
+            targ_irk=irk,
+            hop3=hop3,
+            ext_adv=args.extadv,
+            coded_phy=args.longrange,
+            rssi_min=args.rssi,
+            interval_preload=preload_pairs,
+            phy_preload=None if args.nophychange else PhyMode.PHY_2M,
+            pause_done=args.pause,
+            validate_crc=not args.crcerr,
+        )
+        self.hw.mark_and_flush()
+
+        global pcwriter
+        if args.output is not None:
+            self.pcwriter = PcapBleWriter(args.output)
+            pcwriter = self.pcwriter
+
+    def run(self, args) -> None:
+        self.setup(args)
+        try:
+            while True:
+                msg = self.hw.recv_and_decode()
+                self.print_message(msg, args.quiet, args.decode)
+        except SourceDone:
+            pass
+        except KeyboardInterrupt:
+            self.hw.cancel_recv()
+            sys.stderr.write("\r")
+        finally:
+            self.close()
+
+    def print_message(self, msg, quiet: bool, decode_ad: bool) -> None:
+        if isinstance(msg, PacketMessage):
+            self.print_packet(msg, quiet, decode_ad)
+        elif isinstance(msg, (DebugMessage, StateMessage, MeasurementMessage)):
+            print(msg, end='\n\n')
+
+    def print_packet(self, dpkt, quiet: bool, decode_ad: bool) -> None:
+        if isinstance(dpkt, (AdvaMessage, AdvDirectIndMessage, ScanRspMessage, AdvExtIndMessage)):
+            print(dpkt.str_header())
+            print(dpkt.str_decode())
+            if decode_ad:
+                for ad in decode_adv_data(dpkt.adv_data):
+                    print(ad)
+            print(dpkt.hexdump(), end='\n\n')
+        elif not (quiet and isinstance(dpkt, DataMessage) and dpkt.data_length == 0):
+            print(dpkt, end='\n\n')
+
+        if self.pcwriter:
+            self.pcwriter.write_packet_message(dpkt)
+
+    def get_mac_from_string(self, s, coded_phy=False):
+        self.hw.setup_sniffer(SnifferMode.ACTIVE_SCAN, ext_adv=True, coded_phy=coded_phy)
+        self.hw.mark_and_flush()
+        while True:
+            msg = self.hw.recv_and_decode()
+            if isinstance(msg, (AdvaMessage, AdvDirectIndMessage, ScanRspMessage, AdvExtIndMessage)) and msg.AdvA is not None:
+                if s in msg.body:
+                    return msg.AdvA, not msg.TxAdd
+
+    def close(self) -> None:
+        if self.pcwriter is not None:
+            self.pcwriter.close()
+            self.pcwriter = None
+        global pcwriter
+        pcwriter = None
+
+    def reset(self) -> None:
+        self.close()
+        self.hw = None
+        global hw
+        hw = None
+
+
+def reset_globals() -> None:
+    """Reset module-level global hardware state."""
+    global hw, pcwriter
+    if pcwriter is not None:
+        pcwriter.close()
+    hw = None
+    pcwriter = None
+
+
 def main():
     aparse = argparse.ArgumentParser(description="Host-side receiver for Sniffle BLE5 sniffer")
     aparse.add_argument("-s", "--serport", default=None, help="Sniffer serial port name")
@@ -72,96 +225,8 @@ def main():
     aparse.add_argument("-o", "--output", default=None, help="PCAP output file name")
     args = aparse.parse_args()
 
-    # Sanity check argument combinations
-    targ_specs = bool(args.mac) + bool(args.irk) + bool(args.string)
-    if args.hop and targ_specs < 1:
-        raise UsageError("Primary adv. channel hop requires a target MAC, IRK, or ad string specified!")
-    if args.longrange and args.hop:
-        # this would be pointless anyway, since long range always uses extended ads
-        raise UsageError("Primary ad channel hopping unsupported on long range PHY!")
-    if targ_specs > 1:
-        raise UsageError("MAC, IRK, and advertisement string filters are mutually exclusive!")
-    if args.advchan != 40 and args.hop:
-        raise UsageError("Don't specify an advertising channel if you want advertising channel hopping!")
-
-    global hw
-    hw = make_sniffle_hw(args.serport, baudrate=args.baudrate)
-
-    # if a channel was explicitly specified, don't hop
-    hop3 = True if targ_specs else False
-    if args.advchan == 40:
-        args.advchan = 37
-    else:
-        hop3 = False
-
-    # disable 37/38/39 hop in extended mode unless overridden
-    if args.extadv and not args.hop:
-        hop3 = False
-
-    mac = None
-    irk = None
-    if args.irk:
-        irk = unhexlify(args.irk)
-    elif args.mac:
-        try:
-            parts = args.mac.split(":")
-            if len(parts) != 6:
-                raise ValueError("MAC must contain exactly 6 colon-separated hex bytes")
-            mac = [int(h, 16) for h in reversed(parts)]
-        except (ValueError, TypeError) as exc:
-            raise UsageError("MAC must be 6 colon-separated hex bytes") from exc
-    elif args.string:
-        search_str = args.string.encode('latin-1').decode('unicode_escape').encode('latin-1')
-        print("Waiting for advertisement containing specified string...")
-        mac, _ = get_mac_from_string(search_str, args.longrange)
-        print("Found target MAC: %s" % str_mac(mac))
-
-    preload_pairs = []
-    if args.preload:
-        # expect colon separated pairs, separated by commas
-        for tstr in args.preload.split(','):
-            tsplit = tstr.split(':')
-            tup = (int(tsplit[0]), int(tsplit[1]))
-            preload_pairs.append(tup)
-
-    if args.scan:
-        sniffer_mode = SnifferMode.ACTIVE_SCAN
-    elif args.advonly:
-        sniffer_mode = SnifferMode.PASSIVE_SCAN
-    else:
-        sniffer_mode = SnifferMode.CONN_FOLLOW
-
-    hw.setup_sniffer(
-            mode=sniffer_mode,
-            chan=args.advchan,
-            targ_mac=mac,
-            targ_irk=irk,
-            hop3=hop3,
-            ext_adv=args.extadv,
-            coded_phy=args.longrange,
-            rssi_min=args.rssi,
-            interval_preload=preload_pairs,
-            phy_preload=None if args.nophychange else PhyMode.PHY_2M,
-            pause_done=args.pause,
-            validate_crc=not args.crcerr)
-
-    # zero timestamps and flush old packets
-    hw.mark_and_flush()
-
-    global pcwriter
-    if args.output is not None:
-        pcwriter = PcapBleWriter(args.output)
-
-    while True:
-        try:
-            msg = hw.recv_and_decode()
-            print_message(msg, args.quiet, args.decode)
-        except SourceDone:
-            break
-        except KeyboardInterrupt:
-            hw.cancel_recv()
-            sys.stderr.write("\r")
-            break
+    session = SniffReceiverSession(args.serport, baudrate=args.baudrate)
+    session.run(args)
 
 def print_message(msg, quiet, decode_ad):
     if isinstance(msg, PacketMessage):
