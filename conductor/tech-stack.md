@@ -32,5 +32,5 @@
 
 ## Testing, Tooling & Code Quality
 - **Packet Dissection & Streaming Engine**: `tshark` (Wireshark CLI engine with Sniffle extcap plugin wrapper, supporting line-delimited `-T ek` and `-T json` streaming)
-- **Test Framework**: `pytest>=9.1.1` with `anyio`, `pytest-cov` (658 multi-tier E2E, unit, and integration tests across 36 test modules)
+- **Test Framework**: `pytest>=9.1.1` with `anyio`, `pytest-cov` (1,267+ passing multi-tier E2E, unit, and integration tests across 60+ test modules)
 - **Static Analysis & Formatting**: `ruff` (targeting Python 3.10+, line length 120)

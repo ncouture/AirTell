@@ -22,13 +22,13 @@ The validation suite is partitioned into five distinct End-to-End tiers in addit
 
 | Tier | Suite File | Test Count | Description |
 |:---|:---|:---:|:---|
-| **Base / Unit** | `tests/test_*.py` | 311 | Core unit, integration, CLI, and mock hardware baseline tests |
+| **Base / Unit** | `tests/test_*.py`, `tests/radar/`, `tests/benchmarks/` | 1,014+ | Core unit, integration, CLI, radar tomography, storage benchmarks, and mock hardware tests |
 | **Tier 1** | `tests/e2e/test_tier1_features.py` | 100 | **Features in Isolation**: 20 features $\times$ 5 dedicated tests each |
 | **Tier 2** | `tests/e2e/test_tier2_boundaries.py` | 100 | **Boundary & Edge Conditions**: 20 features $\times$ 5 extreme boundary tests each |
 | **Tier 3** | `tests/e2e/test_tier3_combinations.py` | 25 | **Cross-Feature Combinations**: Multi-vendor broadcasts, paired PCAP/telemetry, dual-channel interactions |
 | **Tier 4** | `tests/e2e/test_tier4_scenarios.py` | 5 | **Realistic PoPETs 2025-0103 Scenarios**: Complete real-world application simulations |
 | **Tier 5** | `tests/e2e/test_tier5_adversarial.py` | 23 | **White-Box Adversarial Hardening**: Malformed packets, framing jitter, concurrency stress, rapid teardown, buffer overflow |
-| **Total** | | **564** | **100% Passing, 0 Failed, 0 Warnings** |
+| **Total** | | **1,267+** | **100% Passing, 0 Failed, 0 Warnings (1,331+ total collected across 65 modules)** |
 
 ---
 
