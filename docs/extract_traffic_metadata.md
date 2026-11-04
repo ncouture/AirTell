@@ -1,7 +1,7 @@
 # Comprehensive Forensic Investigation & Sourcing Correlation Report
 ## Traffic Metadata, Law Enforcement Electronics & Quebec Signal Control Audit (10:00–10:05 Window)
 
-**Analysis Target**: [`merged.json`](file:///home/self/git/AirTell/merged.json) (Correlated against [`app/data/merged.pcap`](file:///home/self/git/AirTell/app/data/merged.pcap))  
+**Analysis Target**: [`merged.json`](../merged.json) (Correlated against [`app/data/merged.pcap`](../app/data/merged.pcap))  
 **Capture Window**: May 21, 2026 — 10:00:00 to 10:05:59 EDT (`1779372000.000` to `1779372360.000` Epoch)  
 **Geographical Context**: Boulevard des Entreprises / Autoroute 640 Corridor, Terrebonne, Quebec, Canada  
 **Jurisdiction**: Sûreté du Québec (SQ), Service de police de la Ville de Montréal (SPVM), and Royal Canadian Mounted Police (RCMP / GRC)  
@@ -10,7 +10,7 @@
 
 ## 1. Executive Summary & Quantitative Reconciliation
 
-A rigorous forensic audit of the Bluetooth Low Energy (BLE) Link-Layer data in [`merged.json`](file:///home/self/git/AirTell/merged.json) and [`app/data/merged.pcap`](file:///home/self/git/AirTell/app/data/merged.pcap) was conducted for the time window on **May 21, 2026** between **10:00:00 and 10:05:59 EDT** (`1779372000.000` to `1779372360.000` Epoch).
+A rigorous forensic audit of the Bluetooth Low Energy (BLE) Link-Layer data in [`merged.json`](../merged.json) and [`app/data/merged.pcap`](../app/data/merged.pcap) was conducted for the time window on **May 21, 2026** between **10:00:00 and 10:05:59 EDT** (`1779372000.000` to `1779372360.000` Epoch).
 
 ### Quantitative Discrepancy Reconciliation
 Metrics were audited against the raw packet stream to reconcile the **strict 5-minute window** (`10:00:00`–`10:05:00`) versus the **inclusive 6-minute window** (`10:00:00`–`10:05:59.999`):
@@ -134,7 +134,7 @@ Time: 10:05:08 – 10:05:45 EDT
 ## 4. Forensic Analysis: Entries in `merged.json` That "Look Similar"
 
 ### Cluster A: Non-Random Wire `:FF:FF` Suffix (Telink BLE Mesh Cluster)
-In [`merged.json`](file:///home/self/git/AirTell/merged.json), four findings between `10:00:15` and `10:00:27` match this pattern:
+In [`merged.json`](../merged.json), four findings between `10:00:15` and `10:00:27` match this pattern:
 ```json
 [
   {
