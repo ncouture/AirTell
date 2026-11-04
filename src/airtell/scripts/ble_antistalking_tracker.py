@@ -27,7 +27,7 @@ import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 from dotenv import load_dotenv
 
@@ -157,9 +157,9 @@ def format_webhook_payload(alert_data: Any) -> dict[str, Any]:
 def dispatch_webhook_alert(
     alert_data: dict[str, Any] | str,
     webhook_url: str,
-    secret: Optional[str] = None,
+    secret: str | None = None,
     timeout: float = 5.0,
-    headers: Optional[dict[str, str]] = None,
+    headers: dict[str, str] | None = None,
     async_dispatch: bool = False,
 ) -> bool:
     """Dispatches a structured JSON threat alert to an external HTTP webhook endpoint.
@@ -253,8 +253,8 @@ def dispatch_webhook_alert(
 
 def dispatch_desktop_notification(
     alert_data: dict[str, Any] | str,
-    title: Optional[str] = None,
-    system_override: Optional[str] = None,
+    title: str | None = None,
+    system_override: str | None = None,
     async_dispatch: bool = False,
 ) -> bool:
     """Dispatches a native cross-platform OS desktop notification.
@@ -423,11 +423,11 @@ class BLETrackerDB:
     def __init__(
         self,
         db_path: str,
-        webhook_url: Optional[str] = None,
-        webhook_secret: Optional[str] = None,
-        enable_desktop_notify: Optional[bool] = None,
-        backend_type: Optional[str] = None,
-        enable_duckdb: Optional[bool] = None,
+        webhook_url: str | None = None,
+        webhook_secret: str | None = None,
+        enable_desktop_notify: bool | None = None,
+        backend_type: str | None = None,
+        enable_duckdb: bool | None = None,
     ) -> None:
         self.db_path = db_path
         self.webhook_url = webhook_url if webhook_url is not None else os.getenv("WEBHOOK_URL", "")
@@ -443,8 +443,8 @@ class BLETrackerDB:
             )
         self.init_db()
 
-        self.duckdb_backend: Optional[Any] = None
-        self._sqlite_backend: Optional[Any] = None
+        self.duckdb_backend: Any | None = None
+        self._sqlite_backend: Any | None = None
         if enable_duckdb is not None:
             self.enable_duckdb = enable_duckdb
         elif backend_type is not None:
@@ -464,7 +464,7 @@ class BLETrackerDB:
         if self.enable_duckdb:
             self.attach_duckdb()
 
-    def attach_duckdb(self, threads: Optional[int] = None, memory_limit: Optional[str] = None) -> bool:
+    def attach_duckdb(self, threads: int | None = None, memory_limit: str | None = None) -> bool:
         """Attach DuckDB vectorized engine to accelerate analytical queries."""
         if threads is None:
             try:
@@ -519,12 +519,12 @@ class BLETrackerDB:
     def get_observations(
         self,
         limit: int = 1000,
-        network_type: Optional[str] = None,
-        search_query: Optional[str] = None,
-        channel: Optional[int] = None,
-        min_rssi: Optional[int] = None,
-        start_time: Optional[float] = None,
-        end_time: Optional[float] = None,
+        network_type: str | None = None,
+        search_query: str | None = None,
+        channel: int | None = None,
+        min_rssi: int | None = None,
+        start_time: float | None = None,
+        end_time: float | None = None,
         as_df: bool = False,
     ) -> Any:
         """Query observation records using accelerated backend."""
@@ -541,8 +541,8 @@ class BLETrackerDB:
 
     def get_rssi_timeseries(
         self,
-        network_types: Optional[list[str]] = None,
-        min_rssi: Optional[int] = None,
+        network_types: list[str] | None = None,
+        min_rssi: int | None = None,
         limit: int = 2000,
         as_df: bool = False,
     ) -> Any:
@@ -660,7 +660,7 @@ class BLETrackerDB:
         ephemeral_key: str,
         channel: int = 37,
         raw_payload: str = "",
-        timestamp: Optional[float] = None,
+        timestamp: float | None = None,
     ) -> int:
         """Insert an observation record and return its row ID."""
         now = time.time() if timestamp is None else timestamp
@@ -711,9 +711,9 @@ class BLETrackerDB:
         count: int,
         max_rssi: int,
         message: str,
-        first_seen: Optional[float] = None,
-        last_seen: Optional[float] = None,
-        timestamp: Optional[float] = None,
+        first_seen: float | None = None,
+        last_seen: float | None = None,
+        timestamp: float | None = None,
     ) -> int:
         """Insert an alert record and return its row ID."""
         now = time.time() if timestamp is None else timestamp
@@ -829,7 +829,7 @@ class BLETrackerDB:
             return cursor.lastrowid or 0
 
     def get_alert_actions(
-        self, alert_id: Optional[int] = None
+        self, alert_id: int | None = None
     ) -> list[dict[str, Any]]:
         """Retrieve recorded actions for a specific alert or all alerts."""
         with self.get_connection() as conn:
@@ -953,9 +953,9 @@ class BLETrackerDB:
         window_minutes: int = 15,
         min_observations: int = 5,
         min_duration_minutes: int = 5,
-        webhook_url: Optional[str] = None,
-        webhook_secret: Optional[str] = None,
-        enable_desktop_notify: Optional[bool] = None,
+        webhook_url: str | None = None,
+        webhook_secret: str | None = None,
+        enable_desktop_notify: bool | None = None,
         cooldown_seconds: int = 300,
         deduplicate: bool = True,
         async_dispatch: bool = True,
@@ -1114,13 +1114,13 @@ class SniffleLineParser:
     _RE_HEXLINE = re.compile(r"^0x[0-9A-Fa-f]{4}:\s{2}")
 
     def __init__(self) -> None:
-        self._rssi: Optional[int] = None
-        self._mac: Optional[str] = None
+        self._rssi: int | None = None
+        self._mac: str | None = None
         self._hex_parts: list[str] = []
 
-    def _flush(self) -> Optional[tuple[str, int, str]]:
+    def _flush(self) -> tuple[str, int, str] | None:
         """Return a parsed result if we have all three components, then reset."""
-        result: Optional[tuple[str, int, str]] = None
+        result: tuple[str, int, str] | None = None
         if self._mac is not None and self._rssi is not None and self._hex_parts:
             payload_hex = "".join(self._hex_parts).lower()
             result = (self._mac, self._rssi, payload_hex)
@@ -1129,7 +1129,7 @@ class SniffleLineParser:
         self._hex_parts = []
         return result
 
-    def feed(self, line: str) -> Optional[tuple[str, int, str]]:
+    def feed(self, line: str) -> tuple[str, int, str] | None:
         """Feed one stdout line; returns a parsed tuple when a packet is complete."""
         stripped = line.strip()
 
@@ -1186,7 +1186,7 @@ class SniffleLineParser:
 _parser = SniffleLineParser()
 
 
-def parse_sniffle_line(line: str) -> Optional[tuple[str, int, str]]:
+def parse_sniffle_line(line: str) -> tuple[str, int, str] | None:
     """Parses output lines from sniff_receiver stdout.
 
     Accumulates multi-line Sniffle output and returns a ``(mac, rssi,
@@ -1230,9 +1230,9 @@ def classify_payload(payload_hex: str) -> tuple[str, str]:
 
 def send_notification(
     alert_message: str | dict[str, Any],
-    twilio_config: Optional[dict[str, str]] = None,
-    webhook_url: Optional[str] = None,
-    webhook_secret: Optional[str] = None,
+    twilio_config: dict[str, str] | None = None,
+    webhook_url: str | None = None,
+    webhook_secret: str | None = None,
     enable_desktop_notify: bool = False,
 ) -> None:
     """Dispatches notification via Twilio SMS, Webhook, and/or Desktop notification."""
@@ -1318,7 +1318,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    twilio_cfg: Optional[dict[str, str]] = None
+    twilio_cfg: dict[str, str] | None = None
     if args.twilio_sid and args.twilio_token and args.twilio_from and args.twilio_to:
         twilio_cfg = {
             "account_sid": args.twilio_sid,

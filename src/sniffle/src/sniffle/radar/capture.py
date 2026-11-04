@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 BLE RSSI Radar - Hardware Ingestion & Channel Locking Layer.
 
@@ -9,29 +11,27 @@ Provides:
 - DualSnifferManager: Orchestrator for concurrent dual-receiver streams with auto-fallback.
 """
 
-from abc import ABC, abstractmethod
-from dataclasses import dataclass
 import logging
 import math
-import os
-from pathlib import Path
 import queue
-from queue import Queue
 import random
-import sys
 import threading
 import time
-from typing import Any, Callable, Dict, Generator, List, Optional, Sequence, Tuple
+from abc import ABC, abstractmethod
+from collections.abc import Callable, Generator, Sequence
+from dataclasses import dataclass
+from queue import Queue
+from typing import Any
 
 try:
-    from ..sniffle_hw import make_sniffle_hw, SnifferMode, SniffleHW
+    from ..errors import SniffleHWPacketError, UsageError
     from ..packet_decoder import str_mac
-    from ..errors import UsageError, SniffleHWPacketError
+    from ..sniffle_hw import SnifferMode, SniffleHW, make_sniffle_hw
 except ImportError:
     try:
-        from sniffle.sniffle_hw import make_sniffle_hw, SnifferMode, SniffleHW
+        from sniffle.errors import SniffleHWPacketError, UsageError
         from sniffle.packet_decoder import str_mac
-        from sniffle.errors import UsageError, SniffleHWPacketError
+        from sniffle.sniffle_hw import SnifferMode, SniffleHW, make_sniffle_hw
     except ImportError:
         make_sniffle_hw = None  # type: ignore
         SnifferMode = None  # type: ignore
@@ -123,10 +123,10 @@ class HardwareSniffleSource(SnifflePacketSource):
         baudrate: int = 921600,
         channel: int = 37,
         rx_id: str = "R1",
-        out_queue: Optional[queue.Queue] = None,
+        out_queue: queue.Queue | None = None,
         rssi_min: int = -128,
         validate_crc: bool = True,
-        source_logger: Optional[Any] = None,
+        source_logger: Any | None = None,
     ):
         if channel not in (37, 38, 39):
             raise ValueError(f"Invalid primary advertising channel: {channel}. Must be 37, 38, or 39.")
@@ -140,9 +140,9 @@ class HardwareSniffleSource(SnifflePacketSource):
         self.validate_crc = validate_crc
         self._logger = source_logger or logger
 
-        self.hw: Optional[Any] = None
+        self.hw: Any | None = None
         self._running = False
-        self._worker_thread: Optional[threading.Thread] = None
+        self._worker_thread: threading.Thread | None = None
 
     @property
     def queue(self) -> queue.Queue:
@@ -252,7 +252,7 @@ class HardwareSniffleSource(SnifflePacketSource):
 # 4. Mock Sniffle Source (Simulation & Seamless Fallback)
 # ---------------------------------------------------------------------------
 
-DEFAULT_MOCK_TRANSMITTERS: List[Dict[str, Any]] = [
+DEFAULT_MOCK_TRANSMITTERS: list[dict[str, Any]] = [
     {"mac": "AA:BB:CC:11:22:01", "name": "Beacon_North_1", "pos": (4.0, 8.5), "interval": 0.10, "tx_power": -42.0},
     {"mac": "AA:BB:CC:11:22:02", "name": "Beacon_North_2", "pos": (8.0, 9.0), "interval": 0.15, "tx_power": -40.0},
     {"mac": "AA:BB:CC:11:22:03", "name": "Beacon_North_3", "pos": (12.0, 8.5), "interval": 0.10, "tx_power": -42.0},
@@ -270,7 +270,7 @@ DEFAULT_MOCK_TRANSMITTERS: List[Dict[str, Any]] = [
 ]
 
 
-def default_human_trajectory(t: float) -> Tuple[float, float]:
+def default_human_trajectory(t: float) -> tuple[float, float]:
     """Default simulated walking motion traversing the 20m x 10m sensing space."""
     x = 10.0 + 4.0 * math.sin(0.4 * t)
     y = 5.0 + 3.0 * math.cos(0.4 * t)
@@ -278,10 +278,10 @@ def default_human_trajectory(t: float) -> Tuple[float, float]:
 
 
 def point_to_segment_distance(
-    pt: Tuple[float, float],
-    seg_start: Tuple[float, float],
-    seg_end: Tuple[float, float],
-) -> Tuple[float, float]:
+    pt: tuple[float, float],
+    seg_start: tuple[float, float],
+    seg_end: tuple[float, float],
+) -> tuple[float, float]:
     """
     Computes Euclidean distance from a point to a line segment [seg_start, seg_end].
     Returns (perpendicular_distance, projection_param_u).
@@ -323,14 +323,14 @@ class MockSniffleSource(SnifflePacketSource):
     def __init__(
         self,
         rx_id: str = "R1",
-        channel: Optional[int] = None,
-        channels: Optional[Sequence[int]] = None,
-        rx_pos: Optional[Tuple[float, float]] = None,
-        transmitters: Optional[List[Dict[str, Any]]] = None,
-        out_queue: Optional[queue.Queue] = None,
-        seed: Optional[int] = None,
-        target_pos: Optional[Tuple[float, float]] = None,
-        target_trajectory: Optional[Callable[[float], Optional[Tuple[float, float]]]] = None,
+        channel: int | None = None,
+        channels: Sequence[int] | None = None,
+        rx_pos: tuple[float, float] | None = None,
+        transmitters: list[dict[str, Any]] | None = None,
+        out_queue: queue.Queue | None = None,
+        seed: int | None = None,
+        target_pos: tuple[float, float] | None = None,
+        target_trajectory: Callable[[float], tuple[float, float] | None] | None = None,
         simulate_target: bool = True,
         path_loss_exponent: float = 2.2,
         noise_std: float = 1.5,
@@ -343,7 +343,7 @@ class MockSniffleSource(SnifflePacketSource):
         self.rx_id = rx_id
 
         if channels is not None:
-            self.channels: Tuple[int, ...] = tuple(channels)
+            self.channels: tuple[int, ...] = tuple(channels)
         elif channel is not None:
             self.channels = (channel,)
         else:
@@ -359,7 +359,7 @@ class MockSniffleSource(SnifflePacketSource):
             self.rx_pos = (0.0, 5.0)
 
         tx_template = transmitters if transmitters is not None else DEFAULT_MOCK_TRANSMITTERS
-        self.transmitters: List[Dict[str, Any]] = [dict(t) for t in tx_template]
+        self.transmitters: list[dict[str, Any]] = [dict(t) for t in tx_template]
         for tx in self.transmitters:
             tx["next_tx_time"] = 0.0
 
@@ -382,7 +382,7 @@ class MockSniffleSource(SnifflePacketSource):
         self.tick_interval = tick_interval
 
         self._running = False
-        self._worker_thread: Optional[threading.Thread] = None
+        self._worker_thread: threading.Thread | None = None
         self._sim_start_time = time.time()
 
     @property
@@ -392,7 +392,7 @@ class MockSniffleSource(SnifflePacketSource):
     def is_running(self) -> bool:
         return self._running
 
-    def set_target_pos(self, pos: Optional[Tuple[float, float]]) -> None:
+    def set_target_pos(self, pos: tuple[float, float] | None) -> None:
         """Explicitly set or clear the target position."""
         self.target_pos = pos
 
@@ -400,7 +400,7 @@ class MockSniffleSource(SnifflePacketSource):
         """Enable or disable target shadowing simulation."""
         self.simulate_target = enabled
 
-    def get_current_target_pos(self, t: float) -> Optional[Tuple[float, float]]:
+    def get_current_target_pos(self, t: float) -> tuple[float, float] | None:
         """Resolve current target coordinates given simulation time."""
         if not self.simulate_target:
             return None
@@ -412,11 +412,11 @@ class MockSniffleSource(SnifflePacketSource):
 
     def _compute_sample(
         self,
-        tx: Dict[str, Any],
+        tx: dict[str, Any],
         ch: int,
         now: float,
-        target_xy: Optional[Tuple[float, float]],
-    ) -> Optional[LinkSample]:
+        target_xy: tuple[float, float] | None,
+    ) -> LinkSample | None:
         """Calculates path loss, multipath, and target occlusion for a single transmission."""
         tx_pos = tx["pos"]
         tx_power = tx.get("tx_power", -42.0)
@@ -465,13 +465,13 @@ class MockSniffleSource(SnifflePacketSource):
         self,
         count: int = 50,
         dt: float = 0.05,
-        start_time: Optional[float] = None,
-    ) -> List[LinkSample]:
+        start_time: float | None = None,
+    ) -> list[LinkSample]:
         """
         Synchronously generates a batch of LinkSample objects.
         Useful for deterministic testing and reproducible benchmarks.
         """
-        samples: List[LinkSample] = []
+        samples: list[LinkSample] = []
         if start_time is not None:
             sim_time = start_time
         elif self.seed is not None:
@@ -555,8 +555,8 @@ class DualSnifferManager:
 
     def __init__(
         self,
-        port1: Optional[str] = "/dev/ttyUSB0",
-        port2: Optional[str] = "/dev/ttyUSB1",
+        port1: str | None = "/dev/ttyUSB0",
+        port2: str | None = "/dev/ttyUSB1",
         baudrate: int = 921600,
         simulate: bool = False,
         fallback_to_mock: bool = True,
@@ -564,10 +564,10 @@ class DualSnifferManager:
         rx2_id: str = "R2",
         channel1: int = 37,
         channel2: int = 38,
-        rx_pos1: Tuple[float, float] = (0.0, 5.0),
-        rx_pos2: Tuple[float, float] = (20.0, 5.0),
-        seed: Optional[int] = None,
-        manager_logger: Optional[Any] = None,
+        rx_pos1: tuple[float, float] = (0.0, 5.0),
+        rx_pos2: tuple[float, float] = (20.0, 5.0),
+        seed: int | None = None,
+        manager_logger: Any | None = None,
     ):
         self.port1 = port1
         self.port2 = port2
@@ -584,8 +584,8 @@ class DualSnifferManager:
         self._logger = manager_logger or logger
 
         self.queue: queue.Queue = queue.Queue()
-        self.source1: Optional[SnifflePacketSource] = None
-        self.source2: Optional[SnifflePacketSource] = None
+        self.source1: SnifflePacketSource | None = None
+        self.source2: SnifflePacketSource | None = None
         self.using_mock: bool = False
         self._running: bool = False
 
@@ -680,7 +680,7 @@ class DualSnifferManager:
             self.source2.stop()
             self.source2 = None
 
-    def stream_samples(self, timeout: Optional[float] = None) -> Generator[LinkSample, None, None]:
+    def stream_samples(self, timeout: float | None = None) -> Generator[LinkSample, None, None]:
         """
         Generator yielding LinkSample instances from the aggregated queue.
         If timeout is given, breaks when no samples arrive for timeout seconds.

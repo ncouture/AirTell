@@ -5,8 +5,10 @@ Shared Pytest Fixtures for BLE RSSI Radar Test Suite.
 from __future__ import annotations
 
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any
+
 import numpy as np
 import pytest
 
@@ -15,18 +17,17 @@ if str(_SNIFFLE_CLI) not in sys.path:
     sys.path.insert(0, str(_SNIFFLE_CLI))
 
 from tests.harness import (
+    MxNLinkMatrixManager,
+    PublicDeviceManager,
     RobustAnomalyEngine,
     SpatialTomography2D,
     TargetTracker,
-    MxNLinkMatrixManager,
-    PublicDeviceManager,
     create_synthetic_adv_packet,
-    LinkSample,
 )
 
 
 @pytest.fixture
-def standard_geometry() -> Dict[str, Any]:
+def standard_geometry() -> dict[str, Any]:
     """
     Returns standard 20m x 10m room geometry with R1 (Ch 37), R2 (Ch 38),
     and 12 ambient transmitters generating 24 spatial chords.
@@ -50,7 +51,7 @@ def standard_geometry() -> Dict[str, Any]:
         np.array([13.0, 7.0], dtype=np.float32),
     ]
 
-    links: List[Tuple[np.ndarray, np.ndarray]] = []
+    links: list[tuple[np.ndarray, np.ndarray]] = []
     for tx in tx_nodes:
         links.append((r1, tx))
         links.append((r2, tx))

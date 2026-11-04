@@ -11,7 +11,10 @@ from app.queue_bridge import EventQueue
 from app.views.alert_feed import ThreatCategory, categorize_alert, render_alert_feed
 from app.views.packet_inspector import decode_ad_structures, render_packet_inspector
 from app.views.rssi_trends import build_rssi_figure, render_rssi_trends
-from app.views.telemetry_overview import compute_telemetry_metrics, render_telemetry_overview
+from app.views.telemetry_overview import (
+    compute_telemetry_metrics,
+    render_telemetry_overview,
+)
 
 
 def test_alert_categorization_levels() -> None:

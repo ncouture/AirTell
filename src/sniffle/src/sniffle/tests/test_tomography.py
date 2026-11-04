@@ -2,15 +2,13 @@
 Unit Tests for 2D Spatial Tomography, Tracker, and Visualizer (sniffle.radar.tomography).
 """
 
-import math
 import time
-import numpy as np
-import pytest
 
+import numpy as np
 from sniffle.radar.tomography import (
-    TomographyResult,
     SpatialTomography2D,
     TargetTracker,
+    TomographyResult,
 )
 from sniffle.radar.visualizer import RadarVisualizer
 

@@ -6,7 +6,7 @@ import random
 import time
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 try:
     from airtell.scripts.ble_antistalking_tracker import BLETrackerDB, classify_payload
@@ -111,8 +111,8 @@ class RogueBeaconGenerator:
         count: int = 5,
         interval_seconds: float = 1.0,
         jitter_seconds: float = 0.05,
-        start_time: Optional[float] = None,
-        channels: Optional[Sequence[int]] = None,
+        start_time: float | None = None,
+        channels: Sequence[int] | None = None,
     ) -> list[SyntheticPacket]:
         """Generate a sequential burst of synthetic packets with timing jitter.
 

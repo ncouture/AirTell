@@ -1,7 +1,9 @@
-from dataclasses import dataclass, field
+from __future__ import annotations
+
+from dataclasses import dataclass
 from enum import Enum
+
 import numpy as np
-from typing import Tuple, Optional
 
 
 class NodeType(Enum):
@@ -48,7 +50,7 @@ class RFLink:
         return float(np.linalg.norm(self.rx.position - self.tx.position))
 
     @property
-    def key(self) -> Tuple[str, str]:
+    def key(self) -> tuple[str, str]:
         return (self.rx_id, self.tx_id)
 
 

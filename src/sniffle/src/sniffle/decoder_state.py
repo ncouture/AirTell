@@ -6,6 +6,7 @@ from .constants import BLE_ADV_AA, BLE_ADV_CRCI
 from .crc_ble import rbit24
 from .sniffer_state import SnifferState
 
+
 class SniffleDecoderState:
     def __init__(self, is_data=False):
         # packet receive time tracking

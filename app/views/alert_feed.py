@@ -5,7 +5,7 @@ from __future__ import annotations
 import enum
 import sqlite3
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 import pandas as pd
 import streamlit as st
@@ -71,10 +71,10 @@ def categorize_alert(alert: dict[str, Any]) -> CategorizedAlert:
 
 
 def render_alert_feed(
-    conn: Optional[sqlite3.Connection],
-    tracker_db: Optional[BLETrackerDB] = None,
-    event_queue: Optional[EventQueue] = None,
-    backend: Optional[Any] = None,
+    conn: sqlite3.Connection | None,
+    tracker_db: BLETrackerDB | None = None,
+    event_queue: EventQueue | None = None,
+    backend: Any | None = None,
 ) -> None:
     """Render the Multi-Level Alert Feed view with analyst triage capabilities."""
     st.subheader("🚨 Anti-Stalking Threat Feed & Triage")

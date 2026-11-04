@@ -4,7 +4,9 @@
 
 from struct import unpack
 from uuid import UUID
-from .constants import ad_types, service_uuids16, company_identifiers
+
+from .constants import ad_types, company_identifiers, service_uuids16
+
 
 def str_service16(uuid: int):
     if uuid in service_uuids16:

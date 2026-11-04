@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 from collections import deque
-from typing import Dict, Tuple
 
 import numpy as np
 
@@ -14,8 +15,8 @@ class FeatureExtractor:
     def __init__(self, window_size: int = 10, expected_rate_hz: float = 20.0):
         self.window_size = window_size
         self.expected_rate_hz = expected_rate_hz
-        self.rssi_buffers: Dict[Tuple[str, str, int], deque[float]] = {}
-        self.time_buffers: Dict[Tuple[str, str, int], deque[float]] = {}
+        self.rssi_buffers: dict[tuple[str, str, int], deque[float]] = {}
+        self.time_buffers: dict[tuple[str, str, int], deque[float]] = {}
 
     def add_sample(self, rx_id: str, tx_mac: str, rssi: float, timestamp: float, channel: int = 37):
         key = (rx_id, tx_mac, channel)

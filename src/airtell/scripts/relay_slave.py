@@ -4,14 +4,21 @@
 # Copyright (c) 2020-2025, NCC Group plc
 # Released as open source under GPLv3
 
-import argparse, sys
-from time import time
+import argparse
 from select import select
 from struct import pack, unpack
+from time import time
 
-from sniffle.sniffle_hw import SniffleHW, BLE_ADV_AA, PacketMessage, DebugMessage, StateMessage, MeasurementMessage
-from sniffle.packet_decoder import DPacketMessage, ConnectIndMessage, LlDataContMessage
-from sniffle.relay_protocol import connect_relay, MessageType
+from sniffle.packet_decoder import ConnectIndMessage, DPacketMessage, LlDataContMessage
+from sniffle.relay_protocol import MessageType, connect_relay
+from sniffle.sniffle_hw import (
+    BLE_ADV_AA,
+    DebugMessage,
+    MeasurementMessage,
+    PacketMessage,
+    SniffleHW,
+    StateMessage,
+)
 
 # global variable to access hardware
 hw = None

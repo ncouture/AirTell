@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import numpy as np
-from typing import Optional
 
 
 def estimate_position(
@@ -7,7 +8,7 @@ def estimate_position(
     grid_x: np.ndarray,
     grid_y: np.ndarray,
     threshold_percentile: float = 90.0
-) -> Optional[np.ndarray]:
+) -> np.ndarray | None:
     """
     Solves 2D target position by finding the Center-of-Mass of the hottest
     RF disturbance region above threshold_percentile.

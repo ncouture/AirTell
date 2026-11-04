@@ -9,11 +9,9 @@ and headless mock pipeline integration (15+ tests).
 from __future__ import annotations
 
 import math
-import os
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pytest
@@ -22,37 +20,24 @@ _SNIFFLE_CLI = Path(__file__).resolve().parents[1]
 if str(_SNIFFLE_CLI) not in sys.path:
     sys.path.insert(0, str(_SNIFFLE_CLI))
 
-from sniffle.radar.capture import (
-    LinkSample,
-    MockSniffleSource,
-    DualSnifferManager,
-    point_to_segment_distance,
-)
-from sniffle.radar.matrix import (
-    AddressType,
-    classify_ble_mac,
-    LinkState,
-    LinkRecord,
-    MxNLinkMatrixManager,
-    PublicDeviceManager,
-)
 from sniffle.radar.anomaly import (
     RobustAnomalyEngine,
-    LinkAnomalyVector,
-    compute_wilson_hilferty,
+)
+from sniffle.radar.capture import (
+    MockSniffleSource,
+)
+from sniffle.radar.matrix import (
+    LinkState,
+    MxNLinkMatrixManager,
 )
 from sniffle.radar.tomography import (
     SpatialTomography2D,
     TargetTracker,
-    TomographyResult,
 )
 from sniffle.radar.visualizer import (
-    RadarVisualizer,
-    RadarFrameProcessor,
-    run_single_frame,
     run_radar_pipeline,
+    run_single_frame,
 )
-
 
 # ============================================================================
 # Pairwise Interaction Tests

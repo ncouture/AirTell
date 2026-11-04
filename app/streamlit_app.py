@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import sqlite3
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import streamlit as st
 
@@ -55,7 +55,7 @@ tracker_db = get_tracker_db(DB_PATH)
 
 
 @st.cache_resource
-def get_analytics_backend(db_path: str = DB_PATH) -> Optional[Any]:
+def get_analytics_backend(db_path: str = DB_PATH) -> Any | None:
     """Retrieve and cache DuckDB high-throughput analytics backend."""
     try:
         from airtell.telemetry.storage import get_database_backend
@@ -65,7 +65,7 @@ def get_analytics_backend(db_path: str = DB_PATH) -> Optional[Any]:
         return None
 
 
-def get_db_connection() -> Optional[sqlite3.Connection]:
+def get_db_connection() -> sqlite3.Connection | None:
     """Establish connection to SQLite tracker database."""
     try:
         conn = sqlite3.connect(DB_PATH, timeout=10.0)
@@ -78,7 +78,9 @@ def get_db_connection() -> Optional[sqlite3.Connection]:
 def _fragment_if_in_streamlit(**kwargs: Any) -> Any:
     """Apply st.fragment in live Streamlit sessions while passing through directly in test runners."""
     try:
-        from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+        from streamlit.runtime.scriptrunner_utils.script_run_context import (
+            get_script_run_ctx,
+        )
 
         if get_script_run_ctx() is None:
             return lambda f: f

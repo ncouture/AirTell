@@ -409,3 +409,16 @@ def test_pcap_reader_truncated_global_header():
             PcapBleReader(stream)
 
 
+def test_sniffle_pcap_writer_double_close_idempotent(tmp_path: Path):
+    """Test that sniffle PcapBleWriter close() can be called multiple times safely."""
+    from sniffle.pcap import PcapBleWriter as SnifflePcapWriter
+
+    pcap_file = tmp_path / "idempotent.pcap"
+    writer = SnifflePcapWriter(str(pcap_file))
+    writer.write_packet(1000, 0x8E89BED6, 37, -60, bytes([0x00, 2, 0x01, 0x02]))
+    writer.close()
+    # Calling close again should not raise ValueError
+    writer.close()
+
+
+

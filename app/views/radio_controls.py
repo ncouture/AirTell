@@ -7,7 +7,7 @@ import shutil
 import subprocess
 import threading
 import time
-from typing import Any, Optional
+from typing import Any
 
 import pandas as pd
 import plotly.express as px
@@ -65,9 +65,9 @@ def discover_available_dongles() -> list[dict[str, Any]]:
 class RadioOrchestrator:
     """Manages Sniffle radio topologies, background sniffers, and beacon injection."""
 
-    def __init__(self, event_queue: Optional[EventQueue] = None) -> None:
+    def __init__(self, event_queue: EventQueue | None = None) -> None:
         self.event_queue: EventQueue = event_queue or get_event_queue()
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
         self._stop_event = threading.Event()
         self._running = False
         self._active_topology = "None"
@@ -411,8 +411,8 @@ def get_tshark_topology_manager() -> TsharkTopologyManager:
 
 
 def render_radio_controls(
-    tracker_db: Optional[BLETrackerDB] = None,
-    event_queue: Optional[EventQueue] = None,
+    tracker_db: BLETrackerDB | None = None,
+    event_queue: EventQueue | None = None,
 ) -> None:
     """Render the Testbed & Radio Controls view."""
     st.subheader("🎛️ Testbed & Radio Controls")

@@ -2,7 +2,10 @@
 # Copyright (c) 2020-2025, NCC Group plc
 # Released as open source under GPLv3
 
-import socket, struct, enum
+import enum
+import socket
+import struct
+
 
 class RelayServer:
     def __init__(self, ip='0.0.0.0', port=7352):

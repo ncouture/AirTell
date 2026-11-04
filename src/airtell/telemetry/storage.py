@@ -10,7 +10,7 @@ import time
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 import pandas as pd
 
@@ -52,7 +52,7 @@ class DatabaseBackend(ABC):
         ephemeral_key: str,
         channel: int = 37,
         raw_payload: str = "",
-        timestamp: Optional[float] = None,
+        timestamp: float | None = None,
     ) -> int:
         """Insert a BLE observation record and return its row ID."""
 
@@ -66,7 +66,7 @@ class DatabaseBackend(ABC):
         last_seen: float,
         max_rssi: int,
         alert_message: str,
-        timestamp: Optional[float] = None,
+        timestamp: float | None = None,
     ) -> int:
         """Insert an alert record and return its row ID."""
 
@@ -74,24 +74,24 @@ class DatabaseBackend(ABC):
     def get_observations(
         self,
         limit: int = 1000,
-        network_type: Optional[str] = None,
-        search_query: Optional[str] = None,
-        channel: Optional[int] = None,
-        min_rssi: Optional[int] = None,
-        start_time: Optional[float] = None,
-        end_time: Optional[float] = None,
+        network_type: str | None = None,
+        search_query: str | None = None,
+        channel: int | None = None,
+        min_rssi: int | None = None,
+        start_time: float | None = None,
+        end_time: float | None = None,
         as_df: bool = False,
-    ) -> Union[list[dict[str, Any]], pd.DataFrame]:
+    ) -> list[dict[str, Any]] | pd.DataFrame:
         """Query observation records with optional filtering."""
 
     @abstractmethod
     def get_rssi_timeseries(
         self,
-        network_types: Optional[list[str]] = None,
-        min_rssi: Optional[int] = None,
+        network_types: list[str] | None = None,
+        min_rssi: int | None = None,
         limit: int = 2000,
         as_df: bool = False,
-    ) -> Union[list[dict[str, Any]], pd.DataFrame]:
+    ) -> list[dict[str, Any]] | pd.DataFrame:
         """Retrieve chronological RSSI signal observations for tracking beacons."""
 
     @abstractmethod
@@ -104,7 +104,7 @@ class DatabaseBackend(ABC):
         min_count: int = 1,
         limit: int = 100,
         as_df: bool = False,
-    ) -> Union[list[dict[str, Any]], pd.DataFrame]:
+    ) -> list[dict[str, Any]] | pd.DataFrame:
         """Aggregate tracker observation counts, signal stats, and time spans."""
 
     @abstractmethod
@@ -113,11 +113,11 @@ class DatabaseBackend(ABC):
         window_seconds: int = 900,
         min_observations: int = 5,
         min_time_span: int = 300,
-        window_minutes: Optional[int] = None,
-        min_duration_minutes: Optional[int] = None,
+        window_minutes: int | None = None,
+        min_duration_minutes: int | None = None,
         cooldown_seconds: int = 300,
         deduplicate: bool = True,
-        now: Optional[float] = None,
+        now: float | None = None,
     ) -> list[dict[str, Any]]:
         """Evaluate sliding-window heuristics for persistent tracking beacons."""
 
@@ -142,15 +142,15 @@ class DatabaseBackend(ABC):
         """Record an analyst triage action or note on an alert."""
 
     @abstractmethod
-    def get_alert_actions(self, alert_id: Optional[int] = None) -> list[dict[str, Any]]:
+    def get_alert_actions(self, alert_id: int | None = None) -> list[dict[str, Any]]:
         """Retrieve recorded actions for alerts."""
 
     @abstractmethod
-    def get_alerts(self, limit: int = 200, as_df: bool = False) -> Union[list[dict[str, Any]], pd.DataFrame]:
+    def get_alerts(self, limit: int = 200, as_df: bool = False) -> list[dict[str, Any]] | pd.DataFrame:
         """Retrieve recorded anti-stalking alerts."""
 
     @abstractmethod
-    def query_df(self, sql: str, params: Optional[list[Any]] = None) -> pd.DataFrame:
+    def query_df(self, sql: str, params: list[Any] | None = None) -> pd.DataFrame:
         """Execute a raw SQL query and return results directly as a pandas DataFrame."""
 
 
@@ -165,7 +165,7 @@ class SQLiteBackend(DatabaseBackend):
         self._lock = threading.RLock()
         self._local = threading.local()
         self._all_conns: set[sqlite3.Connection] = set()
-        self._mem_conn: Optional[sqlite3.Connection] = None
+        self._mem_conn: sqlite3.Connection | None = None
         if self.db_path == ":memory:":
             self._mem_conn = sqlite3.connect(":memory:", check_same_thread=False, timeout=self.timeout)
             self._mem_conn.row_factory = sqlite3.Row
@@ -277,7 +277,7 @@ class SQLiteBackend(DatabaseBackend):
         ephemeral_key: str,
         channel: int = 37,
         raw_payload: str = "",
-        timestamp: Optional[float] = None,
+        timestamp: float | None = None,
     ) -> int:
         now = time.time() if timestamp is None else timestamp
         dt_str = datetime.fromtimestamp(now).strftime("%Y-%m-%d %H:%M:%S")
@@ -302,7 +302,7 @@ class SQLiteBackend(DatabaseBackend):
         last_seen: float,
         max_rssi: int,
         alert_message: str,
-        timestamp: Optional[float] = None,
+        timestamp: float | None = None,
     ) -> int:
         now = time.time() if timestamp is None else timestamp
         dt_str = datetime.fromtimestamp(now).strftime("%Y-%m-%d %H:%M:%S")
@@ -331,14 +331,14 @@ class SQLiteBackend(DatabaseBackend):
     def get_observations(
         self,
         limit: int = 1000,
-        network_type: Optional[str] = None,
-        search_query: Optional[str] = None,
-        channel: Optional[int] = None,
-        min_rssi: Optional[int] = None,
-        start_time: Optional[float] = None,
-        end_time: Optional[float] = None,
+        network_type: str | None = None,
+        search_query: str | None = None,
+        channel: int | None = None,
+        min_rssi: int | None = None,
+        start_time: float | None = None,
+        end_time: float | None = None,
         as_df: bool = False,
-    ) -> Union[list[dict[str, Any]], pd.DataFrame]:
+    ) -> list[dict[str, Any]] | pd.DataFrame:
         query = (
             "SELECT id, datetime_str, timestamp, channel, mac_address, rssi, network_type, ephemeral_key, raw_payload "
             "FROM observations WHERE 1=1"
@@ -378,11 +378,11 @@ class SQLiteBackend(DatabaseBackend):
 
     def get_rssi_timeseries(
         self,
-        network_types: Optional[list[str]] = None,
-        min_rssi: Optional[int] = None,
+        network_types: list[str] | None = None,
+        min_rssi: int | None = None,
         limit: int = 2000,
         as_df: bool = False,
-    ) -> Union[list[dict[str, Any]], pd.DataFrame]:
+    ) -> list[dict[str, Any]] | pd.DataFrame:
         query = (
             "SELECT id, datetime_str, timestamp, mac_address, rssi, network_type, "
             "SUBSTR(COALESCE(NULLIF(TRIM(ephemeral_key), ''), mac_address), 1, 16) as key_short, "
@@ -422,7 +422,7 @@ class SQLiteBackend(DatabaseBackend):
         min_count: int = 1,
         limit: int = 100,
         as_df: bool = False,
-    ) -> Union[list[dict[str, Any]], pd.DataFrame]:
+    ) -> list[dict[str, Any]] | pd.DataFrame:
         query = (
             "SELECT "
             "COALESCE(NULLIF(TRIM(ephemeral_key), ''), mac_address) AS tracker_id, "
@@ -465,11 +465,11 @@ class SQLiteBackend(DatabaseBackend):
         window_seconds: int = 900,
         min_observations: int = 5,
         min_time_span: int = 300,
-        window_minutes: Optional[int] = None,
-        min_duration_minutes: Optional[int] = None,
+        window_minutes: int | None = None,
+        min_duration_minutes: int | None = None,
         cooldown_seconds: int = 300,
         deduplicate: bool = True,
-        now: Optional[float] = None,
+        now: float | None = None,
     ) -> list[dict[str, Any]]:
         curr_time = time.time() if now is None else now
         if window_minutes is not None:
@@ -627,7 +627,7 @@ class SQLiteBackend(DatabaseBackend):
             conn.commit()
             return cursor.lastrowid or 0
 
-    def get_alert_actions(self, alert_id: Optional[int] = None) -> list[dict[str, Any]]:
+    def get_alert_actions(self, alert_id: int | None = None) -> list[dict[str, Any]]:
         with self.connect() as conn:
             cursor = conn.cursor()
             if alert_id is not None:
@@ -641,7 +641,7 @@ class SQLiteBackend(DatabaseBackend):
                 )
             return [dict(r) for r in cursor.fetchall()]
 
-    def get_alerts(self, limit: int = 200, as_df: bool = False) -> Union[list[dict[str, Any]], pd.DataFrame]:
+    def get_alerts(self, limit: int = 200, as_df: bool = False) -> list[dict[str, Any]] | pd.DataFrame:
         query = (
             "SELECT id, datetime_str, timestamp, identifier, network_type, "
             "observation_count, first_seen, last_seen, max_rssi, alert_message "
@@ -654,7 +654,7 @@ class SQLiteBackend(DatabaseBackend):
             cursor.execute(query, [limit])
             return [dict(r) for r in cursor.fetchall()]
 
-    def query_df(self, sql: str, params: Optional[list[Any]] = None) -> pd.DataFrame:
+    def query_df(self, sql: str, params: list[Any] | None = None) -> pd.DataFrame:
         with self.connect() as conn:
             return pd.read_sql_query(sql, conn, params=params)
 
@@ -678,7 +678,7 @@ class DuckDBBackend(DatabaseBackend):
         self._is_memory = self.db_path == ":memory:"
 
         # Delegate SQLite writes and initial schema setup to SQLiteBackend when attaching
-        self._sqlite_fallback: Optional[SQLiteBackend] = None
+        self._sqlite_fallback: SQLiteBackend | None = None
         if not self._is_native and not self._is_memory:
             self._sqlite_fallback = SQLiteBackend(self.db_path)
 
@@ -802,7 +802,7 @@ class DuckDBBackend(DatabaseBackend):
         ephemeral_key: str,
         channel: int = 37,
         raw_payload: str = "",
-        timestamp: Optional[float] = None,
+        timestamp: float | None = None,
     ) -> int:
         if self._sqlite_fallback is not None:
             return self._sqlite_fallback.insert_observation(
@@ -836,7 +836,7 @@ class DuckDBBackend(DatabaseBackend):
         last_seen: float,
         max_rssi: int,
         alert_message: str,
-        timestamp: Optional[float] = None,
+        timestamp: float | None = None,
     ) -> int:
         if self._sqlite_fallback is not None:
             return self._sqlite_fallback.insert_alert(
@@ -875,14 +875,14 @@ class DuckDBBackend(DatabaseBackend):
     def get_observations(
         self,
         limit: int = 1000,
-        network_type: Optional[str] = None,
-        search_query: Optional[str] = None,
-        channel: Optional[int] = None,
-        min_rssi: Optional[int] = None,
-        start_time: Optional[float] = None,
-        end_time: Optional[float] = None,
+        network_type: str | None = None,
+        search_query: str | None = None,
+        channel: int | None = None,
+        min_rssi: int | None = None,
+        start_time: float | None = None,
+        end_time: float | None = None,
         as_df: bool = False,
-    ) -> Union[list[dict[str, Any]], pd.DataFrame]:
+    ) -> list[dict[str, Any]] | pd.DataFrame:
         query = (
             "SELECT id, datetime_str, timestamp, channel, mac_address, rssi, network_type, ephemeral_key, raw_payload "
             "FROM observations WHERE 1=1"
@@ -935,11 +935,11 @@ class DuckDBBackend(DatabaseBackend):
 
     def get_rssi_timeseries(
         self,
-        network_types: Optional[list[str]] = None,
-        min_rssi: Optional[int] = None,
+        network_types: list[str] | None = None,
+        min_rssi: int | None = None,
         limit: int = 2000,
         as_df: bool = False,
-    ) -> Union[list[dict[str, Any]], pd.DataFrame]:
+    ) -> list[dict[str, Any]] | pd.DataFrame:
         query = (
             "SELECT id, datetime_str, timestamp, mac_address, rssi, network_type, "
             "SUBSTR(COALESCE(NULLIF(TRIM(ephemeral_key), ''), mac_address), 1, 16) as key_short, "
@@ -993,7 +993,7 @@ class DuckDBBackend(DatabaseBackend):
         min_count: int = 1,
         limit: int = 100,
         as_df: bool = False,
-    ) -> Union[list[dict[str, Any]], pd.DataFrame]:
+    ) -> list[dict[str, Any]] | pd.DataFrame:
         query = (
             "SELECT "
             "COALESCE(NULLIF(TRIM(ephemeral_key), ''), mac_address) AS tracker_id, "
@@ -1044,11 +1044,11 @@ class DuckDBBackend(DatabaseBackend):
         window_seconds: int = 900,
         min_observations: int = 5,
         min_time_span: int = 300,
-        window_minutes: Optional[int] = None,
-        min_duration_minutes: Optional[int] = None,
+        window_minutes: int | None = None,
+        min_duration_minutes: int | None = None,
         cooldown_seconds: int = 300,
         deduplicate: bool = True,
-        now: Optional[float] = None,
+        now: float | None = None,
     ) -> list[dict[str, Any]]:
         curr_time = time.time() if now is None else now
         if window_minutes is not None:
@@ -1213,7 +1213,7 @@ class DuckDBBackend(DatabaseBackend):
             ).fetchone()
             return int(res[0]) if res else 0
 
-    def get_alert_actions(self, alert_id: Optional[int] = None) -> list[dict[str, Any]]:
+    def get_alert_actions(self, alert_id: int | None = None) -> list[dict[str, Any]]:
         if self._sqlite_fallback is not None:
             return self._sqlite_fallback.get_alert_actions(alert_id)
         with self._lock:
@@ -1228,7 +1228,7 @@ class DuckDBBackend(DatabaseBackend):
                 ).df()
             return df.to_dict(orient="records")
 
-    def get_alerts(self, limit: int = 200, as_df: bool = False) -> Union[list[dict[str, Any]], pd.DataFrame]:
+    def get_alerts(self, limit: int = 200, as_df: bool = False) -> list[dict[str, Any]] | pd.DataFrame:
         query = (
             "SELECT id, datetime_str, timestamp, identifier, network_type, "
             "observation_count, first_seen, last_seen, max_rssi, alert_message "
@@ -1246,7 +1246,7 @@ class DuckDBBackend(DatabaseBackend):
                 return self._sqlite_fallback.get_alerts(limit=limit, as_df=as_df)
             raise
 
-    def query_df(self, sql: str, params: Optional[list[Any]] = None) -> pd.DataFrame:
+    def query_df(self, sql: str, params: list[Any] | None = None) -> pd.DataFrame:
         try:
             with self._lock:
                 return self.con.execute(sql, params or []).df()
@@ -1258,10 +1258,10 @@ class DuckDBBackend(DatabaseBackend):
 
 
 def get_database_backend(
-    backend_type: Optional[str] = None,
+    backend_type: str | None = None,
     db_path: str = "data/ble_tracker.db",
-    threads: Optional[int] = None,
-    memory_limit: Optional[str] = None,
+    threads: int | None = None,
+    memory_limit: str | None = None,
     **kwargs: Any,
 ) -> DatabaseBackend:
     """Factory creating a DatabaseBackend instance (SQLiteBackend or DuckDBBackend).
