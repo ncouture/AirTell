@@ -60,8 +60,8 @@ class TestScriptsPackagingAndImports:
         assert BLETrackerDB is not None
         assert callable(classify_payload)
 
-    def test_import_scripts_alias(self) -> None:
-        import scripts.ble_antistalking_tracker as tracker_mod
+    def test_import_scripts_canonical(self) -> None:
+        import airtell.scripts.ble_antistalking_tracker as tracker_mod
 
         assert hasattr(tracker_mod, "BLETrackerDB")
         assert hasattr(tracker_mod, "classify_payload")
