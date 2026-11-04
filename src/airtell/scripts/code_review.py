@@ -274,7 +274,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    project_root = Path(__file__).resolve().parent.parent.parent
+    project_root = Path(__file__).resolve().parent.parent.parent.parent
     if not (project_root / ".github").exists():
         project_root = Path.cwd()
 
