@@ -12,10 +12,10 @@ Provides:
 
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
-import math
-from typing import Any, Dict, List, Optional, Tuple, Sequence
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -85,8 +85,8 @@ class LinkRecord:
     current_rssi: float = -60.0
     last_seen: float = 0.0
     packet_count: int = 0
-    rssi_history: List[float] = field(default_factory=list)
-    time_history: List[float] = field(default_factory=list)
+    rssi_history: deque[float] = field(default_factory=deque)
+    time_history: deque[float] = field(default_factory=deque)
     state: LinkState = LinkState.DISCOVERING
     expected_interval_s: float = 0.1
     pdr: float = 1.0
@@ -172,8 +172,8 @@ class MxNLinkMatrixManager:
                 current_rssi=rssi,
                 last_seen=timestamp,
                 packet_count=1,
-                rssi_history=[rssi],
-                time_history=[timestamp],
+                rssi_history=deque([rssi], maxlen=self.window_size),
+                time_history=deque([timestamp], maxlen=self.window_size),
                 state=LinkState.DISCOVERING,
             )
         else:
@@ -181,11 +181,12 @@ class MxNLinkMatrixManager:
             rec.last_seen = timestamp
             rec.packet_count += 1
             rec.current_rssi = rssi
+            if not isinstance(rec.rssi_history, deque) or rec.rssi_history.maxlen != self.window_size:
+                rec.rssi_history = deque(rec.rssi_history, maxlen=self.window_size)
+            if not isinstance(rec.time_history, deque) or rec.time_history.maxlen != self.window_size:
+                rec.time_history = deque(rec.time_history, maxlen=self.window_size)
             rec.rssi_history.append(rssi)
             rec.time_history.append(timestamp)
-            if len(rec.rssi_history) > self.window_size:
-                rec.rssi_history.pop(0)
-                rec.time_history.pop(0)
 
             if len(rec.time_history) >= 2 and rec.state == LinkState.DISCOVERING:
                 intervals = [rec.time_history[i] - rec.time_history[i - 1] for i in range(1, len(rec.time_history))]

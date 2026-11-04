@@ -1,4 +1,6 @@
-from typing import Dict, Tuple, List
+from collections import deque
+from typing import Dict, Tuple
+
 import numpy as np
 
 
@@ -13,24 +15,22 @@ class BaselineTracker:
         self.history_size = history_size
         self.baselines: Dict[Tuple[str, str, int], float] = {}
         self.variances: Dict[Tuple[str, str, int], float] = {}
-        self.history: Dict[Tuple[str, str, int], List[float]] = {}
+        self.history: Dict[Tuple[str, str, int], deque[float]] = {}
 
     def update(self, rx_id: str, tx_mac: str, rssi: float, channel: int = 37) -> float:
         key = (rx_id, tx_mac, channel)
-        
+
         if key not in self.history:
-            self.history[key] = []
-        
+            self.history[key] = deque(maxlen=self.history_size)
+
         # Outlier rejection using median window
         hist = self.history[key]
         if len(hist) >= 3:
             median_val = float(np.median(hist))
             if abs(rssi - median_val) > self.outlier_threshold:
                 return self.baselines.get(key, median_val)
-        
+
         hist.append(rssi)
-        if len(hist) > self.history_size:
-            hist.pop(0)
 
         # EMA update
         if key not in self.baselines:
@@ -40,7 +40,7 @@ class BaselineTracker:
             delta = rssi - self.baselines[key]
             self.baselines[key] = self.alpha * rssi + (1.0 - self.alpha) * self.baselines[key]
             self.variances[key] = (1.0 - self.alpha) * self.variances[key] + self.alpha * (delta ** 2)
-            
+
         return self.baselines[key]
 
     def get_baseline(self, rx_id: str, tx_mac: str, channel: int = 37, default: float = -60.0) -> float:
