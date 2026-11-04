@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from collections import deque
-
-import numpy as np
+import math
+import statistics
 
 
 class BaselineTracker:
@@ -27,7 +27,7 @@ class BaselineTracker:
         # Outlier rejection using median window
         hist = self.history[key]
         if len(hist) >= 3:
-            median_val = float(np.median(hist))
+            median_val = float(statistics.median(hist))
             if abs(rssi - median_val) > self.outlier_threshold:
                 return self.baselines.get(key, median_val)
 
@@ -49,5 +49,5 @@ class BaselineTracker:
 
     def get_std_dev(self, rx_id: str, tx_mac: str, channel: int = 37, min_std: float = 1.0) -> float:
         var = self.variances.get((rx_id, tx_mac, channel), min_std ** 2)
-        return float(np.sqrt(max(min_std ** 2, var)))
+        return float(math.sqrt(max(min_std ** 2, var)))
 
