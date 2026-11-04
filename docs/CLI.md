@@ -254,9 +254,6 @@ Single-device workflows utilize exactly one physical USB Sniffle radio dongle co
 Check serial port connectivity, query running firmware versions, and perform hardware resets:
 
 ```bash
-# Verify single-dongle port connectivity and baseline responsiveness
-airtell verify-hardware --dev1 /dev/ttyUSB0 --burst-duration-sec 0.5
-
 # Query active Sniffle firmware version directly via script helper
 python3 -m airtell.scripts.version_check -s /dev/ttyUSB0
 
