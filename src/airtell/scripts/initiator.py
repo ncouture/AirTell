@@ -68,8 +68,8 @@ def main():
         try:
             mac_bytes = [int(h, 16) for h in reversed(args.mac.split(":"))]
             if len(mac_bytes) != 6:
-                raise Exception("Wrong length!")
-        except:
+                raise ValueError("Wrong length!")
+        except (ValueError, TypeError):
             print("MAC must be 6 colon-separated hex bytes", file=sys.stderr)
             return
         hw.cmd_mac(mac_bytes, False)
