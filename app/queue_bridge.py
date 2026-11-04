@@ -9,6 +9,11 @@ from typing import Any
 
 import streamlit as st
 
+try:
+    from airtell.scripts.ble_antistalking_tracker import classify_payload
+except ImportError:
+    classify_payload = None  # type: ignore[assignment]
+
 
 class EventQueue:
     """Thread-safe bounded queue with automatic overflow protection for live telemetry."""
@@ -198,14 +203,13 @@ def packet_to_event_dict(pkt: Any) -> dict[str, Any]:
 
     net_type = "Unknown"
     eph_key = ""
-    try:
-        from airtell.scripts.ble_antistalking_tracker import classify_payload
-
-        net_type, eph_key = classify_payload(adv_payload_hex or raw_payload_hex)
-        if net_type == "Tile Tracker":
-            net_type = "Tile"
-    except Exception:
-        pass
+    if classify_payload is not None:
+        try:
+            net_type, eph_key = classify_payload(adv_payload_hex or raw_payload_hex)
+            if net_type == "Tile Tracker":
+                net_type = "Tile"
+        except Exception:
+            pass
 
     if net_type == "Unknown":
         payload_lower = (adv_payload_hex or raw_payload_hex).lower()
