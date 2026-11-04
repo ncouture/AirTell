@@ -4,16 +4,30 @@
 # Copyright (c) 2018-2025, NCC Group plc
 # Released as open source under GPLv3
 
-import argparse, sys
+import argparse
+import sys
 from binascii import unhexlify
-from sniffle.constants import BLE_ADV_AA
-from sniffle.pcap import PcapBleWriter
-from sniffle.sniffle_hw import (make_sniffle_hw, PacketMessage, DebugMessage, StateMessage,
-                                MeasurementMessage, SnifferMode, PhyMode)
-from sniffle.packet_decoder import (AdvaMessage, AdvDirectIndMessage, AdvExtIndMessage,
-                                    ScanRspMessage, DataMessage, str_mac)
-from sniffle.errors import UsageError, SourceDone
+
 from sniffle.advdata.decoder import decode_adv_data
+from sniffle.errors import SourceDone, UsageError
+from sniffle.packet_decoder import (
+    AdvaMessage,
+    AdvDirectIndMessage,
+    AdvExtIndMessage,
+    DataMessage,
+    ScanRspMessage,
+    str_mac,
+)
+from sniffle.pcap import PcapBleWriter
+from sniffle.sniffle_hw import (
+    DebugMessage,
+    MeasurementMessage,
+    PacketMessage,
+    PhyMode,
+    SnifferMode,
+    StateMessage,
+    make_sniffle_hw,
+)
 
 # global variable to access hardware
 hw = None
@@ -90,9 +104,12 @@ def main():
         irk = unhexlify(args.irk)
     elif args.mac:
         try:
-            mac = [int(h, 16) for h in reversed(args.mac.split(":"))]
-        except (ValueError, TypeError):
-            raise UsageError("MAC must be 6 colon-separated hex bytes")
+            parts = args.mac.split(":")
+            if len(parts) != 6:
+                raise ValueError("MAC must contain exactly 6 colon-separated hex bytes")
+            mac = [int(h, 16) for h in reversed(parts)]
+        except (ValueError, TypeError) as exc:
+            raise UsageError("MAC must be 6 colon-separated hex bytes") from exc
     elif args.string:
         search_str = args.string.encode('latin-1').decode('unicode_escape').encode('latin-1')
         print("Waiting for advertisement containing specified string...")
@@ -132,7 +149,7 @@ def main():
     hw.mark_and_flush()
 
     global pcwriter
-    if not (args.output is None):
+    if args.output is not None:
         pcwriter = PcapBleWriter(args.output)
 
     while True:
