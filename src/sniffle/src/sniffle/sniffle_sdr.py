@@ -306,7 +306,7 @@ class SniffleSDR:
                       validate_crc=True):
         if interval_preload is None:
             interval_preload = []
-        if not mode in SnifferMode:
+        if mode not in SnifferMode:
             raise ValueError("Invalid mode requested")
 
         if self.use_channelizer:

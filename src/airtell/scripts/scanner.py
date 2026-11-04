@@ -223,7 +223,7 @@ def handle_packet(dpkt):
             isinstance(dpkt, AdvExtIndMessage) and dpkt.AdvA is not None):
         adva = str_mac2(dpkt.AdvA, dpkt.TxAdd)
 
-        if not adva in advertisers:
+        if adva not in advertisers:
             advertisers[adva] = Advertiser()
             print("Found %s..." % adva)
 
