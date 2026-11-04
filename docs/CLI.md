@@ -95,6 +95,10 @@ The CLI enforces a deterministic semantic exit code contract:
 | **`1`** | **Threat Detected / Verification Failed** | In `sidechannel`, exclusive-use side-channel signatures were **detected** (`has_detections == True`). In `verify-hardware`, fewer than 5 stages verified. In `mock-simulate`, missing beacon profiles or empty capture. In hardware allocation, insufficient dongles detected. |
 | **`2`** | **Syntax / Device Error** | Invalid CLI argument, missing required input source, mutually conflicting input sources, nonexistent PCAP file, invalid CSRK hex or length, inaccessible serial interface, or out-of-bounds parameter. |
 
+> ⚠️ **Important Parameter Divergence: `--json` Flag Semantics**
+> - In `airtell sidechannel`: `--json` is a boolean flag (`store_true`) enabling JSON output format. To save to a file, use the `-o` / `--output <path>` option (e.g. `airtell sidechannel -i trace.pcap --json -o out.json`).
+> - In all other subcommands (`topology-a`, `topology-b`, `mock-simulate`, `verify-hardware`, `deanonymize`): `--json <path>` takes a string parameter designating the output file path.
+
 ---
 
 ## 2. Zero-Device Scenarios (Offline PCAP Analysis & Simulation)
@@ -491,6 +495,8 @@ Usage: airtell sidechannel [-h] (-i PCAP | --live LIVE | --mock)
 | `--limit`, `--max-packets` | `int` | None | `None` | No | Maximum number of packets to process |
 
 *\*Note: Exactly one input source (`--pcap`, `--live`, or `--mock`) is required.*
+
+*Note: In `sidechannel`, `--json` does NOT take an argument value; passing `airtell sidechannel --json <out.json>` results in an argument parsing error. Output file destination must be specified using `-o <path>`.*
 
 ### 5.2 `topology-a`
 
