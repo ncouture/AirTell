@@ -277,6 +277,7 @@ airtell/
 │   ├── json_jq.md              # Parsing Wireshark JSON with JQ
 │   ├── tshark.md               # TShark & PCAP dissection guide
 │   └── hardware_setup.md       # Hardware flashing & multi-dongle guide
+├── idbleed/                    # IDBleed research & legacy streaming prototypes
 ├── scripts/                    # Standalone CLI tools, relays, & decoders
 │   ├── code_review.py          # Antigravity SDK review runner (Gemini 3.8 Flash)
 │   ├── advertiser.py           # Connectable peripheral emulator
@@ -300,7 +301,12 @@ airtell/
 │   │   ├── device/             # Serial port lifecycle, lsof check, mock bus
 │   │   ├── extcap/             # Asynchronous Tshark runner & stream parser
 │   │   ├── protocol/           # Wire protocol, beacons, probing, MAC generator
-│   │   └── topology/           # Topologies A & B, graceful shutdown
+│   │   ├── scripts/            # Script entrypoints and radar engine wrappers
+│   │   ├── sidechannel/        # BAT allowlist, CSRK counter, encryption side-channels
+│   │   ├── sniff/              # Packet dissectors, PCAP/PCAPNG serialization
+│   │   ├── telemetry/          # SQLite & DuckDB storage backends, schemas
+│   │   ├── topology/           # Topologies A & B, multi-dongle orchestration
+│   │   └── cli.py              # Centralized unified AirTell CLI entrypoint
 │   └── sniffle/                # Embedded Sniffle C firmware & CLI library
 └── tests/                      # Unit, integration, and E2E test suites
     └── test_codeowner_enforcement.py # Codeowner authorization policy tests
