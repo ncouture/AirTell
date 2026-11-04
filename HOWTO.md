@@ -1,48 +1,39 @@
-# AirTell: Python BLE Offline Finding Parser & Anti-Stalking Tracker Suite
+# AirTell Quickstart Guide
 
-All requested components have been created and validated in `/home/self/git/bluetooth-sniffle`:
+This document provides a concise quickstart for running AirTell and links to authoritative documentation guides.
 
-### Standalone Offline Finding Parser (`ble_parser.py`)
+## Canonical Documentation Hub
 
-- **Interfaces directly** with `sniffle_receiver` on the specified serial port and advertising channel (37, 38, or 39).
-- **Unpacks and parses** raw 31-byte advertising payloads.
-- **Detects and extracts** public key fragments for Apple Find My (`0x004C` / `0x12`), Google Fast Pair / Find Hub (`0xFE9F`), Tile (`0xFEED`), and Samsung SmartThings Find (`0x0075`).
+For exhaustive technical guides, parameter manuals, and hardware setups, refer to the canonical files in `docs/`:
 
-### BLE Anti-Stalking Tracker & SQLite Logger (`ble_antistalking_tracker.py`)
-
-- **Database Management**: Manages SQLite database schema with `observations` and `alerts` tables and performance indexes on `timestamp` and `ephemeral_key`.
-- **Heuristic Correlation**: Implements sliding-window heuristics (15-minute evaluation window, minimum observation threshold, minimum persistence span) to flag persistent rogue beacons even across randomized Bluetooth MAC addresses.
-- **Alert Dispatching**: Integrated with alert notification dispatching via Twilio SMS (`--twilio-sid`, `--twilio-token`, `--twilio-from`, `--twilio-to` or corresponding environment variables) to automatically push alerts when a rogue tag threshold is breached.
-
-### Streamlit Real-Time Dashboard (`streamlit_dashboard.py`)
-
-- **Shared State**: Connects to the shared SQLite database (`ble_tracker.db`).
-- **Telemetry Visualizer**: Visualizes live summary metrics (Total Packets, Identified Trackers, Active 15m Threats).
-- **Interactive Trajectories**: Generates interactive Plotly RSSI time-series trends grouped by tracker ephemeral keys.
-- **Threat Feed**: Provides an interactive security alert feed and filtered raw packet inspector table.
+- **Sniffle CLI Operations Guide**: [`docs/howto.md`](docs/howto.md) (Hardware detection, packet sniffing, connection following, radar tomography, and PCAP decoding).
+- **AirTell Unified CLI Manual**: [`docs/CLI.md`](docs/CLI.md) (Subcommands: `sidechannel`, `topology-a`, `topology-b`, `deanonymize`, `verify-hardware`, `mock-simulate`).
+- **Scripts Reference**: [`docs/scripts_reference.md`](docs/scripts_reference.md) (Standalone utility directory reference).
+- **Documentation Index**: [`docs/index.md`](docs/index.md) (Central navigation index).
 
 ---
 
-## Deployment & Execution Guide
+## Quickstart Commands
 
-### 1. Dual-Dongle Parallel Capture
-
-Deploy both SONOFF CC2652P dongles concurrently across different primary advertising channels to write simultaneously into the shared database:
-
+### 1. Offline PCAP Analysis & Simulation (Zero-Hardware)
 ```bash
-# Terminal 1: Monitor Channel 37 via Dongle 1
-python3 scripts/ble_antistalking_tracker.py -s /dev/ttyUSB0 -c 37 -db ble_tracker.db
+# Analyze side-channels (differential encryption, CSRK counters, BAT allowlist)
+airtell sidechannel -i captures/trace_session.pcap
 
-# Terminal 2: Monitor Channel 38 via Dongle 2
-python3 scripts/ble_antistalking_tracker.py -s /dev/ttyUSB1 -c 38 -db ble_tracker.db
+# Replay simulated 2D radio tomographic sensing
+python3 src/airtell/scripts/radar_tomography.py --simulate --headless --max-frames 25
 ```
 
-### 2. Launch the Streamlit Web Dashboard
-
-Launch the web interface to visualize real-time RSSI trajectories and security alerts:
-
+### 2. Dual-Dongle Monitoring & Anti-Stalking Tracker
 ```bash
-streamlit run app/streamlit_dashboard.py
+# Monitor Channel 37 via Dongle 1
+python3 src/airtell/scripts/ble_antistalking_tracker.py -s /dev/ttyUSB0 -c 37 --db ble_tracker.db
+
+# Monitor Channel 38 via Dongle 2
+python3 src/airtell/scripts/ble_antistalking_tracker.py -s /dev/ttyUSB1 -c 38 --db ble_tracker.db
 ```
 
-The dashboard will open at `http://localhost:8501`.
+### 3. Launch the Streamlit Web Dashboard
+```bash
+streamlit run app/streamlit_app.py
+```
