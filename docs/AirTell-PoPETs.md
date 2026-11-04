@@ -92,6 +92,3 @@ The following workspace artifacts were developed specifically to parse and contr
 
 1.  `src/airtell/extcap/runner.py` (`TsharkStreamRunner`)
     -   **Description:** An asynchronous Python backend module that executes `tshark` subprocesses wrapping the Sniffle extcap plugin to stream live Bluetooth JSON data to a Streamlit web application.
-
-💡 Would you like to generate a detailed comparative report or mind map summarizing all Bluetooth privacy vulnerabilities identified across these papers?
-
