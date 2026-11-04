@@ -6,7 +6,14 @@ Build an adversarial security evaluation testbed leveraging the dual-dongle Snif
 2. Implement a two-ended BLE pairing relay testbed where Device 1 captures central connection/pairing requests, forwards them across a low-latency IPC queue to Device 2 operating as a peripheral proxy, and extracts success/failure feedback signals to link randomized Private Addresses (RPAs).
 3. Construct a synthetic rogue beacon generator supporting Apple Find My, Google Find Hub, Samsung SmartThings Find, and Tile with parameterized rotation intervals, jitter, and signal attenuation to systematically evaluate the detection resilience and evasion thresholds of anti-stalking algorithms.
 
-## 2. Functional Requirements
+### Modular Track Decomposition (Single Responsibility Principle)
+To prevent scope creep and maintain single-responsibility boundaries, this monolithic track is decomposed into four cohesive modular tracks:
+- **Track A (`ble_identifier_deanonymizer`)**: Multi-Signal Rotating Identifier Deanonymizer
+- **Track B (`ble_pairing_relay_ipc`)**: Two-Ended Pairing Relay & IPC Bridge
+- **Track C (`ble_rogue_beacon_benchmark`)**: Synthetic Rogue Beacon Generator & Evasion Benchmark Suite
+- **Track D (`adversarial_cli_ui_integration`)**: Adversarial CLI Suite & M3 Dashboard UI Integration (completed via remediation track `cli_adversarial_completion_20261016`)
+
+## 2. Functional Requirements by Modular Track
 
 ### FR1: Multi-Signal Rotating Identifier Deanonymizer
 - **Static Address Leakage Detection**: Flag target tags broadcasting identical public keys alongside fixed MAC addresses, or transmitting constant IEEE OUI prefixes across address rotations.
@@ -39,12 +46,21 @@ Build an adversarial security evaluation testbed leveraging the dual-dongle Snif
 - **Safety & Threading**: Graceful shutdown of relay threads on SIGINT/SIGTERM without port deadlock or orphaned subprocesses.
 - **Testability**: 100% offline unit and integration test coverage using `VirtualRadioBus` and mock devices without requiring physical radios.
 
-## 4. Acceptance Criteria
-- [ ] Unit tests verify detection of static MAC leakage and rotation delay divergence with $>95\%$ precision on synthetic traces.
-- [ ] Two-ended relay state machine correctly captures and forwards simulated pairing requests, logging success/failure status codes.
-- [ ] Rogue beacon generator produces valid 31-byte advertising payloads across all 4 supported finding networks.
-- [ ] Automated benchmark verifies whether rogue beacon injection triggers or evades `BLETrackerDB.check_stalking_heuristics()`.
-- [ ] All new tests pass in CI (`uv run pytest`) and code satisfies `ruff check .` with zero warnings.
+## 4. Acceptance Criteria by Modular Track
+- **`ble_identifier_deanonymizer`**:
+  - [ ] Unit tests verify detection of static MAC leakage and rotation delay divergence with $>95\%$ precision on synthetic traces (`tests/test_adversarial_deanonymizer.py`).
+  - [ ] Trajectory correlation engine reconstructs target motion paths across rotating addresses.
+- **`ble_pairing_relay_ipc`**:
+  - [ ] Two-ended relay state machine correctly captures and forwards simulated pairing requests with $< 5\text{ ms}$ IPC queue latency (`tests/test_adversarial_relay.py`).
+  - [ ] Handshake failure error extractor records `SMP_PAIRING_FAILED` status codes to establish cross-RPA device persistent identity.
+- **`ble_rogue_beacon_benchmark`**:
+  - [ ] Rogue beacon generator produces valid 31-byte advertising payloads across Apple Find My, Google Find Hub, Samsung SmartThings, and Tile (`tests/test_adversarial_rogue_beacon.py`).
+  - [ ] Automated benchmark verifies whether rogue beacon injection triggers or evades `BLETrackerDB.check_stalking_heuristics()`.
+- **`adversarial_cli_ui_integration`**:
+  - [ ] Dedicated CLI subcommands (`airtell relay`, `airtell deanonymize`, `airtell rogue-inject`) are fully wired and functional without placeholder stubs.
+  - [ ] Streamlit M3 dashboard renders live relay handshake states, linkability confidence scores, and evasion benchmark reports.
+- **Cross-Cutting Quality Gate**:
+  - [ ] All new tests pass in CI (`pytest`) and code satisfies `ruff check .` with zero warnings.
 
 ## 5. Out of Scope
 - Hardware-in-the-loop over-the-air relay targeting non-consenting commercial devices.

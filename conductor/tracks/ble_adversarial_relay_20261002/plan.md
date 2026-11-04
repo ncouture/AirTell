@@ -1,6 +1,13 @@
 # Implementation Plan: BLE Tracker Deanonymization, Pairing Relay Evaluation & Rogue Beacon Testbed
 
-## Phase 1: Multi-Signal Rotating Identifier Deanonymizer [checkpoint: 82884b5]
+> **Modular Track Decomposition**:
+> This monolithic track is formally decomposed into four cohesive, single-responsibility tracks adhering to the Single Responsibility Principle:
+> 1. `ble_identifier_deanonymizer` (Phase 1)
+> 2. `ble_pairing_relay_ipc` (Phase 2)
+> 3. `ble_rogue_beacon_benchmark` (Phase 3)
+> 4. `adversarial_cli_ui_integration` (Phase 4, completed and finalized via remediation track `cli_adversarial_completion_20261016`)
+
+## Modular Track 1: `ble_identifier_deanonymizer` (Phase 1: Multi-Signal Rotating Identifier Deanonymizer) [checkpoint: 82884b5]
 - [x] Task: Write tests for static MAC leakage detection and rotation delay divergence [f981eaf]
   - [x] Write unit tests in `tests/test_adversarial_deanonymizer.py` for static MAC leakage flag across rotating cryptographic keys
   - [x] Write unit tests verifying rotation delay divergence $\Delta t$ detection between address changes and payload updates
@@ -12,7 +19,7 @@
   - [x] Add unit test verifying trajectory recovery across multiple randomized private address rotations
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [82884b5]
 
-## Phase 2: Two-Ended Pairing Relay Architecture [checkpoint: 164182e]
+## Modular Track 2: `ble_pairing_relay_ipc` (Phase 2: Two-Ended Pairing Relay Architecture) [checkpoint: 164182e]
 - [x] Task: Write unit and integration tests for pairing relay state machine and IPC bridge [b66a1a2]
   - [x] Write unit tests in `tests/test_adversarial_relay.py` validating Link Layer frame forwarding and timestamp fidelity
   - [x] Write tests simulating central pairing handshake capture and peripheral proxy frame response
@@ -24,7 +31,7 @@
   - [x] Correlate pairing failure error patterns with rotating MAC addresses to establish device persistent identity
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [164182e]
 
-## Phase 3: Synthetic Rogue Beacon Generator & Evasion Benchmark [checkpoint: f85d826]
+## Modular Track 3: `ble_rogue_beacon_benchmark` (Phase 3: Synthetic Rogue Beacon Generator & Evasion Benchmark) [checkpoint: f85d826]
 - [x] Task: Write unit tests for rogue beacon generator and anti-stalking evasion scenarios [4119776]
   - [x] Write unit tests in `tests/test_adversarial_rogue_beacon.py` for Find My, Find Hub, SmartThings, and Tile payload construction
   - [x] Write tests evaluating detection triggers vs. evasion on sliding-window heuristics
@@ -36,7 +43,7 @@
   - [x] Generate structured markdown/JSON evaluation reports detailing detection evasion rates
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [f85d826]
 
-## Phase 4: CLI, Dashboard Integration & End-to-End Verification [checkpoint: 82f41fe]
+## Modular Track 4: `adversarial_cli_ui_integration` (Phase 4: CLI, Dashboard Integration & End-to-End Verification) [checkpoint: 82f41fe]
 - [x] Task: Write CLI and dashboard view tests for adversarial tools [df0025e]
   - [x] Write CLI invocation tests in `tests/test_cli_adversarial.py`
   - [x] Write dashboard view tests for relay telemetry and evasion benchmark controls
