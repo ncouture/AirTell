@@ -114,7 +114,7 @@ The engine provides three operational modes:
 
 The tomographic sensing engine is tested under the automated test suite:
 
-- **Algorithm & Signal Tests:** [`test_radar_signal.py`](../src/airtell/scripts/test_radar_signal.py), [`test_radar_tomography.py`](../src/airtell/scripts/test_radar_tomography.py)
-- **Public Device & Lifecycle Tests:** [`test_radar_public.py`](../src/airtell/scripts/test_radar_public.py)
-- **CLI & Integration Tests:** [`test_radar_cli.py`](../src/airtell/scripts/test_radar_cli.py)
+- **Algorithm & Signal Tests:** [`test_radar_signal.py`](../tests/radar/test_radar_signal.py), [`test_radar_tomography.py`](../tests/radar/test_radar_tomography.py)
+- **Public Device & Lifecycle Tests:** [`test_radar_public.py`](../tests/radar/test_radar_public.py)
+- **CLI & Integration Tests:** [`test_radar_cli.py`](../tests/radar/test_radar_cli.py)
 - **Tier 1 Feature Specifications (F1–F17):** [`test_tier1_features.py`](../src/sniffle/src/sniffle/tests/test_tier1_features.py#L78-L1021)

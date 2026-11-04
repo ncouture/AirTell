@@ -12,6 +12,7 @@ from sniffle.errors import SourceDone
 from sniffle.packet_decoder import (
     AdvaMessage,
     AdvDirectIndMessage,
+    Advertiser,
     AdvertMessage,
     AdvExtIndMessage,
     AuxScanRspMessage,
