@@ -136,6 +136,7 @@ Full technical documentation is centralized in [`docs/`](docs/):
 - [**TShark & PCAP Dissection**](docs/tshark.md): Native vs. extcap capture guide.
 - [**Hardware Setup & Flashing**](docs/hardware_setup.md): Bootloader flashing and configuration.
 - [**GitHub Operations & AI Code Review**](docs/GITHUB.md): Repository governance, Discussions, issue templates, Codeowners policy, and Gemini 3.8 Flash automated review system.
+- [**Contributor Developer Workflows**](CONTRIBUTE.md): Environment setup, TDD lifecycle, Conductor tracks, testing tiers, style standards, and PR rebase workflow.
 
 ---
 
@@ -260,6 +261,7 @@ ruff check src tests
 ```
 airtell/
 ├── README.md
+├── CONTRIBUTE.md               # Developer workflows, TDD lifecycle, & PR standards
 ├── pyproject.toml
 ├── .github/                    # GitHub configurations, templates, & automation
 │   ├── CODEOWNERS              # Global repository ownership (* @ncouture)
@@ -318,4 +320,3 @@ airtell/
 └── tests/                      # Unit, integration, and E2E test suites
     └── test_codeowner_enforcement.py # Codeowner authorization policy tests
 ```
-

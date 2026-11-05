@@ -24,6 +24,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 VALID_DOC_PATHS = [
     "README.md",
+    "CONTRIBUTE.md",
     "docs/CLI.md",
     "docs/index.md",
 ]
@@ -110,6 +111,14 @@ def extract_cli_commands(file_path: Path) -> list[str]:
                 stripped = stripped[2:].strip()
             elif stripped.startswith("$ airtell "):
                 stripped = stripped[2:].strip()
+            elif stripped.startswith("uv run bluetooth-sniffle "):
+                stripped = stripped[len("uv run ") :].strip()
+            elif stripped.startswith("uv run airtell "):
+                stripped = stripped[len("uv run ") :].strip()
+            elif stripped.startswith("$ uv run bluetooth-sniffle "):
+                stripped = stripped[len("$ uv run ") :].strip()
+            elif stripped.startswith("$ uv run airtell "):
+                stripped = stripped[len("$ uv run ") :].strip()
 
             if stripped.startswith("bluetooth-sniffle ") or stripped.startswith("airtell "):
                 if current_cmd:
@@ -210,7 +219,7 @@ class TestMarkdownLinks:
 class TestCliSnippetsSyntax:
     """Verifies that all CLI snippets in documentation parse against create_parser()."""
 
-    @pytest.mark.parametrize("doc_rel_path", ["README.md", "docs/CLI.md"])
+    @pytest.mark.parametrize("doc_rel_path", ["README.md", "CONTRIBUTE.md", "docs/CLI.md"])
     def test_cli_snippets_parse_cleanly(self, doc_rel_path: str) -> None:
         doc_path = REPO_ROOT / doc_rel_path
         commands = extract_cli_commands(doc_path)
@@ -222,7 +231,9 @@ class TestCliSnippetsSyntax:
 
         for cmd_str in commands:
             tokens = shlex.split(cmd_str)
-            assert tokens[0] in ("airtell", "bluetooth-sniffle"), f"Command does not start with airtell or bluetooth-sniffle: {cmd_str}"
+            assert tokens[0] in ("airtell", "bluetooth-sniffle"), (
+                f"Command does not start with airtell or bluetooth-sniffle: {cmd_str}"
+            )
 
             args = tokens[1:]
             try:
@@ -244,19 +255,21 @@ class TestDocsCliMockExecution:
         pcap_path = str(tmp_path / "sim.pcap")
         json_path = str(tmp_path / "sim.json")
         csv_path = str(tmp_path / "sim.csv")
-        code = main([
-            "mock-simulate",
-            "--duration-sec",
-            "0.5",
-            "--interval-ms",
-            "50",
-            "--pcap",
-            pcap_path,
-            "--json",
-            json_path,
-            "--csv",
-            csv_path,
-        ])
+        code = main(
+            [
+                "mock-simulate",
+                "--duration-sec",
+                "0.5",
+                "--interval-ms",
+                "50",
+                "--pcap",
+                pcap_path,
+                "--json",
+                json_path,
+                "--csv",
+                csv_path,
+            ]
+        )
         assert code == 0
         assert Path(pcap_path).exists()
         assert Path(json_path).exists()
