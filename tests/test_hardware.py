@@ -16,6 +16,7 @@ import time
 from typing import Any
 
 import pytest
+import serial
 
 from airtell.cli import main as cli_main
 from airtell.device.controller import SniffleDeviceController
@@ -258,13 +259,15 @@ def test_hardware_cli_verify_hardware_invocation(
             "--dev2",
             dev2,
             "--burst-duration-sec",
-            "0.6",
+            "1.2",
+            "--settling-sec",
+            "0.15",
             "--interval-ms",
             "35",
         ])
         assert rc == 0, f"airtell verify-hardware failed with return code {rc}"
     finally:
-        time.sleep(0.1)
+        time.sleep(0.20)
 
 
 @pytest.mark.hardware
@@ -296,9 +299,9 @@ def test_hardware_clean_teardown_no_thread_or_lock_leak(
         for c in (c1, c2):
             try:
                 c.close(reset=True)
-            except Exception:
+            except (OSError, serial.SerialException, RuntimeError):
                 pass
-        time.sleep(0.1)
+        time.sleep(0.20)
 
     assert not c1.is_open
     assert not c2.is_open
