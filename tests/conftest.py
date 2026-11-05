@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import sys
+import time
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any
@@ -129,6 +130,17 @@ def hardware_ports(sniffle_hardware_config: dict[str, Any]) -> tuple[str, str]:
     return dev1, dev2
 
 
+@pytest.fixture(autouse=True)
+def hardware_test_isolation(request: pytest.FixtureRequest) -> Generator[None, None, None]:
+    """Ensure settling delay and clean state before and after each hardware test."""
+    if "hardware" in request.keywords and is_hardware_enabled(request.config):
+        time.sleep(0.05)
+        yield
+        time.sleep(0.05)
+    else:
+        yield
+
+
 @pytest.fixture
 def live_sniffle_controllers(
     hardware_ports: tuple[str, str],
@@ -139,15 +151,19 @@ def live_sniffle_controllers(
     baudrate = sniffle_hardware_config["baudrate"]
     c1 = SniffleDeviceController(port=dev1, baudrate=baudrate, mock=False)
     c2 = SniffleDeviceController(port=dev2, baudrate=baudrate, mock=False)
-    c1.open()
-    c2.open()
     try:
-        c1.mark_and_flush()
-        c2.mark_and_flush()
+        c1.open()
+        c2.open()
+        assert c1.mark_and_flush(timeout=1.5), f"Failed to sync controller on {dev1}"
+        assert c2.mark_and_flush(timeout=1.5), f"Failed to sync controller on {dev2}"
         yield c1, c2
     finally:
-        c1.close()
-        c2.close()
+        for c in (c1, c2):
+            try:
+                c.close(reset=True)
+            except Exception:
+                pass
+        time.sleep(0.1)
 
 
 @pytest.fixture
@@ -168,11 +184,21 @@ def hardware_topology_a(
     orchestrator.start()
     try:
         if orchestrator.stimulator:
-            orchestrator.stimulator.mark_and_flush()
-        orchestrator.observer.mark_and_flush()
+            assert orchestrator.stimulator.mark_and_flush(timeout=1.5), f"Failed to sync stimulator on {dev1}"
+        assert orchestrator.observer.mark_and_flush(timeout=1.5), f"Failed to sync observer on {dev2}"
         yield orchestrator
     finally:
-        orchestrator.stop()
+        try:
+            orchestrator.stop(reset=True)
+        except Exception:
+            pass
+        for c in (orchestrator.stimulator, orchestrator.observer):
+            if c is not None and getattr(c, "is_open", False):
+                try:
+                    c.close(reset=True)
+                except Exception:
+                    pass
+        time.sleep(0.1)
 
 
 @pytest.fixture
@@ -184,11 +210,21 @@ def hardware_topology_b(
     orchestrator = TopologyBOrchestrator.create_hardware(port1=dev1, port2=dev2, chan1=37, chan2=38)
     orchestrator.start()
     try:
-        orchestrator.device1.mark_and_flush()
-        orchestrator.device2.mark_and_flush()
+        assert orchestrator.device1.mark_and_flush(timeout=1.5), f"Failed to sync device1 on {dev1}"
+        assert orchestrator.device2.mark_and_flush(timeout=1.5), f"Failed to sync device2 on {dev2}"
         yield orchestrator
     finally:
-        orchestrator.stop()
+        try:
+            orchestrator.stop(reset=True)
+        except Exception:
+            pass
+        for c in (orchestrator.device1, orchestrator.device2):
+            if c is not None and getattr(c, "is_open", False):
+                try:
+                    c.close(reset=True)
+                except Exception:
+                    pass
+        time.sleep(0.1)
 
 
 @pytest.fixture
@@ -214,4 +250,14 @@ def dual_sniffer_manager(
     try:
         yield mgr
     finally:
-        mgr.stop()
+        for src in (getattr(mgr, "source1", None), getattr(mgr, "source2", None)):
+            if src is not None and getattr(src, "hw", None) is not None:
+                try:
+                    src.hw.cmd_reset()
+                except Exception:
+                    pass
+        try:
+            mgr.stop()
+        except Exception:
+            pass
+        time.sleep(0.1)

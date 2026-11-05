@@ -198,7 +198,7 @@ def mark_and_flush(ser: Any, timeout: float = 1.0) -> bool:
     """Synchronize with Sniffle dongle and flush stale buffer contents.
 
     Sends COMMAND_MARKER with a random 4-byte token and waits for an echoing
-    MESSAGE_MARKER containing that token.
+    MESSAGE_MARKER containing that token with automatic retry on dropped frames.
 
     Args:
         ser: PySerial instance or MockSerialInterface.
@@ -207,39 +207,44 @@ def mark_and_flush(ser: Any, timeout: float = 1.0) -> bool:
     Returns:
         True if synchronization succeeded, False otherwise.
     """
-    token = os.urandom(4)
-    cmd = encode_cmd([COMMAND_MARKER, *token])
-
-    try:
-        ser.write(cmd)
-    except (OSError, RuntimeError) as exc:
-        logger.error("Failed to write sync marker to port: %s", exc)
-        return False
-
     deadline = time.monotonic() + timeout
+
     while time.monotonic() < deadline:
-        try:
-            line = ser.readline()
-        except (OSError, RuntimeError):
-            break
-
-        if not line:
-            time.sleep(0.01)
-            continue
+        token = os.urandom(4)
+        cmd = encode_cmd([COMMAND_MARKER, *token])
 
         try:
-            _, msg_type, msg_body = decode_msg(line)
-        except ValueError:
-            continue
+            ser.write(cmd)
+            if hasattr(ser, "flush"):
+                ser.flush()
+        except (OSError, RuntimeError) as exc:
+            logger.error("Failed to write sync marker to port: %s", exc)
+            return False
 
-        if msg_type == MESSAGE_MARKER:
+        attempt_deadline = min(deadline, time.monotonic() + 0.3)
+        while time.monotonic() < attempt_deadline:
             try:
-                marker = MarkerMessage(msg_body)
-                if marker.marker_data == token:
-                    return True
-            except ValueError:
-                logger.debug("Failed to decode marker payload, continuing...")
+                line = ser.readline()
+            except (OSError, RuntimeError):
+                break
+
+            if not line:
+                time.sleep(0.01)
                 continue
+
+            try:
+                _, msg_type, msg_body = decode_msg(line)
+            except ValueError:
+                continue
+
+            if msg_type == MESSAGE_MARKER:
+                try:
+                    marker = MarkerMessage(msg_body)
+                    if marker.marker_data == token:
+                        return True
+                except ValueError:
+                    logger.debug("Failed to decode marker payload, continuing...")
+                    continue
 
     logger.warning("Marker sync timed out after %.2f seconds", timeout)
     return False
@@ -271,6 +276,11 @@ def open_sniffle_serial(
         dsrdtr=False,
         timeout=timeout,
     )
+    try:
+        ser.reset_input_buffer()
+        ser.reset_output_buffer()
+    except (OSError, RuntimeError, serial.SerialException) as exc:
+        logger.debug("Failed to reset serial buffers on %s: %s", port, exc)
     return ser
 
 

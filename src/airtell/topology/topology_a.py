@@ -165,7 +165,7 @@ class TopologyAOrchestrator(BaseTopology):
                 self.observer_hop,
             )
 
-    def stop(self) -> None:
+    def stop(self, reset: bool = True) -> None:
         """Stop stimulus injection and close both serial devices."""
         if not self.is_running:
             return
@@ -173,13 +173,13 @@ class TopologyAOrchestrator(BaseTopology):
         # 1. Close stimulator if present
         if self.stimulator is not None:
             try:
-                self.stimulator.close()
+                self.stimulator.close(reset=reset)
             except Exception as exc:
                 logger.warning("Error closing stimulator: %s", exc)
 
         # 2. Close observer
         try:
-            self.observer.close()
+            self.observer.close(reset=reset)
         except Exception as exc:
             logger.warning("Error closing observer: %s", exc)
 

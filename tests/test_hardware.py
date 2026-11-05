@@ -96,27 +96,37 @@ def test_hardware_controllers_lifecycle_and_firmware_version(
     baudrate = sniffle_hardware_config["baudrate"]
 
     # 1. Device 1 Controller lifecycle
-    with SniffleDeviceController(port=dev1, baudrate=baudrate, mock=False) as c1:
+    c1 = SniffleDeviceController(port=dev1, baudrate=baudrate, mock=False)
+    c1.open()
+    try:
         assert c1.is_open is True
         assert c1.baudrate == baudrate
-        sync_ok = c1.mark_and_flush(timeout=1.0)
+        sync_ok = c1.mark_and_flush(timeout=1.5)
         assert sync_ok is True, f"Sync marker echo failed on {dev1}"
 
-        fw_ver1 = c1.get_firmware_version(timeout=1.0)
+        fw_ver1 = c1.get_firmware_version(timeout=1.5)
         assert fw_ver1 is not None, f"Firmware version query timed out on {dev1}"
         assert fw_ver1 >= (1, 11, 0, 0), f"Expected firmware version >= 1.11.0.0, got {fw_ver1}"
+    finally:
+        c1.close(reset=True)
+        time.sleep(0.1)
     assert c1.is_open is False
 
     # 2. Device 2 Controller lifecycle
-    with SniffleDeviceController(port=dev2, baudrate=baudrate, mock=False) as c2:
+    c2 = SniffleDeviceController(port=dev2, baudrate=baudrate, mock=False)
+    c2.open()
+    try:
         assert c2.is_open is True
         assert c2.baudrate == baudrate
-        sync_ok = c2.mark_and_flush(timeout=1.0)
+        sync_ok = c2.mark_and_flush(timeout=1.5)
         assert sync_ok is True, f"Sync marker echo failed on {dev2}"
 
-        fw_ver2 = c2.get_firmware_version(timeout=1.0)
+        fw_ver2 = c2.get_firmware_version(timeout=1.5)
         assert fw_ver2 is not None, f"Firmware version query timed out on {dev2}"
         assert fw_ver2 >= (1, 11, 0, 0), f"Expected firmware version >= 1.11.0.0, got {fw_ver2}"
+    finally:
+        c2.close(reset=True)
+        time.sleep(0.1)
     assert c2.is_open is False
 
 
@@ -136,8 +146,8 @@ def test_hardware_controllers_fixtures(
     assert d2 is c2
 
     # Verify both respond to marker synchronization
-    assert c1.mark_and_flush(timeout=1.0) is True
-    assert c2.mark_and_flush(timeout=1.0) is True
+    assert c1.mark_and_flush(timeout=1.5) is True
+    assert c2.mark_and_flush(timeout=1.5) is True
 
 
 @pytest.mark.hardware
@@ -240,18 +250,21 @@ def test_hardware_cli_verify_hardware_invocation(
 ) -> None:
     """Verify CLI airtell verify-hardware passes 5/5 loopback stages on physical dongles."""
     dev1, dev2 = hardware_ports
-    rc = cli_main([
-        "verify-hardware",
-        "--dev1",
-        dev1,
-        "--dev2",
-        dev2,
-        "--burst-duration-sec",
-        "0.4",
-        "--interval-ms",
-        "40",
-    ])
-    assert rc == 0, f"airtell verify-hardware failed with return code {rc}"
+    try:
+        rc = cli_main([
+            "verify-hardware",
+            "--dev1",
+            dev1,
+            "--dev2",
+            dev2,
+            "--burst-duration-sec",
+            "0.6",
+            "--interval-ms",
+            "35",
+        ])
+        assert rc == 0, f"airtell verify-hardware failed with return code {rc}"
+    finally:
+        time.sleep(0.1)
 
 
 @pytest.mark.hardware
@@ -268,19 +281,24 @@ def test_hardware_clean_teardown_no_thread_or_lock_leak(
     # Initialize and open controllers
     c1 = SniffleDeviceController(port=dev1, baudrate=baudrate, mock=False)
     c2 = SniffleDeviceController(port=dev2, baudrate=baudrate, mock=False)
-    c1.open()
-    c2.open()
+    try:
+        c1.open()
+        c2.open()
 
-    assert c1._reader_thread is not None and c1._reader_thread.is_alive()
-    assert c2._reader_thread is not None and c2._reader_thread.is_alive()
+        assert c1._reader_thread is not None and c1._reader_thread.is_alive()
+        assert c2._reader_thread is not None and c2._reader_thread.is_alive()
 
-    # Perform active operations
-    c1.mark_and_flush(timeout=1.0)
-    c2.mark_and_flush(timeout=1.0)
-
-    # Close both controllers
-    c1.close()
-    c2.close()
+        # Perform active operations
+        assert c1.mark_and_flush(timeout=1.5) is True
+        assert c2.mark_and_flush(timeout=1.5) is True
+    finally:
+        # Close and reset both controllers individually
+        for c in (c1, c2):
+            try:
+                c.close(reset=True)
+            except Exception:
+                pass
+        time.sleep(0.1)
 
     assert not c1.is_open
     assert not c2.is_open
