@@ -231,9 +231,7 @@ class TestRadarDequePoppingO1Workload:
             assert len(hist) == 20
 
         # Zero variance check (all samples exactly -70.0)
-        z_rob, z_drop, combined = engine.compute_link_robust_z(
-            "rx_0", "C0:00:00:00:00:00", 37, -70.0
-        )
+        z_rob, z_drop, combined = engine.compute_link_robust_z("rx_0", "C0:00:00:00:00:00", 37, -70.0)
         assert z_rob == 0.0
         assert z_drop == 0.0
         assert not math.isnan(combined)

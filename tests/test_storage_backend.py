@@ -471,7 +471,7 @@ def test_sqlite_backend_close_multi_threaded(temp_sqlite_path: str) -> None:
         closed_event.wait(timeout=5.0)
         try:
             other_conn.execute("SELECT 1")
-        except Exception as exc:
+        except sqlite3.ProgrammingError as exc:
             worker_error = exc
 
     t = threading.Thread(target=worker)

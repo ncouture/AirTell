@@ -9,6 +9,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+import serial
 
 _SNIFFLE_CLI = Path("/home/self/git/Sniffle/Sniffle/python_cli")
 if _SNIFFLE_CLI.exists() and str(_SNIFFLE_CLI) not in sys.path:
@@ -496,7 +497,7 @@ def test_dual_sniffer_manager_no_fallback_raises():
         fallback_to_mock=False,
     )
 
-    with pytest.raises(Exception):
+    with pytest.raises(serial.SerialException):
         manager.start()
 
     assert not manager.is_running()

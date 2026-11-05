@@ -530,35 +530,35 @@ class TestAdversarialMutationSensitivity:
     """Verifies that test assertions fail when inputs or expectations are mutated."""
 
     def test_mutation_shared_ltk_assertion_fails_on_rejected_trace(self) -> None:
-        """Asserting PAIRED_SHARED_LTK on a rejected trace fails."""
+        """Verifies rejected trace produces REJECTED_UNTRUSTED and not PAIRED_SHARED_LTK."""
         pcap = generate_encryption_trace(shared_ltk=False, error_code=ERROR_PIN_OR_KEY_MISSING)
         rep = analyze_pcap(pcap, analyzers=["encryption"]).reports["differential_encryption"]
-        with pytest.raises(AssertionError):
-            assert rep.verdict == Verdict.PAIRED_SHARED_LTK.value
+        assert rep.verdict == Verdict.REJECTED_UNTRUSTED.value
+        assert rep.verdict != Verdict.PAIRED_SHARED_LTK.value
 
     def test_mutation_rejected_untrusted_assertion_fails_on_shared_trace(self) -> None:
-        """Asserting REJECTED_UNTRUSTED on a shared LTK trace fails."""
+        """Verifies shared LTK trace produces PAIRED_SHARED_LTK and not REJECTED_UNTRUSTED."""
         pcap = generate_encryption_trace(shared_ltk=True)
         rep = analyze_pcap(pcap, analyzers=["encryption"]).reports["differential_encryption"]
-        with pytest.raises(AssertionError):
-            assert rep.verdict == Verdict.REJECTED_UNTRUSTED.value
+        assert rep.verdict == Verdict.PAIRED_SHARED_LTK.value
+        assert rep.verdict != Verdict.REJECTED_UNTRUSTED.value
 
     def test_mutation_csrk_monotonic_assertion_fails_on_replay(self) -> None:
-        """Asserting SEQUENTIAL_MONOTONIC on a replayed trace fails."""
+        """Verifies replayed trace produces ANOMALY_REPLAY and not SEQUENTIAL_MONOTONIC."""
         pcap = generate_csrk_trace(counter_sequence=[10, 11, 11, 12], csrk=CSRK_TEST_KEY)
         rep = analyze_pcap(pcap, analyzers=["csrk"]).reports["csrk_counter"]
-        with pytest.raises(AssertionError):
-            assert rep.verdict == Verdict.SEQUENTIAL_MONOTONIC.value
+        assert rep.verdict == Verdict.ANOMALY_REPLAY.value
+        assert rep.verdict != Verdict.SEQUENTIAL_MONOTONIC.value
 
     def test_mutation_csrk_replay_assertion_fails_on_monotonic(self) -> None:
-        """Asserting ANOMALY_REPLAY on a monotonic trace fails."""
+        """Verifies monotonic trace produces SEQUENTIAL_MONOTONIC and not ANOMALY_REPLAY."""
         pcap = generate_csrk_trace(counter_sequence=[10, 11, 12, 13], csrk=CSRK_TEST_KEY)
         rep = analyze_pcap(pcap, analyzers=["csrk"]).reports["csrk_counter"]
-        with pytest.raises(AssertionError):
-            assert rep.verdict == Verdict.ANOMALY_REPLAY.value
+        assert rep.verdict == Verdict.SEQUENTIAL_MONOTONIC.value
+        assert rep.verdict != Verdict.ANOMALY_REPLAY.value
 
     def test_mutation_bat_allowlist_assertion_fails_on_open_device(self) -> None:
-        """Asserting ALLOWLIST_CONFIRMED on an open advertiser trace fails."""
+        """Verifies open advertiser trace produces OPEN_ADVERTISER and not ALLOWLIST_CONFIRMED."""
         pcap = generate_bat_allowlist_trace(
             allowlist_enabled=False,
             target_rpa="AA:BB:CC:DD:EE:01",
@@ -567,5 +567,5 @@ class TestAdversarialMutationSensitivity:
             mode="selective_probe",
         )
         rep = analyze_pcap(pcap, analyzers=["bat"]).reports["bat_allowlist"]
-        with pytest.raises(AssertionError):
-            assert rep.verdict == Verdict.ALLOWLIST_CONFIRMED.value
+        assert rep.verdict == Verdict.OPEN_ADVERTISER.value
+        assert rep.verdict != Verdict.ALLOWLIST_CONFIRMED.value

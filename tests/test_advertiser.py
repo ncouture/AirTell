@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from airtell.scripts.advertiser import main
 
 
@@ -10,10 +12,8 @@ def test_advertiser_truncates_long_name(capsys):
 
     with patch("sys.argv", ["advertiser.py", "-s", "/dev/null", "--name", long_name]):
         with patch("airtell.scripts.advertiser.SniffleHW", return_value=mock_hw):
-            try:
+            with pytest.raises(KeyboardInterrupt):
                 main()
-            except KeyboardInterrupt:
-                pass
 
             mock_hw.cmd_advertise.assert_called_once()
             _, scan_rsp = mock_hw.cmd_advertise.call_args[0]

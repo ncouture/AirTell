@@ -24,6 +24,7 @@ Covers:
 
 from __future__ import annotations
 
+import concurrent.futures
 import os
 import random
 import signal
@@ -342,27 +343,19 @@ class TestLifecycleAndThreadingStress:
 
     def test_multithreaded_rapid_controller_lifecycle(self) -> None:
         """Concurrently open and close controllers across 10 threads without deadlock."""
-        errors: list[Exception] = []
 
-        def worker(thread_id: int):
-            try:
-                for _ in range(10):
-                    ctrl = SniffleDeviceController(port=f"mock://stress_{thread_id}", mock=True)
-                    ctrl.open()
-                    assert ctrl.is_open
-                    ctrl.close()
-                    assert not ctrl.is_open
-            except Exception as exc:
-                errors.append(exc)
+        def worker(thread_id: int) -> None:
+            for _ in range(10):
+                ctrl = SniffleDeviceController(port=f"mock://stress_{thread_id}", mock=True)
+                ctrl.open()
+                assert ctrl.is_open
+                ctrl.close()
+                assert not ctrl.is_open
 
-        threads = [threading.Thread(target=worker, args=(i,)) for i in range(10)]
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join(timeout=3.0)
-            assert not t.is_alive(), "Worker thread hung / deadlocked"
-
-        assert len(errors) == 0, f"Errors in concurrent controller lifecycle: {errors}"
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            futures = [executor.submit(worker, i) for i in range(10)]
+            for f in concurrent.futures.as_completed(futures, timeout=5.0):
+                f.result()
 
 
 class TestSerialPortDiscoveryAdversarial:
