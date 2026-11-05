@@ -8,10 +8,10 @@ from binascii import Error as BAError
 from os.path import realpath
 from random import randint, randrange
 from struct import pack, unpack
-from time import time
+from time import sleep, time
 from traceback import format_exception
 
-from serial import Serial, SerialTimeoutException
+from serial import Serial, SerialException, SerialTimeoutException
 from serial.tools.list_ports import comports
 
 from .constants import BLE_ADV_AA, BLE_ADV_CRCI, PhyMode, SnifferMode
@@ -322,60 +322,66 @@ class SniffleHW:
     def _recv_msg(self, desync=False):
         got_msg = False
         while not (got_msg or self.recv_cancelled):
-            if desync:
-                # readline is inefficient, but a good way to synchronize
-                pkt = self.ser.readline()
-                try:
-                    data = b64decode(pkt.rstrip())
-                except BAError as e:
-                    continue
-                if len(data) < 2:
-                    continue
-            else:
-                # minimum packet is 4 bytes base64 + 2 bytes CRLF
-                pkt = self.ser.read(6)
+            try:
+                if desync:
+                    # readline is inefficient, but a good way to synchronize
+                    pkt = self.ser.readline()
+                    try:
+                        data = b64decode(pkt.rstrip())
+                    except BAError as e:
+                        continue
+                    if len(data) < 2:
+                        continue
+                else:
+                    # minimum packet is 4 bytes base64 + 2 bytes CRLF
+                    pkt = self.ser.read(6)
 
-                # avoid error in case read was aborted
-                if len(pkt) < 6:
-                    if self.timeout:
-                        raise SerialTimeoutException()
-                    else:
+                    # avoid error in case read was aborted
+                    if len(pkt) < 6:
+                        if self.timeout:
+                            raise SerialTimeoutException()
+                        else:
+                            continue
+
+                    # decode header to get length byte
+                    try:
+                        data = b64decode(pkt[:4])
+                    except BAError as e:
+                        self.logger.warning("Ignoring message due to decode error: %s", e)
+                        self.logger.warning("Message: %s", pkt)
+                        self.ser.readline()  # eat CRLF
                         continue
 
-                # decode header to get length byte
-                try:
-                    data = b64decode(pkt[:4])
-                except BAError as e:
-                    self.logger.warning("Ignoring message due to decode error: %s", e)
-                    self.logger.warning("Message: %s", pkt)
-                    self.ser.readline() # eat CRLF
+                    # In case pkt was all whitespace
+                    if len(data) < 2:
+                        continue
+
+                    # now read the rest of the packet (if there is anything)
+                    word_cnt = data[0]
+                    if word_cnt:
+                        pkt += self.ser.read((word_cnt - 1) * 4)
+
+                    # make sure CRLF is present
+                    if pkt[-2:] != b'\r\n':
+                        self.logger.warning("Ignoring message due to missing CRLF")
+                        self.logger.warning("Message: %s", pkt)
+                        self.ser.readline()  # eat CRLF
+                        continue
+
+                    try:
+                        data = b64decode(pkt[:-2])
+                    except BAError as e:
+                        self.logger.warning("Ignoring message due to decode error: %s", e)
+                        self.logger.warning("Message: %s", pkt)
+                        self.ser.readline()  # eat CRLF
+                        continue
+
+                got_msg = True
+            except (OSError, SerialException) as exc:
+                if "device reports readiness to read but returned no data" in str(exc):
+                    sleep(0.005)
                     continue
-
-                # In case pkt was all whitespace
-                if len(data) < 2:
-                    continue
-
-                # now read the rest of the packet (if there is anything)
-                word_cnt = data[0]
-                if word_cnt:
-                    pkt += self.ser.read((word_cnt - 1) * 4)
-
-                # make sure CRLF is present
-                if pkt[-2:] != b'\r\n':
-                    self.logger.warning("Ignoring message due to missing CRLF")
-                    self.logger.warning("Message: %s", pkt)
-                    self.ser.readline() # eat CRLF
-                    continue
-
-                try:
-                    data = b64decode(pkt[:-2])
-                except BAError as e:
-                    self.logger.warning("Ignoring message due to decode error: %s", e)
-                    self.logger.warning("Message: %s", pkt)
-                    self.ser.readline() # eat CRLF
-                    continue
-
-            got_msg = True
+                raise
 
         if self.recv_cancelled:
             self.recv_cancelled = False

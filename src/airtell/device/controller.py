@@ -383,58 +383,74 @@ class SniffleDeviceController:
                 break
         return packets
 
-    def mark_and_flush(self, timeout: float = 1.0) -> bool:
+    def mark_and_flush(self, timeout: float = 1.5) -> bool:
         """Synchronize with the device using a random marker token and flush stale packets."""
         deadline = time.monotonic() + timeout
+        sent_tokens: set[bytes] = set()
+        sub_timeout = 0.6
+        last_sent = 0.0
+
+        # Drain any residual markers queued from prior sessions before transmitting new marker
+        while not self._marker_queue.empty():
+            try:
+                self._marker_queue.get_nowait()
+            except queue.Empty:
+                break
 
         while time.monotonic() < deadline:
-            # Drain any stale markers from prior commands/attempts
-            while not self._marker_queue.empty():
+            now = time.monotonic()
+            if not sent_tokens or (now - last_sent >= sub_timeout):
+                token = os.urandom(4)
                 try:
-                    self._marker_queue.get_nowait()
-                except queue.Empty:
-                    break
+                    self.send_command([COMMAND_MARKER, *token])
+                    sent_tokens.add(token)
+                    last_sent = time.monotonic()
+                except (OSError, RuntimeError) as exc:
+                    logger.warning("Failed to send sync marker command on %s: %s", self.port, exc)
+                    if not sent_tokens:
+                        return False
 
-            token = os.urandom(4)
+            remaining = max(0.01, deadline - time.monotonic())
+            wait_time = min(0.05, remaining)
             try:
-                self.send_command([COMMAND_MARKER, *token])
-            except (OSError, RuntimeError) as exc:
-                logger.warning("Failed to send sync marker command on %s: %s", self.port, exc)
-                return False
-
-            attempt_deadline = min(deadline, time.monotonic() + 0.3)
-            while time.monotonic() < attempt_deadline:
-                remaining = max(0.01, attempt_deadline - time.monotonic())
-                try:
-                    marker = self._marker_queue.get(timeout=remaining)
-                    if marker.marker_data == token:
-                        # Clear out stale packets accumulated before marker
-                        while not self._packet_queue.empty():
-                            try:
-                                self._packet_queue.get_nowait()
-                            except queue.Empty:
-                                break
-                        return True
-                except queue.Empty:
-                    break
+                marker = self._marker_queue.get(timeout=wait_time)
+                if marker.marker_data in sent_tokens:
+                    # Clear out stale packets accumulated before marker
+                    while not self._packet_queue.empty():
+                        try:
+                            self._packet_queue.get_nowait()
+                        except queue.Empty:
+                            break
+                    return True
+                else:
+                    logger.debug("Received unexpected marker token %s on %s", marker.marker_data, self.port)
+            except queue.Empty:
+                continue
 
         logger.warning("Marker sync timed out after %.2f seconds on %s", timeout, self.port)
         return False
 
-    def get_firmware_version(self, timeout: float = 1.0) -> tuple[int, int, int, int] | None:
+    def get_firmware_version(self, timeout: float = 1.5) -> tuple[int, int, int, int] | None:
         """Query firmware version from the device.
 
         Returns:
             tuple (major, minor, revision, api_level) or None on timeout.
         """
+        # Drain any stale items in self._measure_queue before transmitting COMMAND_VERSION
+        while not self._measure_queue.empty():
+            try:
+                self._measure_queue.get_nowait()
+            except queue.Empty:
+                break
+
         self.send_command([COMMAND_VERSION])
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
+            remaining = max(0.01, deadline - time.monotonic())
             try:
-                remaining = max(0.01, deadline - time.monotonic())
-                meas = self._measure_queue.get(timeout=remaining)
-                if meas.version is not None:
+                meas = self._measure_queue.get(timeout=min(0.05, remaining))
+                if getattr(meas, "version", None) is not None:
                     return meas.version
             except queue.Empty:
-                break
+                continue
         return None

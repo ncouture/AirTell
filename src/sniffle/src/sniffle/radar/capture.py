@@ -23,6 +23,8 @@ from dataclasses import dataclass
 from queue import Queue
 from typing import Any
 
+import serial
+
 try:
     from ..errors import SniffleHWPacketError, UsageError
     from ..packet_decoder import str_mac
@@ -176,7 +178,20 @@ class HardwareSniffleSource(SnifflePacketSource):
             rssi_min=self.rssi_min,
         )
 
-        self.hw.mark_and_flush()
+        for attempt in range(3):
+            try:
+                self.hw.mark_and_flush()
+                break
+            except (serial.SerialException, OSError) as exc:
+                if attempt == 2:
+                    self._logger.warning(
+                        "HardwareSniffleSource [%s on %s] mark_and_flush failed after 3 attempts: %s",
+                        self.rx_id,
+                        self.port,
+                        exc,
+                    )
+                else:
+                    time.sleep(0.05)
 
         self._running = True
         self._worker_thread = threading.Thread(

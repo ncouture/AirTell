@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import serial
 
 # Ensure src/ and in-tree sniffle are on sys.path
 SRC_DIR = Path(__file__).resolve().parent.parent / "src"
@@ -134,9 +135,9 @@ def hardware_ports(sniffle_hardware_config: dict[str, Any]) -> tuple[str, str]:
 def hardware_test_isolation(request: pytest.FixtureRequest) -> Generator[None, None, None]:
     """Ensure settling delay and clean state before and after each hardware test."""
     if "hardware" in request.keywords and is_hardware_enabled(request.config):
-        time.sleep(0.05)
+        time.sleep(0.20)
         yield
-        time.sleep(0.05)
+        time.sleep(0.20)
     else:
         yield
 
@@ -161,9 +162,9 @@ def live_sniffle_controllers(
         for c in (c1, c2):
             try:
                 c.close(reset=True)
-            except Exception:
+            except (OSError, serial.SerialException, RuntimeError):
                 pass
-        time.sleep(0.1)
+        time.sleep(0.20)
 
 
 @pytest.fixture
@@ -190,15 +191,15 @@ def hardware_topology_a(
     finally:
         try:
             orchestrator.stop(reset=True)
-        except Exception:
+        except (OSError, serial.SerialException, RuntimeError):
             pass
         for c in (orchestrator.stimulator, orchestrator.observer):
             if c is not None and getattr(c, "is_open", False):
                 try:
                     c.close(reset=True)
-                except Exception:
+                except (OSError, serial.SerialException, RuntimeError):
                     pass
-        time.sleep(0.1)
+        time.sleep(0.20)
 
 
 @pytest.fixture
@@ -216,15 +217,15 @@ def hardware_topology_b(
     finally:
         try:
             orchestrator.stop(reset=True)
-        except Exception:
+        except (OSError, serial.SerialException, RuntimeError):
             pass
         for c in (orchestrator.device1, orchestrator.device2):
             if c is not None and getattr(c, "is_open", False):
                 try:
                     c.close(reset=True)
-                except Exception:
+                except (OSError, serial.SerialException, RuntimeError):
                     pass
-        time.sleep(0.1)
+        time.sleep(0.20)
 
 
 @pytest.fixture
@@ -254,10 +255,10 @@ def dual_sniffer_manager(
             if src is not None and getattr(src, "hw", None) is not None:
                 try:
                     src.hw.cmd_reset()
-                except Exception:
+                except (OSError, serial.SerialException, RuntimeError):
                     pass
         try:
             mgr.stop()
-        except Exception:
+        except (OSError, serial.SerialException, RuntimeError):
             pass
-        time.sleep(0.1)
+        time.sleep(0.20)
