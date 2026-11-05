@@ -493,6 +493,12 @@ def handle_verify_hardware(args: argparse.Namespace) -> int:
         print("ERROR: burst-duration-sec must be non-negative", file=sys.stderr)
         return 2
 
+    settling_sec = getattr(args, "settling_sec", 0.08)
+    if settling_sec < 0:
+        logger.error("settling-sec must be non-negative (got %s)", settling_sec)
+        print("ERROR: settling-sec must be non-negative", file=sys.stderr)
+        return 2
+
     if args.interval_ms < 20 or args.interval_ms > 65535:
         logger.error("interval-ms must be between 20 and 65535 (got %s)", args.interval_ms)
         print("ERROR: interval-ms must be between 20 and 65535", file=sys.stderr)
@@ -582,10 +588,14 @@ def handle_verify_hardware(args: argparse.Namespace) -> int:
         ]
 
         passed_stages = 0
+        settling_sec = max(0.0, getattr(args, "settling_sec", 0.08))
 
         for stage_idx, stage_desc, payload, expected_beacon_type in stages:
             if coord.is_shutting_down:
                 break
+
+            if stage_idx > 1 and settling_sec > 0:
+                time.sleep(settling_sec)
 
             topo.observer.drain_packets()
             topo.inject_beacon(adv_data=payload, interval_ms=args.interval_ms, mode=2)
@@ -1297,6 +1307,9 @@ def create_parser(prog: str = "airtell") -> argparse.ArgumentParser:
     )
     p_verify_hw.add_argument(
         "--burst-duration-sec", type=float, default=0.5, help="Duration for each burst stage in seconds (default: 0.5)"
+    )
+    p_verify_hw.add_argument(
+        "--settling-sec", type=float, default=0.08, help="Settling interval between stages in seconds (default: 0.08)"
     )
     p_verify_hw.add_argument(
         "--interval-ms", type=int, default=50, help="Advertising interval in milliseconds (default: 50)"

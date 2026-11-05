@@ -134,7 +134,7 @@ class TopologyBOrchestrator(BaseTopology):
             self.chan2,
         )
 
-    def stop(self) -> None:
+    def stop(self, reset: bool = True) -> None:
         """Stop background collector and close both serial devices."""
         if not self.is_running:
             return
@@ -148,12 +148,12 @@ class TopologyBOrchestrator(BaseTopology):
         self._collector_thread = None
 
         try:
-            self.device1.close()
+            self.device1.close(reset=reset)
         except Exception as exc:
             logger.warning("Error closing Device 1: %s", exc)
 
         try:
-            self.device2.close()
+            self.device2.close(reset=reset)
         except Exception as exc:
             logger.warning("Error closing Device 2: %s", exc)
 

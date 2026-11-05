@@ -229,11 +229,22 @@ class HardwareSniffleSource(SnifflePacketSource):
                 )
 
     def stop(self) -> None:
-        """Cancel reception, close serial connection, and terminate background thread."""
+        """Cancel reception, terminate background thread, reset radio, and close serial connection."""
         self._running = False
         if self.hw is not None:
             try:
                 self.hw.cancel_recv()
+            except Exception:
+                pass
+
+        if self._worker_thread is not None and self._worker_thread.is_alive():
+            if threading.current_thread() != self._worker_thread:
+                self._worker_thread.join(timeout=1.5)
+
+        if self.hw is not None:
+            try:
+                if hasattr(self.hw, "cmd_reset"):
+                    self.hw.cmd_reset()
             except Exception:
                 pass
             try:
@@ -241,10 +252,6 @@ class HardwareSniffleSource(SnifflePacketSource):
                     self.hw.ser.close()
             except Exception:
                 pass
-
-        if self._worker_thread is not None and self._worker_thread.is_alive():
-            if threading.current_thread() != self._worker_thread:
-                self._worker_thread.join(timeout=1.5)
         self.hw = None
 
 

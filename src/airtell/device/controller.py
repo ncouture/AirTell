@@ -123,6 +123,18 @@ class SniffleDeviceController:
                         timeout=self.timeout,
                     )
 
+            # Flush stale bytes from hardware/kernel buffers upon opening
+            if hasattr(self.ser, "reset_input_buffer"):
+                try:
+                    self.ser.reset_input_buffer()
+                except (OSError, RuntimeError, serial.SerialException):
+                    pass
+            if hasattr(self.ser, "reset_output_buffer"):
+                try:
+                    self.ser.reset_output_buffer()
+                except (OSError, RuntimeError, serial.SerialException):
+                    pass
+
             self.is_open = True
             self._running = True
             self._reader_thread = threading.Thread(
@@ -132,11 +144,12 @@ class SniffleDeviceController:
             )
             self._reader_thread.start()
 
-    def close(self, reset: bool = False) -> None:
-        """Stop background worker threads and close serial connection."""
+    def close(self, reset: bool = True) -> None:
+        """Stop background worker threads, reset MCU/radio, and close serial connection."""
         with self._lock:
             if not self.is_open:
                 return
+            self.is_open = False
             self._running = False
             self.is_sniffing = False
             self.is_advertising = False
@@ -145,25 +158,30 @@ class SniffleDeviceController:
             if reset and self.ser is not None:
                 try:
                     self.ser.write(encode_cmd([COMMAND_RESET]))
-                except (OSError, RuntimeError):
+                    if hasattr(self.ser, "flush"):
+                        self.ser.flush()
+                    time.sleep(0.02)
+                except (OSError, RuntimeError, serial.SerialException):
                     pass
 
+            if self.ser is not None and hasattr(self.ser, "cancel_read"):
+                try:
+                    self.ser.cancel_read()
+                except (OSError, RuntimeError, serial.SerialException):
+                    pass
+
+            reader_thread = self._reader_thread
+            self._reader_thread = None
+
+        if reader_thread and reader_thread.is_alive():
+            reader_thread.join(timeout=2.0)
+
+        with self._lock:
             if self.ser is not None:
-                # Cancel read if supported
-                if hasattr(self.ser, "cancel_read"):
-                    try:
-                        self.ser.cancel_read()
-                    except (OSError, RuntimeError):
-                        pass
                 try:
                     self.ser.close()
-                except (OSError, RuntimeError):
+                except (OSError, RuntimeError, serial.SerialException):
                     pass
-
-        if self._reader_thread and self._reader_thread.is_alive():
-            self._reader_thread.join(timeout=2.0)
-        self._reader_thread = None
-        self.is_open = False
 
     def __enter__(self) -> Self:
         self.open()
@@ -175,7 +193,7 @@ class SniffleDeviceController:
         exc_val: BaseException | None,
         exc_tb: types.TracebackType | None,
     ) -> None:
-        self.close()
+        self.close(reset=True)
 
     def send_command(self, cmd_bytes: Sequence[int] | bytes) -> None:
         """Send a raw command to the device over the wire protocol."""
@@ -189,8 +207,20 @@ class SniffleDeviceController:
         while self._running and self.ser is not None:
             try:
                 line = self.ser.readline()
-            except (OSError, RuntimeError, TypeError, serial.SerialException):
-                break
+            except (OSError, RuntimeError, TypeError, serial.SerialException) as exc:
+                if not self._running:
+                    break
+                if self.ser is not None and not getattr(self.ser, "is_open", True):
+                    break
+                # On Linux CP2102 bridges, zero-length select wakeups raise
+                # SerialException("device reports readiness to read but returned no data").
+                # Do not terminate reader thread during active operation.
+                if "device reports readiness to read but returned no data" in str(exc):
+                    time.sleep(0.005)
+                    continue
+                logger.debug("Transient serial read error in active controller on %s: %s", self.port, exc)
+                time.sleep(0.01)
+                continue
 
             if not self._running:
                 break
@@ -355,24 +385,40 @@ class SniffleDeviceController:
 
     def mark_and_flush(self, timeout: float = 1.0) -> bool:
         """Synchronize with the device using a random marker token and flush stale packets."""
-        token = os.urandom(4)
-        self.send_command([COMMAND_MARKER, *token])
-
         deadline = time.monotonic() + timeout
+
         while time.monotonic() < deadline:
+            # Drain any stale markers from prior commands/attempts
+            while not self._marker_queue.empty():
+                try:
+                    self._marker_queue.get_nowait()
+                except queue.Empty:
+                    break
+
+            token = os.urandom(4)
             try:
-                remaining = max(0.01, deadline - time.monotonic())
-                marker = self._marker_queue.get(timeout=remaining)
-                if marker.marker_data == token:
-                    # Clear out stale packets accumulated before marker
-                    while not self._packet_queue.empty():
-                        try:
-                            self._packet_queue.get_nowait()
-                        except queue.Empty:
-                            break
-                    return True
-            except queue.Empty:
-                break
+                self.send_command([COMMAND_MARKER, *token])
+            except (OSError, RuntimeError) as exc:
+                logger.warning("Failed to send sync marker command on %s: %s", self.port, exc)
+                return False
+
+            attempt_deadline = min(deadline, time.monotonic() + 0.3)
+            while time.monotonic() < attempt_deadline:
+                remaining = max(0.01, attempt_deadline - time.monotonic())
+                try:
+                    marker = self._marker_queue.get(timeout=remaining)
+                    if marker.marker_data == token:
+                        # Clear out stale packets accumulated before marker
+                        while not self._packet_queue.empty():
+                            try:
+                                self._packet_queue.get_nowait()
+                            except queue.Empty:
+                                break
+                        return True
+                except queue.Empty:
+                    break
+
+        logger.warning("Marker sync timed out after %.2f seconds on %s", timeout, self.port)
         return False
 
     def get_firmware_version(self, timeout: float = 1.0) -> tuple[int, int, int, int] | None:
