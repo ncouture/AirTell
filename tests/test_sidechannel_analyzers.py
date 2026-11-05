@@ -156,7 +156,7 @@ class TestLinkLayerDissector:
             rand=b"\x01\x02\x03\x04\x05\x06\x07\x08",
             ediv=0x1234,
             skdm=b"\x11\x22\x33\x44\x55\x66\x77\x88",
-            ivm=b"\xAA\xBB\xCC\xDD",
+            ivm=b"\xaa\xbb\xcc\xdd",
         )
         dissected = dissect_data_channel_pdu(pdu)
         assert dissected is not None
@@ -231,11 +231,11 @@ class TestLinkLayerDissector:
         assert dissected_upd.control_frame.payload["interval_ms"] == 40.0
 
     def test_dissect_att_signed_write_cmd(self) -> None:
-        csrk = b"\xAA" * 16
+        csrk = b"\xaa" * 16
         write_pdu = build_att_signed_write(
             csrk=csrk,
             handle=0x0015,
-            value=b"\xDE\xAD\xBE\xEF",
+            value=b"\xde\xad\xbe\xef",
             counter=42,
         )
         # Verify valid signature
@@ -245,12 +245,12 @@ class TestLinkLayerDissector:
         att = dissected.att_frame
         assert att is not None
         assert att.handle == 0x0015
-        assert att.value == b"\xDE\xAD\xBE\xEF"
+        assert att.value == b"\xde\xad\xbe\xef"
         assert att.sign_counter == 42
         assert att.mac_valid is True
 
         # Verify signature failure with wrong key
-        wrong_csrk = b"\xBB" * 16
+        wrong_csrk = b"\xbb" * 16
         dissected_wrong = dissect_data_channel_pdu(write_pdu, csrk=wrong_csrk)
         assert dissected_wrong is not None
         assert dissected_wrong.att_frame is not None
@@ -670,7 +670,12 @@ class TestAnalyzerStreamAndReset:
     def test_in_memory_captured_packets_stream_processing(self) -> None:
         # Generate stream of encryption handshake events
         events = [
-            SyntheticEvent(ts_usec=1_000, chan=37, aa=BLE_ADV_AA, body=build_connect_ind("AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02", conn_aa=0x55555555)),
+            SyntheticEvent(
+                ts_usec=1_000,
+                chan=37,
+                aa=BLE_ADV_AA,
+                body=build_connect_ind("AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02", conn_aa=0x55555555),
+            ),
             SyntheticEvent(ts_usec=2_000, chan=1, aa=0x55555555, body=build_ll_enc_req(), direction=0),
             SyntheticEvent(ts_usec=3_000, chan=1, aa=0x55555555, body=build_ll_enc_rsp(), direction=1),
             SyntheticEvent(ts_usec=4_000, chan=1, aa=0x55555555, body=build_ll_start_enc_req(), direction=1),
@@ -727,7 +732,13 @@ class TestEdgeCasesAndBoundaries:
 
     def test_dissect_att_error_response(self) -> None:
         # ATT Error Response (0x01): req_opcode=0xD2, handle=0x0015, error=0x05 (Insufficient Auth)
-        pdu_err = build_ll_header(llid=2, length=9) + struct.pack("<HH", 5, 0x0004) + bytes([0x01, 0xD2]) + struct.pack("<H", 0x0015) + bytes([0x05])
+        pdu_err = (
+            build_ll_header(llid=2, length=9)
+            + struct.pack("<HH", 5, 0x0004)
+            + bytes([0x01, 0xD2])
+            + struct.pack("<H", 0x0015)
+            + bytes([0x05])
+        )
         dissected = dissect_data_channel_pdu(pdu_err)
         assert dissected is not None
         assert dissected.att_error is not None
@@ -759,8 +770,12 @@ class TestEdgeCasesAndBoundaries:
 
         analyzer = DifferentialEncryptionAnalyzer()
         # Direct data channel packet without advertising CONNECT_IND
-        analyzer.process_packet(BlePacketRecord(body=pdu_enc_req, channel=1, rssi=-60, timestamp_usec=1_000, access_address=0x99999999))
-        analyzer.process_packet(BlePacketRecord(body=pdu_rej_feat, channel=1, rssi=-60, timestamp_usec=2_000, access_address=0x99999999))
+        analyzer.process_packet(
+            BlePacketRecord(body=pdu_enc_req, channel=1, rssi=-60, timestamp_usec=1_000, access_address=0x99999999)
+        )
+        analyzer.process_packet(
+            BlePacketRecord(body=pdu_rej_feat, channel=1, rssi=-60, timestamp_usec=2_000, access_address=0x99999999)
+        )
 
         report = analyzer.finalize()
         assert report.verdict == Verdict.UNPAIRED_KEY_REJECTED.value
@@ -773,12 +788,28 @@ class TestEdgeCasesAndBoundaries:
         csrk = b"\x44" * 16
         pdu_conn = build_connect_ind("AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02", conn_aa=0x77777777)
         pdu_write = build_att_signed_write(csrk=csrk, handle=0x0005, value=b"\x01", counter=10)
-        pdu_err = build_ll_header(llid=2, length=9) + struct.pack("<HH", 5, 0x0004) + bytes([0x01, 0xD2]) + struct.pack("<H", 0x0005) + bytes([0x05])
+        pdu_err = (
+            build_ll_header(llid=2, length=9)
+            + struct.pack("<HH", 5, 0x0004)
+            + bytes([0x01, 0xD2])
+            + struct.pack("<H", 0x0005)
+            + bytes([0x05])
+        )
 
         analyzer = CsrkCounterAnalyzer(csrk=csrk)
-        analyzer.process_packet(BlePacketRecord(body=pdu_conn, channel=37, rssi=-60, timestamp_usec=1_000, access_address=BLE_ADV_AA))
-        analyzer.process_packet(BlePacketRecord(body=pdu_write, channel=1, rssi=-60, timestamp_usec=2_000, access_address=0x77777777, direction=0))
-        analyzer.process_packet(BlePacketRecord(body=pdu_err, channel=1, rssi=-60, timestamp_usec=3_000, access_address=0x77777777, direction=1))
+        analyzer.process_packet(
+            BlePacketRecord(body=pdu_conn, channel=37, rssi=-60, timestamp_usec=1_000, access_address=BLE_ADV_AA)
+        )
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=pdu_write, channel=1, rssi=-60, timestamp_usec=2_000, access_address=0x77777777, direction=0
+            )
+        )
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=pdu_err, channel=1, rssi=-60, timestamp_usec=3_000, access_address=0x77777777, direction=1
+            )
+        )
 
         report = analyzer.finalize()
         assert any(f.verdict == Verdict.VERIFICATION_FAILED.value for f in report.findings)
@@ -790,8 +821,16 @@ class TestEdgeCasesAndBoundaries:
         pdu_write2 = build_att_signed_write(csrk=csrk, handle=0x0001, value=b"", counter=0xFFFFFFFF)
 
         analyzer = CsrkCounterAnalyzer(csrk=csrk)
-        analyzer.process_packet(BlePacketRecord(body=pdu_write1, channel=1, rssi=-60, timestamp_usec=1_000, access_address=0x88888888, direction=0))
-        analyzer.process_packet(BlePacketRecord(body=pdu_write2, channel=1, rssi=-60, timestamp_usec=2_000, access_address=0x88888888, direction=0))
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=pdu_write1, channel=1, rssi=-60, timestamp_usec=1_000, access_address=0x88888888, direction=0
+            )
+        )
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=pdu_write2, channel=1, rssi=-60, timestamp_usec=2_000, access_address=0x88888888, direction=0
+            )
+        )
 
         report = analyzer.finalize()
         assert report.verdict == Verdict.SEQUENTIAL_MONOTONIC.value
@@ -857,9 +896,15 @@ class TestRemediatedSidechannelAnalyzers:
         aa = 0x12345678
 
         # Central and Peripheral both send LL_START_ENC_RSP + retransmissions
-        f1 = analyzer.process_packet(BlePacketRecord(body=build_ll_start_enc_rsp(), channel=1, rssi=-60, timestamp_usec=1000, access_address=aa))
-        f2 = analyzer.process_packet(BlePacketRecord(body=build_ll_start_enc_rsp(), channel=1, rssi=-60, timestamp_usec=2000, access_address=aa))
-        f3 = analyzer.process_packet(BlePacketRecord(body=build_ll_start_enc_rsp(), channel=1, rssi=-60, timestamp_usec=3000, access_address=aa))
+        f1 = analyzer.process_packet(
+            BlePacketRecord(body=build_ll_start_enc_rsp(), channel=1, rssi=-60, timestamp_usec=1000, access_address=aa)
+        )
+        f2 = analyzer.process_packet(
+            BlePacketRecord(body=build_ll_start_enc_rsp(), channel=1, rssi=-60, timestamp_usec=2000, access_address=aa)
+        )
+        f3 = analyzer.process_packet(
+            BlePacketRecord(body=build_ll_start_enc_rsp(), channel=1, rssi=-60, timestamp_usec=3000, access_address=aa)
+        )
 
         assert len(f1) == 1
         assert len(f2) == 0
@@ -871,10 +916,22 @@ class TestRemediatedSidechannelAnalyzers:
         analyzer = DifferentialEncryptionAnalyzer()
         aa = 0x55443322
 
-        analyzer.process_packet(BlePacketRecord(body=build_ll_enc_req(), channel=1, rssi=-60, timestamp_usec=1000, access_address=aa))
-        analyzer.process_packet(BlePacketRecord(body=build_ll_start_enc_rsp(), channel=1, rssi=-60, timestamp_usec=2000, access_address=aa))
+        analyzer.process_packet(
+            BlePacketRecord(body=build_ll_enc_req(), channel=1, rssi=-60, timestamp_usec=1000, access_address=aa)
+        )
+        analyzer.process_packet(
+            BlePacketRecord(body=build_ll_start_enc_rsp(), channel=1, rssi=-60, timestamp_usec=2000, access_address=aa)
+        )
         # Unrelated rejection later in connection
-        analyzer.process_packet(BlePacketRecord(body=build_ll_reject_ext_ind(reject_opcode=0x0F, error_code=0x20), channel=1, rssi=-60, timestamp_usec=3000, access_address=aa))
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_ll_reject_ext_ind(reject_opcode=0x0F, error_code=0x20),
+                channel=1,
+                rssi=-60,
+                timestamp_usec=3000,
+                access_address=aa,
+            )
+        )
 
         report = analyzer.finalize()
         assert report.verdict == Verdict.PAIRED_SHARED_LTK.value
@@ -885,7 +942,11 @@ class TestRemediatedSidechannelAnalyzers:
         """Target MAC filter must not leak unassociated PERIPH_ connections."""
         analyzer = DifferentialEncryptionAnalyzer(target_mac="AA:BB:CC:DD:EE:01")
         # Packet with different AA and no CONNECT_IND matching target
-        findings = analyzer.process_packet(BlePacketRecord(body=build_ll_start_enc_rsp(), channel=1, rssi=-60, timestamp_usec=1000, access_address=0x99999999))
+        findings = analyzer.process_packet(
+            BlePacketRecord(
+                body=build_ll_start_enc_rsp(), channel=1, rssi=-60, timestamp_usec=1000, access_address=0x99999999
+            )
+        )
         assert len(findings) == 0
 
     def test_csrk_counter_invalid_mac_aborts_without_state_pollution(self) -> None:
@@ -896,11 +957,21 @@ class TestRemediatedSidechannelAnalyzers:
         periph = "D0:01:02:03:04:05"
         aa = 0x11223344
 
-        analyzer.process_packet(BlePacketRecord(body=build_connect_ind(dev, periph, conn_aa=aa), channel=37, rssi=-60, timestamp_usec=1000, access_address=BLE_ADV_AA))
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_connect_ind(dev, periph, conn_aa=aa),
+                channel=37,
+                rssi=-60,
+                timestamp_usec=1000,
+                access_address=BLE_ADV_AA,
+            )
+        )
 
         # Injected packet with corrupted MAC and SC=999
         bad_write = build_att_signed_write(csrk=csrk, handle=0x0001, value=b"x", counter=999, corrupt_mac=True)
-        f_bad = analyzer.process_packet(BlePacketRecord(body=bad_write, channel=1, rssi=-60, timestamp_usec=2000, access_address=aa, direction=0))
+        f_bad = analyzer.process_packet(
+            BlePacketRecord(body=bad_write, channel=1, rssi=-60, timestamp_usec=2000, access_address=aa, direction=0)
+        )
 
         assert len(f_bad) == 1
         assert f_bad[0].verdict == Verdict.VERIFICATION_FAILED.value
@@ -909,7 +980,9 @@ class TestRemediatedSidechannelAnalyzers:
 
         # Subsequent legitimate packet SC=1 must be accepted as initial counter
         good_write = build_att_signed_write(csrk=csrk, handle=0x0001, value=b"x", counter=1, corrupt_mac=False)
-        f_good = analyzer.process_packet(BlePacketRecord(body=good_write, channel=1, rssi=-60, timestamp_usec=3000, access_address=aa, direction=0))
+        f_good = analyzer.process_packet(
+            BlePacketRecord(body=good_write, channel=1, rssi=-60, timestamp_usec=3000, access_address=aa, direction=0)
+        )
 
         assert len(f_good) == 1
         assert f_good[0].verdict == Verdict.SEQUENTIAL_MONOTONIC.value
@@ -923,26 +996,44 @@ class TestRemediatedSidechannelAnalyzers:
         periph = "D0:11:22:33:44:55"
         aa = 0x22334455
 
-        analyzer.process_packet(BlePacketRecord(body=build_connect_ind(dev, periph, conn_aa=aa), channel=37, rssi=-60, timestamp_usec=1000, access_address=BLE_ADV_AA))
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_connect_ind(dev, periph, conn_aa=aa),
+                channel=37,
+                rssi=-60,
+                timestamp_usec=1000,
+                access_address=BLE_ADV_AA,
+            )
+        )
 
         # Legitimate sequence 10, 11, 12
         for sc in (10, 11, 12):
             w = build_att_signed_write(csrk=csrk, handle=0x0001, value=b"", counter=sc)
-            analyzer.process_packet(BlePacketRecord(body=w, channel=1, rssi=-60, timestamp_usec=1000 + sc * 100, access_address=aa, direction=0))
+            analyzer.process_packet(
+                BlePacketRecord(
+                    body=w, channel=1, rssi=-60, timestamp_usec=1000 + sc * 100, access_address=aa, direction=0
+                )
+            )
 
         # Replay SC=10 (already seen)
         w_replay = build_att_signed_write(csrk=csrk, handle=0x0001, value=b"", counter=10)
-        f_rep = analyzer.process_packet(BlePacketRecord(body=w_replay, channel=1, rssi=-60, timestamp_usec=5000, access_address=aa, direction=0))
+        f_rep = analyzer.process_packet(
+            BlePacketRecord(body=w_replay, channel=1, rssi=-60, timestamp_usec=5000, access_address=aa, direction=0)
+        )
         assert f_rep[0].verdict == Verdict.ANOMALY_REPLAY.value
 
         # High-water mark preserved at 12 -> SC=13 is delta=1 (SEQUENTIAL_MONOTONIC)
         w_next = build_att_signed_write(csrk=csrk, handle=0x0001, value=b"", counter=13)
-        f_next = analyzer.process_packet(BlePacketRecord(body=w_next, channel=1, rssi=-60, timestamp_usec=6000, access_address=aa, direction=0))
+        f_next = analyzer.process_packet(
+            BlePacketRecord(body=w_next, channel=1, rssi=-60, timestamp_usec=6000, access_address=aa, direction=0)
+        )
         assert f_next[0].verdict == Verdict.SEQUENTIAL_MONOTONIC.value
 
         # Rollback to SC=5 (never seen before)
         w_roll = build_att_signed_write(csrk=csrk, handle=0x0001, value=b"", counter=5)
-        f_roll = analyzer.process_packet(BlePacketRecord(body=w_roll, channel=1, rssi=-60, timestamp_usec=7000, access_address=aa, direction=0))
+        f_roll = analyzer.process_packet(
+            BlePacketRecord(body=w_roll, channel=1, rssi=-60, timestamp_usec=7000, access_address=aa, direction=0)
+        )
         assert f_roll[0].verdict == Verdict.ANOMALY_ROLLBACK.value
 
     def test_csrk_counter_cross_rpa_scoped_by_target_peripheral(self) -> None:
@@ -952,12 +1043,46 @@ class TestRemediatedSidechannelAnalyzers:
         rpa_b = "C0:00:00:00:00:02"
 
         # Sender A connects to Peripheral 1
-        analyzer.process_packet(BlePacketRecord(body=build_connect_ind(rpa_a, "D0:01:00:00:00:00", conn_aa=0x11111111), channel=37, rssi=-60, timestamp_usec=1000, access_address=BLE_ADV_AA))
-        analyzer.process_packet(BlePacketRecord(body=build_att_signed_write(csrk=b"\x11" * 16, handle=0x0001, value=b"", counter=10), channel=1, rssi=-60, timestamp_usec=2000, access_address=0x11111111, direction=0))
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_connect_ind(rpa_a, "D0:01:00:00:00:00", conn_aa=0x11111111),
+                channel=37,
+                rssi=-60,
+                timestamp_usec=1000,
+                access_address=BLE_ADV_AA,
+            )
+        )
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_att_signed_write(csrk=b"\x11" * 16, handle=0x0001, value=b"", counter=10),
+                channel=1,
+                rssi=-60,
+                timestamp_usec=2000,
+                access_address=0x11111111,
+                direction=0,
+            )
+        )
 
         # Sender B connects to Peripheral 2 with SC=11 (delta=1)
-        analyzer.process_packet(BlePacketRecord(body=build_connect_ind(rpa_b, "D0:02:00:00:00:00", conn_aa=0x22222222), channel=37, rssi=-60, timestamp_usec=3000, access_address=BLE_ADV_AA))
-        analyzer.process_packet(BlePacketRecord(body=build_att_signed_write(csrk=b"\x22" * 16, handle=0x0001, value=b"", counter=11), channel=1, rssi=-60, timestamp_usec=4000, access_address=0x22222222, direction=0))
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_connect_ind(rpa_b, "D0:02:00:00:00:00", conn_aa=0x22222222),
+                channel=37,
+                rssi=-60,
+                timestamp_usec=3000,
+                access_address=BLE_ADV_AA,
+            )
+        )
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_att_signed_write(csrk=b"\x22" * 16, handle=0x0001, value=b"", counter=11),
+                channel=1,
+                rssi=-60,
+                timestamp_usec=4000,
+                access_address=0x22222222,
+                direction=0,
+            )
+        )
 
         report = analyzer.finalize()
         # Must NOT link rpa_a and rpa_b because target peripherals differ
@@ -972,8 +1097,12 @@ class TestRemediatedSidechannelAnalyzers:
 
         analyzer.process_packet(BlePacketRecord(body=build_adv_ind(periph), channel=37, rssi=-60, timestamp_usec=500))
         # Foreign probes at 1000us, Allowed probes at 1100us
-        analyzer.process_packet(BlePacketRecord(body=build_scan_req(foreign_scanner, periph), channel=37, rssi=-60, timestamp_usec=1000))
-        analyzer.process_packet(BlePacketRecord(body=build_scan_req(allowed_scanner, periph), channel=37, rssi=-60, timestamp_usec=1100))
+        analyzer.process_packet(
+            BlePacketRecord(body=build_scan_req(foreign_scanner, periph), channel=37, rssi=-60, timestamp_usec=1000)
+        )
+        analyzer.process_packet(
+            BlePacketRecord(body=build_scan_req(allowed_scanner, periph), channel=37, rssi=-60, timestamp_usec=1100)
+        )
         # Response at 1250us (150us after allowed, 250us after foreign)
         analyzer.process_packet(BlePacketRecord(body=build_scan_rsp(periph), channel=37, rssi=-60, timestamp_usec=1250))
 
@@ -982,4 +1111,3 @@ class TestRemediatedSidechannelAnalyzers:
         periph_state = analyzer._peripherals[periph]
         assert allowed_scanner in periph_state.probes_responded
         assert foreign_scanner in periph_state.probes_silenced
-

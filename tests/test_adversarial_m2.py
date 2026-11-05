@@ -112,10 +112,7 @@ class TestTopologyAAdversarial:
             topo.set_stimulus_mac(pal_mac, is_random=True)
 
             burst_count = 25
-            sequence = [
-                (bytes([0x02, 0x01, 0x06, 0x03, 0xFF, idx, 0xAA]), 0.001)
-                for idx in range(burst_count)
-            ]
+            sequence = [(bytes([0x02, 0x01, 0x06, 0x03, 0xFF, idx, 0xAA]), 0.001) for idx in range(burst_count)]
             topo.inject_burst_sequence(sequence, interval_ms=20, mode=2)
 
             received = topo.get_captured_packets(timeout=0.5)
@@ -221,7 +218,7 @@ class TestTopologyBAdversarial:
             assert len(inversions) == 0, (
                 f"Timestamp sorting failure: {len(inversions)} inversions detected! "
                 f"First inversion at index {inversions[0][0]}: "
-                f"ts[{inversions[0][0]}]={inversions[0][1]} > ts[{inversions[0][0]+1}]={inversions[0][2]}"
+                f"ts[{inversions[0][0]}]={inversions[0][1]} > ts[{inversions[0][0] + 1}]={inversions[0][2]}"
             )
             assert timestamps == sorted(timestamps), "Stream timestamps are not monotonically non-decreasing"
 
@@ -327,6 +324,7 @@ class TestLifecycleAndThreadingStress:
 
     def test_file_descriptor_leak_prevention(self) -> None:
         """Assert zero file descriptors are leaked across 20 rapid start/stop cycles."""
+
         def get_fds() -> set[str]:
             return set(os.listdir("/proc/self/fd"))
 
@@ -373,7 +371,9 @@ class TestSerialPortDiscoveryAdversarial:
     def test_allocate_dual_ports_missing_dongles_raises(self) -> None:
         """Assert RuntimeError is raised when zero Sniffle dongles are connected."""
         with patch("serial.tools.list_ports.comports", return_value=[]):
-            with pytest.raises(RuntimeError, match="Dual-device topology requires 2 Sniffle dongles, but only 0 detected"):
+            with pytest.raises(
+                RuntimeError, match="Dual-device topology requires 2 Sniffle dongles, but only 0 detected"
+            ):
                 allocate_dual_ports()
 
     def test_allocate_dual_ports_single_dongle_raises(self) -> None:
@@ -386,7 +386,9 @@ class TestSerialPortDiscoveryAdversarial:
         mock_p1.product = "Sonoff"
 
         with patch("serial.tools.list_ports.comports", return_value=[mock_p1]):
-            with pytest.raises(RuntimeError, match="Dual-device topology requires 2 Sniffle dongles, but only 1 detected"):
+            with pytest.raises(
+                RuntimeError, match="Dual-device topology requires 2 Sniffle dongles, but only 1 detected"
+            ):
                 allocate_dual_ports()
 
     def test_allocate_dual_ports_explicit_identical_raises_value_error(self) -> None:

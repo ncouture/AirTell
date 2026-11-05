@@ -68,9 +68,7 @@ def test_offline_pcap_parsing() -> None:
     buf = io.BytesIO()
     writer = PcapBleWriter(buf)
 
-    ibeacon_bytes = build_ibeacon(
-        uuid="e2c56db5-dffb-48d2-b060-d0f5a71096e0", major=1, minor=2
-    )
+    ibeacon_bytes = build_ibeacon(uuid="e2c56db5-dffb-48d2-b060-d0f5a71096e0", major=1, minor=2)
     # PDU header (ADV_IND, len=36) + AdvA (6B) + AdvData (30B)
     adv_pdu = bytes([0x00, 36]) + bytes.fromhex("C01122334455") + ibeacon_bytes
     writer.write_packet(ts_usec=1000, chan=37, rssi=-62, packet=adv_pdu)
@@ -150,14 +148,16 @@ def test_streamlit_app_conn_closed_on_view_exception() -> None:
     from app import streamlit_app
 
     mock_conn = MagicMock()
-    with patch.object(streamlit_app, "get_db_connection", return_value=mock_conn), \
-         patch.object(streamlit_app, "get_event_queue", return_value=MagicMock()), \
-         patch.object(streamlit_app, "render_top_app_bar"), \
-         patch.object(streamlit_app, "render_navigation", return_value="telemetry"), \
-         patch.object(streamlit_app, "render_telemetry_overview", side_effect=RuntimeError("Simulated view rendering failure")):
+    with (
+        patch.object(streamlit_app, "get_db_connection", return_value=mock_conn),
+        patch.object(streamlit_app, "get_event_queue", return_value=MagicMock()),
+        patch.object(streamlit_app, "render_top_app_bar"),
+        patch.object(streamlit_app, "render_navigation", return_value="telemetry"),
+        patch.object(
+            streamlit_app, "render_telemetry_overview", side_effect=RuntimeError("Simulated view rendering failure")
+        ),
+    ):
         with pytest.raises(RuntimeError, match="Simulated view rendering failure"):
             streamlit_app.main()
 
     mock_conn.close.assert_called_once()
-
-

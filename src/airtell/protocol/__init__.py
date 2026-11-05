@@ -130,4 +130,3 @@ __all__ = [
     "parse_sniffle_message",
     "str_to_mac",
 ]
-

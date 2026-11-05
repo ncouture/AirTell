@@ -1,10 +1,10 @@
 # Comprehensive Forensic Investigation & Sourcing Correlation Report
 ## Traffic Metadata, Law Enforcement Electronics & Quebec Signal Control Audit (10:00–10:05 Window)
 
-**Analysis Target**: `merged.json` (Correlated against [`app/data/merged.pcap`](../app/data/merged.pcap))  
-**Capture Window**: May 21, 2026 — 10:00:00 to 10:05:59 EDT (`1779372000.000` to `1779372360.000` Epoch)  
-**Geographical Context**: Boulevard des Entreprises / Autoroute 640 Corridor, Terrebonne, Quebec, Canada  
-**Jurisdiction**: Sûreté du Québec (SQ), Service de police de la Ville de Montréal (SPVM), and Royal Canadian Mounted Police (RCMP / GRC)  
+**Analysis Target**: `merged.json` (Correlated against [`app/data/merged.pcap`](../app/data/merged.pcap))
+**Capture Window**: May 21, 2026 — 10:00:00 to 10:05:59 EDT (`1779372000.000` to `1779372360.000` Epoch)
+**Geographical Context**: Boulevard des Entreprises / Autoroute 640 Corridor, Terrebonne, Quebec, Canada
+**Jurisdiction**: Sûreté du Québec (SQ), Service de police de la Ville de Montréal (SPVM), and Royal Canadian Mounted Police (RCMP / GRC)
 
 ---
 

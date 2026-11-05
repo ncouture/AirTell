@@ -173,16 +173,18 @@ def test_render_adversarial_evaluation_structure() -> None:
 def test_render_rssi_trends_with_event_queue() -> None:
     """Validate render_rssi_trends correctly incorporates live EventQueue observations."""
     queue = EventQueue(maxsize=50)
-    queue.push({
-        "timestamp": 1727870400.0,
-        "datetime_str": "2026-10-02 12:00:00",
-        "mac_address": "40:11:22:33:44:55",
-        "channel": 37,
-        "rssi": -48,
-        "network_type": "Apple Find My",
-        "ephemeral_key": "aabbccddeeff001122334455",
-        "raw_payload": "020106",
-    })
+    queue.push(
+        {
+            "timestamp": 1727870400.0,
+            "datetime_str": "2026-10-02 12:00:00",
+            "mac_address": "40:11:22:33:44:55",
+            "channel": 37,
+            "rssi": -48,
+            "network_type": "Apple Find My",
+            "ephemeral_key": "aabbccddeeff001122334455",
+            "raw_payload": "020106",
+        }
+    )
 
     def mock_columns(spec):
         count = spec if isinstance(spec, int) else len(spec)
@@ -209,16 +211,18 @@ def test_render_rssi_trends_with_event_queue() -> None:
 def test_render_packet_inspector_with_event_queue() -> None:
     """Validate render_packet_inspector correctly displays live EventQueue packets."""
     queue = EventQueue(maxsize=50)
-    queue.push({
-        "timestamp": 1727870400.0,
-        "datetime_str": "2026-10-02 12:00:00",
-        "mac_address": "40:11:22:33:44:55",
-        "channel": 37,
-        "rssi": -48,
-        "network_type": "Apple Find My",
-        "ephemeral_key": "aabbccddeeff001122334455",
-        "raw_payload": "020106",
-    })
+    queue.push(
+        {
+            "timestamp": 1727870400.0,
+            "datetime_str": "2026-10-02 12:00:00",
+            "mac_address": "40:11:22:33:44:55",
+            "channel": 37,
+            "rssi": -48,
+            "network_type": "Apple Find My",
+            "ephemeral_key": "aabbccddeeff001122334455",
+            "raw_payload": "020106",
+        }
+    )
 
     def mock_columns(spec):
         count = spec if isinstance(spec, int) else len(spec)
@@ -228,7 +232,9 @@ def test_render_packet_inspector_with_event_queue() -> None:
         patch("streamlit.subheader"),
         patch("streamlit.markdown"),
         patch("streamlit.columns", side_effect=mock_columns),
-        patch("streamlit.selectbox", side_effect=lambda label, options=None, **kwargs: options[0] if options else "All"),
+        patch(
+            "streamlit.selectbox", side_effect=lambda label, options=None, **kwargs: options[0] if options else "All"
+        ),
         patch("streamlit.text_input", return_value=""),
         patch("streamlit.caption") as mock_caption,
         patch("streamlit.write"),
@@ -248,16 +254,18 @@ def test_render_packet_inspector_with_event_queue() -> None:
 def test_render_alert_feed_with_event_queue() -> None:
     """Validate render_alert_feed detects real-time threats from live EventQueue packets."""
     queue = EventQueue(maxsize=50)
-    queue.push({
-        "timestamp": 1727870400.0,
-        "datetime_str": "2026-10-02 12:00:00",
-        "mac_address": "40:11:22:33:44:55",
-        "channel": 37,
-        "rssi": -45,  # > -55 dBm threshold for proximity threat
-        "network_type": "Apple Find My",
-        "ephemeral_key": "aabbccddeeff001122334455",
-        "raw_payload": "020106",
-    })
+    queue.push(
+        {
+            "timestamp": 1727870400.0,
+            "datetime_str": "2026-10-02 12:00:00",
+            "mac_address": "40:11:22:33:44:55",
+            "channel": 37,
+            "rssi": -45,  # > -55 dBm threshold for proximity threat
+            "network_type": "Apple Find My",
+            "ephemeral_key": "aabbccddeeff001122334455",
+            "raw_payload": "020106",
+        }
+    )
 
     def mock_columns(spec):
         count = spec if isinstance(spec, int) else len(spec)
@@ -286,27 +294,31 @@ def test_render_alert_feed_with_event_queue() -> None:
 def test_views_duckdb_backend_integration() -> None:
     """Validate dashboard views integrate cleanly with DuckDB backend."""
     mock_backend = MagicMock()
-    mock_backend.get_observations.return_value = pd.DataFrame([
-        {
-            "id": 1,
-            "datetime_str": "2026-10-17 12:00:00",
-            "channel": 37,
-            "mac_address": "40:11:22:33:44:55",
-            "rssi": -55,
-            "network_type": "Apple Find My",
-            "ephemeral_key": "aabbcc112233",
-            "raw_payload": "020106",
-        }
-    ])
-    mock_backend.get_rssi_timeseries.return_value = pd.DataFrame([
-        {
-            "id": 1,
-            "datetime_str": "2026-10-17 12:00:00",
-            "rssi": -55,
-            "key_short": "aabbcc112233",
-            "network_type": "Apple Find My",
-        }
-    ])
+    mock_backend.get_observations.return_value = pd.DataFrame(
+        [
+            {
+                "id": 1,
+                "datetime_str": "2026-10-17 12:00:00",
+                "channel": 37,
+                "mac_address": "40:11:22:33:44:55",
+                "rssi": -55,
+                "network_type": "Apple Find My",
+                "ephemeral_key": "aabbcc112233",
+                "raw_payload": "020106",
+            }
+        ]
+    )
+    mock_backend.get_rssi_timeseries.return_value = pd.DataFrame(
+        [
+            {
+                "id": 1,
+                "datetime_str": "2026-10-17 12:00:00",
+                "rssi": -55,
+                "key_short": "aabbcc112233",
+                "network_type": "Apple Find My",
+            }
+        ]
+    )
     mock_backend.get_alerts.return_value = [
         {
             "id": 1,
@@ -328,7 +340,9 @@ def test_views_duckdb_backend_integration() -> None:
         patch("streamlit.subheader"),
         patch("streamlit.markdown"),
         patch("streamlit.columns", side_effect=mock_columns),
-        patch("streamlit.selectbox", side_effect=lambda label, options=None, **kwargs: options[0] if options else "All"),
+        patch(
+            "streamlit.selectbox", side_effect=lambda label, options=None, **kwargs: options[0] if options else "All"
+        ),
         patch("streamlit.text_input", return_value=""),
         patch("streamlit.write"),
         patch("streamlit.dataframe"),
@@ -372,7 +386,3 @@ def test_views_duckdb_backend_integration() -> None:
     ):
         render_telemetry_overview(conn=None, event_queue=None, backend=mock_backend)
         mock_backend.get_observations.assert_called()
-
-
-
-

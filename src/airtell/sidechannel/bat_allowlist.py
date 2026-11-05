@@ -95,9 +95,7 @@ class BatAllowlistAnalyzer(SideChannelAnalyzer):
             # BLE T_IFS is 150us; if over 5000us (5ms) elapsed without SCAN_RSP, probe was silenced
             if current_usec - probe.timestamp_usec > 5000:
                 p_state = self._get_or_create_periph(probe.target_addr)
-                p_state.probes_silenced[probe.scanner_addr] = (
-                    p_state.probes_silenced.get(probe.scanner_addr, 0) + 1
-                )
+                p_state.probes_silenced[probe.scanner_addr] = p_state.probes_silenced.get(probe.scanner_addr, 0) + 1
 
                 # Check if this peripheral has also responded to another scanner
                 has_allowed = bool(p_state.probes_responded)
@@ -315,8 +313,8 @@ class BatAllowlistAnalyzer(SideChannelAnalyzer):
                             "hop": adv_pdu.hop,
                             "profile_tuple": profile,
                             "summary": (
-                                f"Connection established with profile <Interval={adv_pdu.interval*1.25}ms, "
-                                f"Latency={adv_pdu.latency}, Timeout={adv_pdu.timeout*10}ms, Hop={adv_pdu.hop}>."
+                                f"Connection established with profile <Interval={adv_pdu.interval * 1.25}ms, "
+                                f"Latency={adv_pdu.latency}, Timeout={adv_pdu.timeout * 10}ms, Hop={adv_pdu.hop}>."
                             ),
                         },
                     )
@@ -360,18 +358,12 @@ class BatAllowlistAnalyzer(SideChannelAnalyzer):
             self._flush_expired_probes(last_ts)
 
         allowlist_confirmed_count = sum(
-            1
-            for p in self._peripherals.values()
-            if bool(p.probes_silenced) and bool(p.probes_responded)
+            1 for p in self._peripherals.values() if bool(p.probes_silenced) and bool(p.probes_responded)
         )
-        directed_count = sum(
-            1 for p in self._peripherals.values() if p.directed_burst_count > 0
-        )
+        directed_count = sum(1 for p in self._peripherals.values() if p.directed_burst_count > 0)
         profile_count = sum(len(p.connection_profiles) for p in self._peripherals.values())
         fast_slow_transition_count = sum(
-            1
-            for p in self._peripherals.values()
-            if p.fast_adv_observed and p.slow_adv_observed
+            1 for p in self._peripherals.values() if p.fast_adv_observed and p.slow_adv_observed
         )
 
         # Determine overall verdict
@@ -383,9 +375,7 @@ class BatAllowlistAnalyzer(SideChannelAnalyzer):
             )
         elif directed_count > 0:
             overall_verdict = Verdict.DIRECTED_EXCLUSIVE.value
-            summary = (
-                f"Detected exclusive bonding via {directed_count} directed advertising burst(s) (ADV_DIRECT_IND)."
-            )
+            summary = f"Detected exclusive bonding via {directed_count} directed advertising burst(s) (ADV_DIRECT_IND)."
         elif profile_count > 0:
             overall_verdict = Verdict.PROFILE_MATCH.value
             summary = f"Extracted {profile_count} connection parameter profile(s) across monitored connections."

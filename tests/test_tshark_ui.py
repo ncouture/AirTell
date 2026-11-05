@@ -20,9 +20,7 @@ class TestTsharkUIDependencyDiagnostics:
 
     @patch("shutil.which", return_value="/usr/bin/tshark")
     @patch("subprocess.run")
-    def test_dependencies_detected_successfully(
-        self, mock_run: MagicMock, mock_which: MagicMock
-    ) -> None:
+    def test_dependencies_detected_successfully(self, mock_run: MagicMock, mock_which: MagicMock) -> None:
         """When tshark and sniffle extcap are present, report all available."""
         mock_proc = MagicMock()
         mock_proc.returncode = 0
@@ -45,9 +43,7 @@ class TestTsharkUIDependencyDiagnostics:
 
     @patch("shutil.which", return_value="/usr/bin/tshark")
     @patch("subprocess.run")
-    def test_sniffle_extcap_missing_interface(
-        self, mock_run: MagicMock, mock_which: MagicMock
-    ) -> None:
+    def test_sniffle_extcap_missing_interface(self, mock_run: MagicMock, mock_which: MagicMock) -> None:
         """When tshark is present but sniffle plugin is missing from interfaces."""
         mock_proc = MagicMock()
         mock_proc.returncode = 0
@@ -134,22 +130,24 @@ class TestLiveTableAndPlotlyVisualizations:
 
     def test_build_tshark_live_chart(self) -> None:
         """Plotly chart should render correctly from live packet DataFrame."""
-        df = pd.DataFrame([
-            {
-                "datetime_str": "2026-10-02 20:00:00",
-                "rssi": -65,
-                "mac_address": "AA:BB:CC:DD:EE:FF",
-                "network_type": "Apple Find My",
-                "channel": 37,
-            },
-            {
-                "datetime_str": "2026-10-02 20:00:01",
-                "rssi": -62,
-                "mac_address": "AA:BB:CC:DD:EE:FF",
-                "network_type": "Apple Find My",
-                "channel": 37,
-            },
-        ])
+        df = pd.DataFrame(
+            [
+                {
+                    "datetime_str": "2026-10-02 20:00:00",
+                    "rssi": -65,
+                    "mac_address": "AA:BB:CC:DD:EE:FF",
+                    "network_type": "Apple Find My",
+                    "channel": 37,
+                },
+                {
+                    "datetime_str": "2026-10-02 20:00:01",
+                    "rssi": -62,
+                    "mac_address": "AA:BB:CC:DD:EE:FF",
+                    "network_type": "Apple Find My",
+                    "channel": 37,
+                },
+            ]
+        )
         fig = build_tshark_live_chart(df)
         assert fig is not None
         assert hasattr(fig, "data")

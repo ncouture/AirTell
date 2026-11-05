@@ -1,4 +1,4 @@
-#/usr/bin/env python
+# /usr/bin/env python
 #
 
 import time
@@ -27,13 +27,7 @@ def test_node_models():
 
 
 def test_link_sample():
-    sample = LinkSample(
-        timestamp=1000.0,
-        rssi=-65.0,
-        rx_id="R1",
-        tx_mac="AA:BB:CC:DD:EE:FF",
-        channel=37
-    )
+    sample = LinkSample(timestamp=1000.0, rssi=-65.0, rx_id="R1", tx_mac="AA:BB:CC:DD:EE:FF", channel=37)
     assert sample.rssi == -65.0
     assert sample.tx_mac == "AA:BB:CC:DD:EE:FF"
 
@@ -104,4 +98,3 @@ def test_robust_z_score_anomaly_detection():
     major_features = extractor.compute_features("R1", "T1", baseline, channel=37, baseline_std=std_dev, z_threshold=3.0)
     assert major_features.attenuation_drop >= 10.0
     assert major_features.activity_score >= 10.0
-

@@ -50,4 +50,3 @@ class BaselineTracker:
     def get_std_dev(self, rx_id: str, tx_mac: str, channel: int = 37, min_std: float = 1.0) -> float:
         var = self.variances.get((rx_id, tx_mac, channel), min_std ** 2)
         return float(math.sqrt(max(min_std ** 2, var)))
-

@@ -165,13 +165,9 @@ class TestBoundaryCounterRollover:
         stream = io.BytesIO()
         with PcapBleWriter(stream, base_epoch=1700000000.0) as writer:
             # Packet 1: 16 microseconds before 32-bit rollover
-            writer.write_packet(
-                ts_usec=0xFFFFFFF0, chan=37, packet=b"\x00\x06\x01\x02\x03\x04\x05\x06"
-            )
+            writer.write_packet(ts_usec=0xFFFFFFF0, chan=37, packet=b"\x00\x06\x01\x02\x03\x04\x05\x06")
             # Packet 2: 16 microseconds after 32-bit rollover
-            writer.write_packet(
-                ts_usec=0x00000010, chan=37, packet=b"\x00\x06\x01\x02\x03\x04\x05\x06"
-            )
+            writer.write_packet(ts_usec=0x00000010, chan=37, packet=b"\x00\x06\x01\x02\x03\x04\x05\x06")
 
         pkts = list(PcapBleReader(io.BytesIO(stream.getvalue())))
         assert len(pkts) == 2
@@ -231,7 +227,7 @@ class TestCorruptedLengthsAndPayloadEdgeCases:
     def test_corrupted_ll_declared_length_smaller_than_actual(self) -> None:
         """PDU with declared length smaller than payload preserves raw bytes without truncating."""
         # Header specifies Length = 2, but body contains 30 bytes
-        corrupted_pdu = b"\x03\x02" + b"\xFE" * 28
+        corrupted_pdu = b"\x03\x02" + b"\xfe" * 28
         event = SyntheticEvent(ts_usec=1_000_000, chan=1, body=corrupted_pdu)
         pcap_data = generate_synthetic_pcap([event])
 
@@ -262,7 +258,7 @@ class TestCorruptedLengthsAndPayloadEdgeCases:
             counter=100,
         )
         assert len(pdu_max) == 257  # 2B LL hdr + 255B payload
-        assert pdu_max[1] == 255   # LL length byte is 255
+        assert pdu_max[1] == 255  # LL length byte is 255
 
         # Empty value payload
         pdu_empty = build_att_signed_write(
@@ -332,9 +328,7 @@ class TestDlt256LibpcapStressHarness:
 
     def test_corrupted_pcap_packet_records_rejected(self) -> None:
         """PcapBleReader raises appropriate errors on truncated packet records."""
-        valid_hdr = struct.pack(
-            GLOBAL_HEADER_FORMAT, PCAP_MAGIC_USEC, 2, 4, 0, 0, 65535, DLT_BLUETOOTH_LE_LL_WITH_PHDR
-        )
+        valid_hdr = struct.pack(GLOBAL_HEADER_FORMAT, PCAP_MAGIC_USEC, 2, 4, 0, 0, 65535, DLT_BLUETOOTH_LE_LL_WITH_PHDR)
 
         # Truncated payload (< incl_len)
         pkt_hdr = struct.pack(PACKET_HEADER_FORMAT, 1000, 0, 60, 60)
@@ -540,10 +534,14 @@ class TestTsharkDissectionVerificationOracle:
         """TShark dissects ADV_IND, ADV_DIRECT_IND, SCAN_REQ, SCAN_RSP, and CONNECT_IND cleanly."""
         events = [
             SyntheticEvent(ts_usec=1_000_000, chan=37, body=build_adv_ind("11:22:33:44:55:66", b"\x02\x01\x06")),
-            SyntheticEvent(ts_usec=1_010_000, chan=37, body=build_adv_direct_ind("11:22:33:44:55:66", "AA:BB:CC:DD:EE:FF")),
+            SyntheticEvent(
+                ts_usec=1_010_000, chan=37, body=build_adv_direct_ind("11:22:33:44:55:66", "AA:BB:CC:DD:EE:FF")
+            ),
             SyntheticEvent(ts_usec=1_020_000, chan=37, body=build_scan_req("AA:BB:CC:DD:EE:FF", "11:22:33:44:55:66")),
             SyntheticEvent(ts_usec=1_030_000, chan=37, body=build_scan_rsp("11:22:33:44:55:66", b"\x07\x09AdvDev")),
-            SyntheticEvent(ts_usec=1_040_000, chan=37, body=build_connect_ind("AA:BB:CC:DD:EE:FF", "11:22:33:44:55:66")),
+            SyntheticEvent(
+                ts_usec=1_040_000, chan=37, body=build_connect_ind("AA:BB:CC:DD:EE:FF", "11:22:33:44:55:66")
+            ),
         ]
         pcap_data = generate_synthetic_pcap(events)
         ret, stdout = self._dissect_pcap(pcap_data)

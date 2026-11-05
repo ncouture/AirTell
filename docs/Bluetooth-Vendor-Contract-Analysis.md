@@ -1,7 +1,7 @@
 # Forensic Investigation & Sourcing Correlation Report: AirTell Wardriving Telemetry
 
-**Capture Window**: May 21, 2026 — 10:00:00 to 10:05:59 EDT (`1779372000` to `1779372359` Epoch)  
-**Dataset Analyzed**: `merged.json` (1,371 records in window) & `merged.pcap` (561,303 Link-Layer BLE frames across 2.58 hours)  
+**Capture Window**: May 21, 2026 — 10:00:00 to 10:05:59 EDT (`1779372000` to `1779372359` Epoch)
+**Dataset Analyzed**: `merged.json` (1,371 records in window) & `merged.pcap` (561,303 Link-Layer BLE frames across 2.58 hours)
 **Operational Scenario**: Wardriving on a highway corridor in Quebec, Canada, encountering two police patrol cars stationed at an intersection with officers physically interacting with a traffic signal cabinet.
 
 ---
@@ -55,7 +55,7 @@ The search snippet quoted in the prompt is a classic example of **algorithmic di
 ```mermaid
 graph TD
     Query["Search Query: 'Arcadyan Corporation Government of Canada'"] --> SearchSynth["Search Engine Disambiguation Synthesis"]
-    
+
     SearchSynth --> Entity1["Arcadyan Technology Corporation<br>• Hsinchu, Taiwan (Compal Group)<br>• B2B Telecom ODM (Telus/Bell Gateways)<br>• ISED Company #4711A<br>• $0 Federal / Provincial Contracts"]
     SearchSynth --> Entity2["Arcadis Canada Inc.<br>• Subsidiary of Arcadis NV (Netherlands)<br>• Environmental & Civil Engineering<br>• Multi-Million Dollar Federal Contracts<br>• No Telecommunications Hardware"]
     SearchSynth --> Entity3["Project Arcadia<br>• Five Eyes Defense Initiative (US, UK, CA, AU, NZ)<br>• Common C2 AI Frameworks & Data Fabrics<br>• Classified Defense Cloud Environment<br>• Zero 2.4 GHz Bluetooth or Traffic Presence"]

@@ -278,10 +278,7 @@ def render_navigation(
     )
 
     options = list(NAVIGATION_VIEWS.keys())
-    format_map = {
-        key: f"{meta['icon']}  {meta['label']}"
-        for key, meta in NAVIGATION_VIEWS.items()
-    }
+    format_map = {key: f"{meta['icon']}  {meta['label']}" for key, meta in NAVIGATION_VIEWS.items()}
 
     selected = st.sidebar.radio(
         label="Navigation Rail",

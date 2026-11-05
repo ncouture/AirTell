@@ -26,7 +26,7 @@ While the connections did not capture the initial pairing key exchange packets (
 ```text
 PCAP contains [BLUETOOTH_LE_LL_WITH_PHDR] frames
 Found 30 connections
- 
+
 Analyzing connection 0:
   4a:11:22:33:44:00 (random: Resolvable Private Address [RPA] - No OUI) -> 00:11:22:33:44:55 (public: Example Wearables Technology Co., Ltd. [OUI 00:11:22])
   Found 0 encrypted packets
@@ -34,7 +34,7 @@ Analyzing connection 0:
     Missing both Mrand and Srand
     Missing LL_ENC_REQ
     Missing LL_ENC_RSP
- 
+
 Analyzing connection 1:
   4a:11:22:33:44:01 (random: Resolvable Private Address [RPA] - No OUI) -> c0:de:00:00:00:01 (random: Static Device Address - No OUI)
   Found 0 encrypted packets
@@ -42,7 +42,7 @@ Analyzing connection 1:
     Missing both Mrand and Srand
     Missing LL_ENC_REQ
     Missing LL_ENC_RSP
- 
+
 Analyzing connection 2:
   4a:11:22:33:44:02 (random: Resolvable Private Address [RPA] - No OUI) -> c0:de:00:00:00:01 (random: Static Device Address - No OUI)
   Found 0 encrypted packets
@@ -50,7 +50,7 @@ Analyzing connection 2:
     Missing both Mrand and Srand
     Missing LL_ENC_REQ
     Missing LL_ENC_RSP
- 
+
 Analyzing connection 3:
   4a:11:22:33:44:03 (random: Resolvable Private Address [RPA] - No OUI) -> 00:11:22:33:44:55 (public: Example Wearables Technology Co., Ltd. [OUI 00:11:22])
   Found 0 encrypted packets
@@ -58,7 +58,7 @@ Analyzing connection 3:
     Missing both Mrand and Srand
     Missing LL_ENC_REQ
     Missing LL_ENC_RSP
- 
+
 Analyzing connection 4:
   4a:11:22:33:44:04 (random: Resolvable Private Address [RPA] - No OUI) -> c0:de:00:00:00:02 (random: Static Device Address - No OUI)
   Found 0 encrypted packets
@@ -66,7 +66,7 @@ Analyzing connection 4:
     Missing both Mrand and Srand
     Missing LL_ENC_REQ
     Missing LL_ENC_RSP
- 
+
 Analyzing connection 5:
   4a:11:22:33:44:05 (random: Resolvable Private Address [RPA] - No OUI) -> 00:11:22:33:44:55 (public: Example Wearables Technology Co., Ltd. [OUI 00:11:22])
   Found 0 encrypted packets
@@ -74,7 +74,7 @@ Analyzing connection 5:
     Missing both Mrand and Srand
     Missing LL_ENC_REQ
     Missing LL_ENC_RSP
- 
+
 Analyzing connection 6:
   4a:11:22:33:44:06 (random: Resolvable Private Address [RPA] - No OUI) -> 00:11:22:33:44:55 (public: Example Wearables Technology Co., Ltd. [OUI 00:11:22])
   Found 0 encrypted packets
@@ -82,7 +82,7 @@ Analyzing connection 6:
     Missing both Mrand and Srand
     Missing LL_ENC_REQ
     Missing LL_ENC_RSP
- 
+
 Analyzing connection 7:
   4a:11:22:33:44:07 (random: Resolvable Private Address [RPA] - No OUI) -> c0:de:00:00:00:03 (random: Static Device Address - No OUI)
   Found 0 encrypted packets
@@ -90,7 +90,7 @@ Analyzing connection 7:
     Missing both Mrand and Srand
     Missing LL_ENC_REQ
     Missing LL_ENC_RSP
- 
+
 Analyzing connection 8:
   4a:11:22:33:44:08 (random: Resolvable Private Address [RPA] - No OUI) -> 00:11:22:33:44:55 (public: Example Wearables Technology Co., Ltd. [OUI 00:11:22])
   Found 0 encrypted packets
@@ -98,7 +98,7 @@ Analyzing connection 8:
     Missing both Mrand and Srand
     Missing LL_ENC_REQ
     Missing LL_ENC_RSP
- 
+
 Analyzing connection 9:
   4a:11:22:33:44:09 (random: Resolvable Private Address [RPA] - No OUI) -> c0:de:00:00:00:02 (random: Static Device Address - No OUI)
   Found 0 encrypted packets
@@ -106,7 +106,7 @@ Analyzing connection 9:
     Missing both Mrand and Srand
     Missing LL_ENC_REQ
     Missing LL_ENC_RSP
- 
+
 Analyzing connection 10:
   4a:11:22:33:44:0a (random: Resolvable Private Address [RPA] - No OUI) -> 00:11:22:33:44:55 (public: Example Wearables Technology Co., Ltd. [OUI 00:11:22])
   Found 0 encrypted packets
@@ -114,7 +114,7 @@ Analyzing connection 10:
     Missing both Mrand and Srand
     Missing LL_ENC_REQ
     Missing LL_ENC_RSP
- 
+
 Analyzing connection 11:
   4a:11:22:33:44:0b (random: Resolvable Private Address [RPA] - No OUI) -> c0:de:00:00:00:02 (random: Static Device Address - No OUI)
   Found 0 encrypted packets
@@ -122,7 +122,7 @@ Analyzing connection 11:
     Missing both Mrand and Srand
     Missing LL_ENC_REQ
     Missing LL_ENC_RSP
- 
+
 Analyzing connection 12:
   4a:11:22:33:44:0b (random: Resolvable Private Address [RPA] - No OUI) -> c0:de:00:00:00:02 (random: Static Device Address - No OUI)
   Found 0 encrypted packets
@@ -130,7 +130,7 @@ Analyzing connection 12:
     Missing both Mrand and Srand
     Missing LL_ENC_REQ
     Missing LL_ENC_RSP
- 
+
 Analyzing connection 13:
   4a:11:22:33:44:0c (random: Resolvable Private Address [RPA] - No OUI) -> c0:de:00:00:00:04 (random: Static Device Address - No OUI)
   Found 0 encrypted packets
@@ -138,7 +138,7 @@ Analyzing connection 13:
     Missing both Mrand and Srand
     Missing LL_ENC_REQ
     Missing LL_ENC_RSP
- 
+
 Analyzing connection 14:
   4a:11:22:33:44:0d (random: Resolvable Private Address [RPA] - No OUI) -> c0:de:00:00:00:05 (random: Static Device Address - No OUI)
   Found 0 encrypted packets
@@ -146,7 +146,7 @@ Analyzing connection 14:
     Missing both Mrand and Srand
     Missing LL_ENC_REQ
     Missing LL_ENC_RSP
- 
+
 Analyzing connection 15:
   4a:11:22:33:44:0e (random: Resolvable Private Address [RPA] - No OUI) -> c0:de:00:00:00:06 (random: Static Device Address - No OUI)
   Found 0 encrypted packets
@@ -154,7 +154,7 @@ Analyzing connection 15:
     Missing both Mrand and Srand
     Missing LL_ENC_REQ
     Missing LL_ENC_RSP
- 
+
 Analyzing connection 16:
   4a:11:22:33:44:0f (random: Resolvable Private Address [RPA] - No OUI) -> c0:de:00:00:00:07 (random: Static Device Address - No OUI)
   Found 0 encrypted packets
@@ -162,7 +162,7 @@ Analyzing connection 16:
     Missing both Mrand and Srand
     Missing LL_ENC_REQ
     Missing LL_ENC_RSP
- 
+
 Analyzing connection 17:
   4a:11:22:33:44:10 (random: Resolvable Private Address [RPA] - No OUI) -> 00:11:22:33:44:55 (public: Example Wearables Technology Co., Ltd. [OUI 00:11:22])
   Found 0 encrypted packets
@@ -170,7 +170,7 @@ Analyzing connection 17:
     Missing both Mrand and Srand
     Missing LL_ENC_REQ
     Missing LL_ENC_RSP
- 
+
 Analyzing connection 18:
   4a:11:22:33:44:11 (random: Resolvable Private Address [RPA] - No OUI) -> 00:11:22:33:44:55 (public: Example Wearables Technology Co., Ltd. [OUI 00:11:22])
   Found 0 encrypted packets
@@ -178,7 +178,7 @@ Analyzing connection 18:
     Missing both Mrand and Srand
     Missing LL_ENC_REQ
     Missing LL_ENC_RSP
- 
+
 Analyzing connection 19:
   4a:11:22:33:44:12 (random: Resolvable Private Address [RPA] - No OUI) -> c0:de:00:00:00:08 (random: Static Device Address - No OUI)
   Found 0 encrypted packets
@@ -186,7 +186,7 @@ Analyzing connection 19:
     Missing both Mrand and Srand
     Missing LL_ENC_REQ
     Missing LL_ENC_RSP
- 
+
 Analyzing connection 20:
   4a:11:22:33:44:13 (random: Resolvable Private Address [RPA] - No OUI) -> c0:de:00:00:00:09 (random: Static Device Address - No OUI | Apple, Inc. Company ID 0x004C)
   Found 0 encrypted packets
@@ -194,7 +194,7 @@ Analyzing connection 20:
     Missing both Mrand and Srand
     Missing LL_ENC_REQ
     Missing LL_ENC_RSP
- 
+
 Analyzing connection 21:
   4a:11:22:33:44:14 (random: Resolvable Private Address [RPA] - No OUI) -> c0:de:00:00:00:0a (random: Static Device Address - No OUI)
   Found 0 encrypted packets
@@ -202,7 +202,7 @@ Analyzing connection 21:
     Missing both Mrand and Srand
     Missing LL_ENC_REQ
     Missing LL_ENC_RSP
- 
+
 Analyzing connection 22:
   4a:11:22:33:44:15 (random: Resolvable Private Address [RPA] - No OUI) -> 00:11:22:33:44:55 (public: Example Wearables Technology Co., Ltd. [OUI 00:11:22])
   Found 0 encrypted packets
@@ -210,7 +210,7 @@ Analyzing connection 22:
     Missing both Mrand and Srand
     Missing LL_ENC_REQ
     Missing LL_ENC_RSP
- 
+
 Analyzing connection 23:
   4a:11:22:33:44:16 (random: Resolvable Private Address [RPA] - No OUI) -> c0:de:00:00:00:0b (random: Static Device Address - No OUI)
   Found 0 encrypted packets
@@ -218,7 +218,7 @@ Analyzing connection 23:
     Missing both Mrand and Srand
     Missing LL_ENC_REQ
     Missing LL_ENC_RSP
- 
+
 Analyzing connection 24:
   4a:11:22:33:44:17 (random: Resolvable Private Address [RPA] - No OUI) -> 00:11:22:33:44:55 (public: Example Wearables Technology Co., Ltd. [OUI 00:11:22])
   Found 0 encrypted packets
@@ -226,7 +226,7 @@ Analyzing connection 24:
     Missing both Mrand and Srand
     Missing LL_ENC_REQ
     Missing LL_ENC_RSP
- 
+
 Analyzing connection 25:
   4a:11:22:33:44:18 (random: Resolvable Private Address [RPA] - No OUI) -> c0:de:00:00:00:0c (random: Static Device Address - No OUI)
   Found 0 encrypted packets
@@ -234,7 +234,7 @@ Analyzing connection 25:
     Missing both Mrand and Srand
     Missing LL_ENC_REQ
     Missing LL_ENC_RSP
- 
+
 Analyzing connection 26:
   4a:11:22:33:44:19 (random: Resolvable Private Address [RPA] - No OUI) -> 00:11:22:33:44:55 (public: Example Wearables Technology Co., Ltd. [OUI 00:11:22])
   Found 0 encrypted packets
@@ -242,7 +242,7 @@ Analyzing connection 26:
     Missing both Mrand and Srand
     Missing LL_ENC_REQ
     Missing LL_ENC_RSP
- 
+
 Analyzing connection 27:
   4a:11:22:33:44:1a (random: Resolvable Private Address [RPA] - No OUI) -> c0:de:00:00:00:0d (random: Static Device Address - No OUI)
   Found 0 encrypted packets
@@ -250,7 +250,7 @@ Analyzing connection 27:
     Missing both Mrand and Srand
     Missing LL_ENC_REQ
     Missing LL_ENC_RSP
- 
+
 Analyzing connection 28:
   4a:11:22:33:44:18 (random: Resolvable Private Address [RPA] - No OUI) -> c0:de:00:00:00:0e (random: Static Device Address - No OUI)
   Found 0 encrypted packets
@@ -258,7 +258,7 @@ Analyzing connection 28:
     Missing both Mrand and Srand
     Missing LL_ENC_REQ
     Missing LL_ENC_RSP
- 
+
 Analyzing connection 29:
   4a:11:22:33:44:1b (random: Resolvable Private Address [RPA] - No OUI) -> 00:11:22:33:44:55 (public: Example Wearables Technology Co., Ltd. [OUI 00:11:22])
   Found 0 encrypted packets

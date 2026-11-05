@@ -48,15 +48,17 @@ def discover_available_dongles() -> list[dict[str, Any]]:
         for p in ports:
             is_sniffle = is_sniffle_device(p)
             in_use = check_device_usage(p.device)
-            discovered.append({
-                "device": p.device,
-                "description": getattr(p, "description", "") or "Serial Device",
-                "is_sniffle": is_sniffle,
-                "in_use": in_use,
-                "vid": getattr(p, "vid", None),
-                "pid": getattr(p, "pid", None),
-                "manufacturer": getattr(p, "manufacturer", "Unknown"),
-            })
+            discovered.append(
+                {
+                    "device": p.device,
+                    "description": getattr(p, "description", "") or "Serial Device",
+                    "is_sniffle": is_sniffle,
+                    "in_use": in_use,
+                    "vid": getattr(p, "vid", None),
+                    "pid": getattr(p, "pid", None),
+                    "manufacturer": getattr(p, "manufacturer", "Unknown"),
+                }
+            )
     except Exception:
         pass
     return discovered
@@ -359,16 +361,18 @@ def build_live_packet_dataframe(packets: list[dict[str, Any]]) -> pd.DataFrame:
 
     rows: list[dict[str, Any]] = []
     for p in packets:
-        rows.append({
-            "datetime_str": p.get("datetime_str", ""),
-            "channel": p.get("channel", 37),
-            "mac_address": p.get("mac_address", "Unknown"),
-            "rssi": p.get("rssi", -128),
-            "pdu_type": p.get("pdu_type", "ADV_IND"),
-            "network_type": p.get("network_type", "Unknown"),
-            "company_id": p.get("company_id", ""),
-            "ephemeral_key": p.get("ephemeral_key", ""),
-        })
+        rows.append(
+            {
+                "datetime_str": p.get("datetime_str", ""),
+                "channel": p.get("channel", 37),
+                "mac_address": p.get("mac_address", "Unknown"),
+                "rssi": p.get("rssi", -128),
+                "pdu_type": p.get("pdu_type", "ADV_IND"),
+                "network_type": p.get("network_type", "Unknown"),
+                "company_id": p.get("company_id", ""),
+                "ephemeral_key": p.get("ephemeral_key", ""),
+            }
+        )
     return pd.DataFrame(rows)
 
 
@@ -697,4 +701,3 @@ def render_radio_controls(
         file_name="sniffle_live_capture.pcap",
         mime="application/vnd.tcpdump.pcap",
     )
-

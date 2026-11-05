@@ -28,4 +28,3 @@ def hexdump(s, bytes_per_line=16, bytes_per_group=8):
             in_repeat = False
         prev_chunk = chunk
     return '\n'.join(lines)
-

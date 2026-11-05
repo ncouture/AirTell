@@ -1,9 +1,9 @@
 # Traffic Metadata, Law Enforcement Electronics & Quebec Signal Control Audit (10:00–10:05 Window)
 
-**Analysis Target**: [`merged.json`](merged.json) (Correlated against [`app/data/merged.pcap`](app/data/merged.pcap))  
-**Capture Window**: May 21, 2026 — 10:00:00 to 10:05:59 EDT (`1779372000.000` to `1779372360.000` Epoch)  
-**Geographical Context**: Boulevard des Entreprises / Autoroute 640 Corridor, Terrebonne, Quebec, Canada  
-**Jurisdiction**: Sûreté du Québec (SQ), Service de police de la Ville de Montréal (SPVM), and Royal Canadian Mounted Police (RCMP / GRC)  
+**Analysis Target**: [`merged.json`](merged.json) (Correlated against [`app/data/merged.pcap`](app/data/merged.pcap))
+**Capture Window**: May 21, 2026 — 10:00:00 to 10:05:59 EDT (`1779372000.000` to `1779372360.000` Epoch)
+**Geographical Context**: Boulevard des Entreprises / Autoroute 640 Corridor, Terrebonne, Quebec, Canada
+**Jurisdiction**: Sûreté du Québec (SQ), Service de police de la Ville de Montréal (SPVM), and Royal Canadian Mounted Police (RCMP / GRC)
 
 ---
 
@@ -17,15 +17,15 @@
 
 ## 2. Physical & Spatial Debunking of Prior Assumptions
 
-* **Active Scanner `E5:3E:90:1C:D0:5C` is Inside the Capture Vehicle**:  
+* **Active Scanner `E5:3E:90:1C:D0:5C` is Inside the Capture Vehicle**:
   Prior assumptions labeled this as an arterial traffic sniffer or police cruiser scanner. Packet-level analysis reveals it transmitted **808 `SCAN_REQ` frames continuously across 87.6 minutes** (08:38 to 10:06) at a constant **-32 to -36 dBm average RSSI** throughout highway and municipal driving. A stationary roadside sensor cannot remain at point-blank range (-35 dBm) for 1.5 hours in a moving vehicle. It was an active device inside the wardriving rig.
-* **`Moniteur 1` (`8E:13:4D:13:77:BC`) is a Stationary Commercial Display**:  
+* **`Moniteur 1` (`8E:13:4D:13:77:BC`) is a Stationary Commercial Display**:
   Heard only during 4 discrete passes (~58 minutes apart) at an average of **-88.2 dBm** (max -77 dBm) as the vehicle passed a commercial facility on Rue Georges-Corbeil in Terrebonne. The -32 dBm spikes were `SCAN_REQ` probes sent by the internal vehicle scanner.
-* **`Sena Motorcycles` (`C7:DC:ED:B9:0F:78`) is a Civilian Helmet Intercom**:  
+* **`Sena Motorcycles` (`C7:DC:ED:B9:0F:78`) is a Civilian Helmet Intercom**:
   Detected at `10:02:26` (over 2 minutes after leaving the intersection at `10:00:28`), co-located with residential gateways (`E3:B5:F3:99:60:7F`). It was not present at the police encounter.
-* **Intel Corporate (`C9:7A:AB:1E:1E:CA`) is on the Highway Corridor**:  
+* **Intel Corporate (`C9:7A:AB:1E:1E:CA`) is on the Highway Corridor**:
   Captured at `10:05:08` (5 minutes after leaving the intersection), placing it 5–7 km away along Autoroute 640.
-* **Telink BLE Mesh Nodes (`:FF:FF`) Total 86 Unique Hardware Units**:  
+* **Telink BLE Mesh Nodes (`:FF:FF`) Total 86 Unique Hardware Units**:
   The full pcap contains **86 unique MAC addresses** sharing the `:FF:FF` wire suffix and Telink Semiconductor Company ID `529` (`0x0211`), representing a large-scale municipal smart lighting / sign mesh along Boulevard des Entreprises. Node `10:F3:D1:4F:FF:FF` was directly adjacent to the stopped vehicle at `10:00:26` (peaking at **-39 dBm**).
 
 ---

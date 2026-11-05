@@ -29,9 +29,7 @@ def str_to_mac(s: str) -> bytes:
     """
     cleaned = s.replace(":", "").replace("-", "").strip()
     if len(cleaned) != 12:
-        raise ValueError(
-            f"Invalid MAC address string '{s}': expected 12 hexadecimal characters, got {len(cleaned)}"
-        )
+        raise ValueError(f"Invalid MAC address string '{s}': expected 12 hexadecimal characters, got {len(cleaned)}")
     try:
         raw = bytes.fromhex(cleaned)
     except ValueError as e:
@@ -80,16 +78,10 @@ def is_palindromic_mac(mac: bytes | str) -> bool:
     else:
         return False
 
-    return (
-        mac_bytes[0] == mac_bytes[5]
-        and mac_bytes[1] == mac_bytes[4]
-        and mac_bytes[2] == mac_bytes[3]
-    )
+    return mac_bytes[0] == mac_bytes[5] and mac_bytes[1] == mac_bytes[4] and mac_bytes[2] == mac_bytes[3]
 
 
-def generate_palindromic_mac(
-    address_type: str = "static", seed: bytes | str | None = None
-) -> bytes:
+def generate_palindromic_mac(address_type: str = "static", seed: bytes | str | None = None) -> bytes:
     """Generates a 6-byte palindromic MAC address compliant with Bluetooth Core Spec.
 
     Mathematical symmetry: B0 == B5, B1 == B4, B2 == B3.
@@ -112,9 +104,7 @@ def generate_palindromic_mac(
     addr_type = address_type.strip().lower()
     valid_types = ("static", "nrpa", "rpa", "public")
     if addr_type not in valid_types:
-        raise ValueError(
-            f"Invalid address_type '{address_type}'. Must be one of {valid_types}"
-        )
+        raise ValueError(f"Invalid address_type '{address_type}'. Must be one of {valid_types}")
 
     if seed is not None:
         if isinstance(seed, str):
@@ -122,9 +112,7 @@ def generate_palindromic_mac(
         else:
             seed_bytes = bytes(seed)
         if len(seed_bytes) < 3:
-            raise ValueError(
-                f"Seed must contain at least 3 bytes, got {len(seed_bytes)}"
-            )
+            raise ValueError(f"Seed must contain at least 3 bytes, got {len(seed_bytes)}")
         b0, b1, b2 = seed_bytes[0], seed_bytes[1], seed_bytes[2]
     else:
         b0 = secrets.randbelow(256)

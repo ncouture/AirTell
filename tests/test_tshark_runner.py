@@ -186,9 +186,11 @@ class TestTsharkExtcapRunner:
         mock_proc.pid = 23456
         mock_proc.stdout = iter([])
         mock_proc.stderr = iter([])
+
         def fake_wait(timeout: float | None = None) -> int:
             mock_proc.poll.return_value = 0
             return 0
+
         mock_proc.wait.side_effect = fake_wait
         mock_popen.return_value = mock_proc
 
@@ -212,6 +214,7 @@ class TestTsharkExtcapRunner:
         mock_proc.stdout = iter([])
         mock_proc.stderr = iter([])
         call_count = 0
+
         def fake_wait(timeout: float | None = None) -> int:
             nonlocal call_count
             call_count += 1
@@ -219,6 +222,7 @@ class TestTsharkExtcapRunner:
                 raise subprocess.TimeoutExpired(cmd="tshark", timeout=0.1)
             mock_proc.poll.return_value = 0
             return 0
+
         mock_proc.wait.side_effect = fake_wait
         mock_popen.return_value = mock_proc
 
@@ -240,9 +244,11 @@ class TestTsharkExtcapRunner:
         mock_proc.pid = 45678
         mock_proc.stdout = iter([])
         mock_proc.stderr = iter([])
+
         def fake_wait(timeout: float | None = None) -> int:
             mock_proc.poll.return_value = 0
             return 0
+
         mock_proc.wait.side_effect = fake_wait
         mock_popen.return_value = mock_proc
 
@@ -299,4 +305,3 @@ class TestTsharkExtcapRunner:
         assert "packet_1" in lines
         assert runner.errors_logged >= 1000
         assert runner.stop() is True
-

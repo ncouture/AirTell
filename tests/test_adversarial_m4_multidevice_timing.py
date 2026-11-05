@@ -240,18 +240,62 @@ class TestAdversarialTimingOracleEdgeCases:
         valid_delays = [100, 150, 170, 250, 1000, 3000, 4999, 5000]
         for delay in valid_delays:
             analyzer = BatAllowlistAnalyzer()
-            analyzer.process_packet(BlePacketRecord(body=build_adv_ind(periph), channel=37, rssi=-50, timestamp_usec=1_000_000, access_address=BLE_ADV_AA))
-            analyzer.process_packet(BlePacketRecord(body=build_scan_req(scanner, periph), channel=37, rssi=-50, timestamp_usec=1_010_000, access_address=BLE_ADV_AA))
-            analyzer.process_packet(BlePacketRecord(body=build_scan_rsp(periph), channel=37, rssi=-50, timestamp_usec=1_010_000 + delay, access_address=BLE_ADV_AA))
+            analyzer.process_packet(
+                BlePacketRecord(
+                    body=build_adv_ind(periph),
+                    channel=37,
+                    rssi=-50,
+                    timestamp_usec=1_000_000,
+                    access_address=BLE_ADV_AA,
+                )
+            )
+            analyzer.process_packet(
+                BlePacketRecord(
+                    body=build_scan_req(scanner, periph),
+                    channel=37,
+                    rssi=-50,
+                    timestamp_usec=1_010_000,
+                    access_address=BLE_ADV_AA,
+                )
+            )
+            analyzer.process_packet(
+                BlePacketRecord(
+                    body=build_scan_rsp(periph),
+                    channel=37,
+                    rssi=-50,
+                    timestamp_usec=1_010_000 + delay,
+                    access_address=BLE_ADV_AA,
+                )
+            )
             rep = analyzer.finalize()
             assert rep.verdict == Verdict.OPEN_ADVERTISER.value, f"Failed at delay {delay}us"
             assert rep.findings[0].details["response_delay_usec"] == delay
 
         # Test expiration at 5001us
         analyzer_exp = BatAllowlistAnalyzer()
-        analyzer_exp.process_packet(BlePacketRecord(body=build_adv_ind(periph), channel=37, rssi=-50, timestamp_usec=1_000_000, access_address=BLE_ADV_AA))
-        analyzer_exp.process_packet(BlePacketRecord(body=build_scan_req(scanner, periph), channel=37, rssi=-50, timestamp_usec=1_010_000, access_address=BLE_ADV_AA))
-        analyzer_exp.process_packet(BlePacketRecord(body=build_scan_rsp(periph), channel=37, rssi=-50, timestamp_usec=1_010_000 + 5001, access_address=BLE_ADV_AA))
+        analyzer_exp.process_packet(
+            BlePacketRecord(
+                body=build_adv_ind(periph), channel=37, rssi=-50, timestamp_usec=1_000_000, access_address=BLE_ADV_AA
+            )
+        )
+        analyzer_exp.process_packet(
+            BlePacketRecord(
+                body=build_scan_req(scanner, periph),
+                channel=37,
+                rssi=-50,
+                timestamp_usec=1_010_000,
+                access_address=BLE_ADV_AA,
+            )
+        )
+        analyzer_exp.process_packet(
+            BlePacketRecord(
+                body=build_scan_rsp(periph),
+                channel=37,
+                rssi=-50,
+                timestamp_usec=1_010_000 + 5001,
+                access_address=BLE_ADV_AA,
+            )
+        )
         rep_exp = analyzer_exp.finalize()
         assert rep_exp.verdict == Verdict.INCONCLUSIVE.value
 
@@ -262,10 +306,26 @@ class TestAdversarialTimingOracleEdgeCases:
 
         analyzer = BatAllowlistAnalyzer()
         # Ingestion where SCAN_REQ arrives first in queue, but with timestamp 1000, and SCAN_RSP has timestamp 960 (-40us)
-        analyzer.process_packet(BlePacketRecord(body=build_adv_ind(periph), channel=37, rssi=-50, timestamp_usec=500_000, access_address=BLE_ADV_AA))
-        analyzer.process_packet(BlePacketRecord(body=build_scan_req(scanner, periph), channel=37, rssi=-50, timestamp_usec=1_000_000, access_address=BLE_ADV_AA))
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_adv_ind(periph), channel=37, rssi=-50, timestamp_usec=500_000, access_address=BLE_ADV_AA
+            )
+        )
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_scan_req(scanner, periph),
+                channel=37,
+                rssi=-50,
+                timestamp_usec=1_000_000,
+                access_address=BLE_ADV_AA,
+            )
+        )
         # SCAN_RSP with timestamp 999_960 (-40us delay within [-50, 5000])
-        analyzer.process_packet(BlePacketRecord(body=build_scan_rsp(periph), channel=37, rssi=-50, timestamp_usec=999_960, access_address=BLE_ADV_AA))
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_scan_rsp(periph), channel=37, rssi=-50, timestamp_usec=999_960, access_address=BLE_ADV_AA
+            )
+        )
 
         rep = analyzer.finalize()
         assert rep.verdict == Verdict.OPEN_ADVERTISER.value
@@ -284,17 +344,61 @@ class TestAdversarialTimingOracleEdgeCases:
 
         analyzer = BatAllowlistAnalyzer()
         t_base = 1_000_000
-        analyzer.process_packet(BlePacketRecord(body=build_adv_ind(periph), channel=37, rssi=-50, timestamp_usec=t_base, access_address=BLE_ADV_AA))
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_adv_ind(periph), channel=37, rssi=-50, timestamp_usec=t_base, access_address=BLE_ADV_AA
+            )
+        )
         # 3 probes closely spaced
-        analyzer.process_packet(BlePacketRecord(body=build_scan_req(scanner_a, periph), channel=37, rssi=-50, timestamp_usec=t_base + 10_000, access_address=BLE_ADV_AA))
-        analyzer.process_packet(BlePacketRecord(body=build_scan_req(scanner_b, periph), channel=37, rssi=-50, timestamp_usec=t_base + 10_005, access_address=BLE_ADV_AA))
-        analyzer.process_packet(BlePacketRecord(body=build_scan_req(scanner_c, periph), channel=37, rssi=-50, timestamp_usec=t_base + 10_010, access_address=BLE_ADV_AA))
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_scan_req(scanner_a, periph),
+                channel=37,
+                rssi=-50,
+                timestamp_usec=t_base + 10_000,
+                access_address=BLE_ADV_AA,
+            )
+        )
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_scan_req(scanner_b, periph),
+                channel=37,
+                rssi=-50,
+                timestamp_usec=t_base + 10_005,
+                access_address=BLE_ADV_AA,
+            )
+        )
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_scan_req(scanner_c, periph),
+                channel=37,
+                rssi=-50,
+                timestamp_usec=t_base + 10_010,
+                access_address=BLE_ADV_AA,
+            )
+        )
 
         # Single SCAN_RSP at exactly 150us after scanner A
-        analyzer.process_packet(BlePacketRecord(body=build_scan_rsp(periph), channel=37, rssi=-50, timestamp_usec=t_base + 10_150, access_address=BLE_ADV_AA))
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_scan_rsp(periph),
+                channel=37,
+                rssi=-50,
+                timestamp_usec=t_base + 10_150,
+                access_address=BLE_ADV_AA,
+            )
+        )
 
         # Advance time to flush expired probes
-        analyzer.process_packet(BlePacketRecord(body=build_adv_ind(periph), channel=37, rssi=-50, timestamp_usec=t_base + 30_000, access_address=BLE_ADV_AA))
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_adv_ind(periph),
+                channel=37,
+                rssi=-50,
+                timestamp_usec=t_base + 30_000,
+                access_address=BLE_ADV_AA,
+            )
+        )
 
         rep = analyzer.finalize()
         assert rep.verdict == Verdict.ALLOWLIST_CONFIRMED.value
@@ -433,9 +537,9 @@ class TestAdversarialCsrkRolloverAndParallelIsolation:
         analyzer = DifferentialEncryptionAnalyzer()
 
         connections = [
-            ("C0:00:00:00:00:01", "D0:00:00:00:00:01", 0x11111111, True),   # Shared LTK
+            ("C0:00:00:00:00:01", "D0:00:00:00:00:01", 0x11111111, True),  # Shared LTK
             ("C0:00:00:00:00:02", "D0:00:00:00:00:02", 0x22222222, False),  # Rejected
-            ("C0:00:00:00:00:03", "D0:00:00:00:00:03", 0x33333333, True),   # Shared LTK
+            ("C0:00:00:00:00:03", "D0:00:00:00:00:03", 0x33333333, True),  # Shared LTK
             ("C0:00:00:00:00:04", "D0:00:00:00:00:04", 0x44444444, False),  # Rejected
         ]
 
@@ -445,33 +549,125 @@ class TestAdversarialCsrkRolloverAndParallelIsolation:
 
         # Interleave ENC_REQ
         for idx, (_, _, aa, _) in enumerate(connections):
-            analyzer.process_packet(BlePacketRecord(
-                body=build_ll_enc_req(rand=bytes([idx]*8), ediv=idx, skdm=bytes([idx]*8), ivm=bytes([idx]*4)),
-                channel=1,
-                rssi=-60,
-                timestamp_usec=10_000 + idx * 1000,
-                access_address=aa,
-                direction=0,
-            ))
+            analyzer.process_packet(
+                BlePacketRecord(
+                    body=build_ll_enc_req(rand=bytes([idx] * 8), ediv=idx, skdm=bytes([idx] * 8), ivm=bytes([idx] * 4)),
+                    channel=1,
+                    rssi=-60,
+                    timestamp_usec=10_000 + idx * 1000,
+                    access_address=aa,
+                    direction=0,
+                )
+            )
 
         # Handshake outcomes interleaved
         # Conn 0 (Shared)
-        analyzer.process_packet(BlePacketRecord(body=build_ll_enc_rsp(skds=b"\x01"*8, ivs=b"\x02"*4), channel=1, rssi=-60, timestamp_usec=20_000, access_address=0x11111111, direction=1))
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_ll_enc_rsp(skds=b"\x01" * 8, ivs=b"\x02" * 4),
+                channel=1,
+                rssi=-60,
+                timestamp_usec=20_000,
+                access_address=0x11111111,
+                direction=1,
+            )
+        )
         # Conn 1 (Reject)
-        analyzer.process_packet(BlePacketRecord(body=build_ll_reject_ind(ERROR_PIN_OR_KEY_MISSING), channel=1, rssi=-60, timestamp_usec=21_000, access_address=0x22222222, direction=1))
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_ll_reject_ind(ERROR_PIN_OR_KEY_MISSING),
+                channel=1,
+                rssi=-60,
+                timestamp_usec=21_000,
+                access_address=0x22222222,
+                direction=1,
+            )
+        )
         # Conn 2 (Shared)
-        analyzer.process_packet(BlePacketRecord(body=build_ll_enc_rsp(skds=b"\x03"*8, ivs=b"\x04"*4), channel=1, rssi=-60, timestamp_usec=22_000, access_address=0x33333333, direction=1))
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_ll_enc_rsp(skds=b"\x03" * 8, ivs=b"\x04" * 4),
+                channel=1,
+                rssi=-60,
+                timestamp_usec=22_000,
+                access_address=0x33333333,
+                direction=1,
+            )
+        )
         # Conn 3 (Reject)
-        analyzer.process_packet(BlePacketRecord(body=build_ll_reject_ind(ERROR_PIN_OR_KEY_MISSING), channel=1, rssi=-60, timestamp_usec=23_000, access_address=0x44444444, direction=1))
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_ll_reject_ind(ERROR_PIN_OR_KEY_MISSING),
+                channel=1,
+                rssi=-60,
+                timestamp_usec=23_000,
+                access_address=0x44444444,
+                direction=1,
+            )
+        )
 
         # Complete Conn 0 and Conn 2
-        analyzer.process_packet(BlePacketRecord(body=build_ll_start_enc_req(), channel=1, rssi=-60, timestamp_usec=30_000, access_address=0x11111111, direction=1))
-        analyzer.process_packet(BlePacketRecord(body=build_ll_start_enc_rsp(), channel=1, rssi=-60, timestamp_usec=31_000, access_address=0x11111111, direction=0))
-        analyzer.process_packet(BlePacketRecord(body=build_ll_start_enc_rsp(mic=b"\xAA"*4), channel=1, rssi=-60, timestamp_usec=32_000, access_address=0x11111111, direction=1))
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_ll_start_enc_req(),
+                channel=1,
+                rssi=-60,
+                timestamp_usec=30_000,
+                access_address=0x11111111,
+                direction=1,
+            )
+        )
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_ll_start_enc_rsp(),
+                channel=1,
+                rssi=-60,
+                timestamp_usec=31_000,
+                access_address=0x11111111,
+                direction=0,
+            )
+        )
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_ll_start_enc_rsp(mic=b"\xaa" * 4),
+                channel=1,
+                rssi=-60,
+                timestamp_usec=32_000,
+                access_address=0x11111111,
+                direction=1,
+            )
+        )
 
-        analyzer.process_packet(BlePacketRecord(body=build_ll_start_enc_req(), channel=1, rssi=-60, timestamp_usec=33_000, access_address=0x33333333, direction=1))
-        analyzer.process_packet(BlePacketRecord(body=build_ll_start_enc_rsp(), channel=1, rssi=-60, timestamp_usec=34_000, access_address=0x33333333, direction=0))
-        analyzer.process_packet(BlePacketRecord(body=build_ll_start_enc_rsp(mic=b"\xBB"*4), channel=1, rssi=-60, timestamp_usec=35_000, access_address=0x33333333, direction=1))
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_ll_start_enc_req(),
+                channel=1,
+                rssi=-60,
+                timestamp_usec=33_000,
+                access_address=0x33333333,
+                direction=1,
+            )
+        )
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_ll_start_enc_rsp(),
+                channel=1,
+                rssi=-60,
+                timestamp_usec=34_000,
+                access_address=0x33333333,
+                direction=0,
+            )
+        )
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_ll_start_enc_rsp(mic=b"\xbb" * 4),
+                channel=1,
+                rssi=-60,
+                timestamp_usec=35_000,
+                access_address=0x33333333,
+                direction=1,
+            )
+        )
 
         rep = analyzer.finalize()
         assert rep.verdict == Verdict.CONFIRMED_EXCLUSIVE.value

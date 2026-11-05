@@ -257,6 +257,7 @@ class TestPlotlyFigureGenerators:
     def test_build_timing_oracle_figure_extra_mechanisms(self) -> None:
         """Verify LL_CONNECTION_UPDATE and ADV_DIRECT_IND_BURST findings are plotted."""
         from airtell.sidechannel import BatAllowlistFinding, SideChannelType
+
         rep = SideChannelSuiteReport(timestamp=1729000000.0, total_packets=50)
         f_conn = BatAllowlistFinding(
             finding_type=SideChannelType.BAT_ALLOWLIST.value,
@@ -369,7 +370,6 @@ class TestPacketCoercion:
         assert isinstance(coerced, BlePacketRecord)
         assert coerced.channel == 38
         assert coerced.timestamp_usec == 2000
-
 
     def test_coerce_dictionary_event(self) -> None:
         item = {
@@ -495,7 +495,9 @@ class TestSideChannelDashboardViewRendering:
             patch("streamlit.radio", return_value="📁 Offline PCAP/PCAPNG Upload"),
             patch("streamlit.columns", side_effect=mock_columns),
             patch("streamlit.text_input", return_value=""),
-            patch("streamlit.multiselect", return_value=["Differential Encryption", "CSRK SignCounter", "BAT Allowlist"]),
+            patch(
+                "streamlit.multiselect", return_value=["Differential Encryption", "CSRK SignCounter", "BAT Allowlist"]
+            ),
             patch("streamlit.file_uploader", return_value=None),
             patch("streamlit.session_state", {"sc_last_report": mock_suite_report}),
             patch("streamlit.error") as mock_error,
@@ -522,7 +524,9 @@ class TestSideChannelDashboardViewRendering:
             patch("streamlit.radio", return_value="🧪 Synthetic Mock Stream"),
             patch("streamlit.columns", side_effect=mock_columns),
             patch("streamlit.text_input", return_value=""),
-            patch("streamlit.multiselect", return_value=["Differential Encryption", "CSRK SignCounter", "BAT Allowlist"]),
+            patch(
+                "streamlit.multiselect", return_value=["Differential Encryption", "CSRK SignCounter", "BAT Allowlist"]
+            ),
             patch("streamlit.selectbox", return_value="All Analyzers (Positive Detections)"),
             patch("streamlit.button", return_value=True),
             patch("streamlit.session_state", session_state),
@@ -541,13 +545,15 @@ class TestSideChannelDashboardViewRendering:
     def test_render_sidechannel_tab_live_queue_ingestion(self) -> None:
         """Live Queue ingestion extracts packets from EventQueue and runs analysis."""
         queue = EventQueue(maxsize=50)
-        queue.push({
-            "timestamp": 1729000000.0,
-            "channel": 37,
-            "rssi": -55,
-            "mac_address": "AA:BB:CC:DD:EE:02",
-            "raw_payload": "020106",
-        })
+        queue.push(
+            {
+                "timestamp": 1729000000.0,
+                "channel": 37,
+                "rssi": -55,
+                "mac_address": "AA:BB:CC:DD:EE:02",
+                "raw_payload": "020106",
+            }
+        )
         session_state = {}
 
         def mock_button(label, key=None):
@@ -633,7 +639,10 @@ class TestSideChannelDashboardViewRendering:
 
         with (
             patch("streamlit.tabs", side_effect=capture_tabs),
-            patch("streamlit.columns", side_effect=lambda n: [MagicMock() for _ in range(n if isinstance(n, int) else len(n))]),
+            patch(
+                "streamlit.columns",
+                side_effect=lambda n: [MagicMock() for _ in range(n if isinstance(n, int) else len(n))],
+            ),
             patch("streamlit.metric"),
             patch("streamlit.dataframe"),
             patch("streamlit.subheader"),

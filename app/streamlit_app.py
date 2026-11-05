@@ -45,6 +45,7 @@ DEFAULT_DB = "data/ble_tracker.db"
 DB_PATH = os.environ.get("DATABASE", DEFAULT_DB)
 Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
 
+
 @st.cache_resource
 def get_tracker_db(db_path: str = DB_PATH) -> BLETrackerDB:
     """Retrieve and cache BLETrackerDB instance."""
@@ -100,7 +101,6 @@ def main() -> None:
     backend = st.session_state.get("analytics_backend") or (
         tracker_db.backend if hasattr(tracker_db, "backend") else None
     )
-
 
     # Determine real-time device usage using lsof system command
     dev0_in_use = check_device_usage("/dev/ttyUSB0")

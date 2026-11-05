@@ -63,58 +63,44 @@ class TestCliArgumentParsing:
         assert "--summary" in captured.out
 
     @pytest.mark.parametrize("subcmd_alias", ["side-channel", "analyze-sidechannel"])
-    def test_sidechannel_subcommand_aliases(
-        self, subcmd_alias: str, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_sidechannel_subcommand_aliases(self, subcmd_alias: str, capsys: pytest.CaptureFixture[str]) -> None:
         rc = main([subcmd_alias, "--help"])
         assert rc == 0
         captured = capsys.readouterr()
         assert "--pcap" in captured.out
 
-    def test_missing_input_source_returns_code_two(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_missing_input_source_returns_code_two(self, capsys: pytest.CaptureFixture[str]) -> None:
         rc = main(["sidechannel"])
         assert rc == 2
         captured = capsys.readouterr()
         assert "ERROR: Must specify an input source" in captured.err
 
-    def test_nonexistent_pcap_returns_code_two(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_nonexistent_pcap_returns_code_two(self, capsys: pytest.CaptureFixture[str]) -> None:
         rc = main(["sidechannel", "--pcap", "/tmp/definitely_nonexistent_pcap_12345.pcap"])
         assert rc == 2
         captured = capsys.readouterr()
         assert "ERROR: PCAP file not found" in captured.err
 
-    def test_invalid_analyzer_choice_returns_code_two(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_invalid_analyzer_choice_returns_code_two(self, capsys: pytest.CaptureFixture[str]) -> None:
         rc = main(["sidechannel", "--mock", "--analyzer", "unsupported_analyzer"])
         assert rc == 2
         captured = capsys.readouterr()
         assert "invalid choice" in captured.err or "usage:" in captured.err
 
-    def test_invalid_csrk_non_hex_returns_code_two(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_invalid_csrk_non_hex_returns_code_two(self, capsys: pytest.CaptureFixture[str]) -> None:
         rc = main(["sidechannel", "--mock", "--csrk", "not_a_valid_hex_string_xyz"])
         assert rc == 2
         captured = capsys.readouterr()
         assert "ERROR: Invalid hex string for CSRK" in captured.err
 
-    def test_invalid_csrk_length_returns_code_two(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_invalid_csrk_length_returns_code_two(self, capsys: pytest.CaptureFixture[str]) -> None:
         # 4 bytes hex instead of 16
         rc = main(["sidechannel", "--mock", "--csrk", "11223344"])
         assert rc == 2
         captured = capsys.readouterr()
         assert "ERROR: CSRK must be 16 bytes" in captured.err
 
-    def test_csrk_empty_string_returns_code_two(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_csrk_empty_string_returns_code_two(self, capsys: pytest.CaptureFixture[str]) -> None:
         rc = main(["sidechannel", "--mock", "--csrk", ""])
         assert rc == 2
         captured = capsys.readouterr()
@@ -130,9 +116,7 @@ class TestCliArgumentParsing:
         captured = capsys.readouterr()
         assert "ERROR: Multiple conflicting input sources specified" in captured.err
 
-    def test_multiple_input_sources_mock_and_live_returns_code_two(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_multiple_input_sources_mock_and_live_returns_code_two(self, capsys: pytest.CaptureFixture[str]) -> None:
         rc = main(["sidechannel", "--mock", "--live", "/dev/ttyUSB0"])
         assert rc == 2
         captured = capsys.readouterr()
@@ -148,17 +132,13 @@ class TestCliArgumentParsing:
         captured = capsys.readouterr()
         assert "ERROR: Multiple conflicting input sources specified" in captured.err
 
-    def test_live_interface_failure_returns_code_two(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_live_interface_failure_returns_code_two(self, capsys: pytest.CaptureFixture[str]) -> None:
         rc = main(["sidechannel", "--live", "/dev/nonexistent_serial_port_999"])
         assert rc == 2
         captured = capsys.readouterr()
         assert "ERROR: Live sniffing interface not available" in captured.err
 
-    def test_output_file_generation_json(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_output_file_generation_json(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         out_file = tmp_path / "nested" / "report.json"
         rc = main(["sidechannel", "--mock", "--json", "--output", str(out_file)])
         assert rc in (0, 1)
@@ -167,9 +147,7 @@ class TestCliArgumentParsing:
         assert "overall_verdict" in parsed
         assert "reports" in parsed
 
-    def test_output_file_generation_text_summary(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_output_file_generation_text_summary(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         out_file = tmp_path / "report.txt"
         rc = main(["sidechannel", "--mock", "--summary", "--output", str(out_file)])
         assert rc in (0, 1)
@@ -185,9 +163,7 @@ class TestCliArgumentParsing:
 class TestDifferentialEncryptionCliAndPcap:
     """Tests differential encryption analyzer integration via CLI and PCAP."""
 
-    def test_positive_shared_ltk_pcap_cli(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_positive_shared_ltk_pcap_cli(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         pcap_path = tmp_path / "shared_ltk.pcap"
         generate_encryption_trace(
             shared_ltk=True,
@@ -196,14 +172,16 @@ class TestDifferentialEncryptionCliAndPcap:
             output_path=pcap_path,
         )
 
-        rc = main([
-            "sidechannel",
-            "--pcap",
-            str(pcap_path),
-            "--analyzer",
-            "encryption",
-            "--json",
-        ])
+        rc = main(
+            [
+                "sidechannel",
+                "--pcap",
+                str(pcap_path),
+                "--analyzer",
+                "encryption",
+                "--json",
+            ]
+        )
         assert rc == 1  # Exclusive-use side-channel detected
 
         captured = capsys.readouterr()
@@ -217,9 +195,7 @@ class TestDifferentialEncryptionCliAndPcap:
         assert finding["verdict"] == Verdict.PAIRED_SHARED_LTK.value
         assert finding["details"]["is_shared_ltk"] is True
 
-    def test_negative_rejected_pcap_cli(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_negative_rejected_pcap_cli(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         pcap_path = tmp_path / "rejected_ltk.pcap"
         generate_encryption_trace(
             shared_ltk=False,
@@ -229,14 +205,16 @@ class TestDifferentialEncryptionCliAndPcap:
             output_path=pcap_path,
         )
 
-        rc = main([
-            "sidechannel",
-            "--pcap",
-            str(pcap_path),
-            "--analyzer",
-            "encryption",
-            "--json",
-        ])
+        rc = main(
+            [
+                "sidechannel",
+                "--pcap",
+                str(pcap_path),
+                "--analyzer",
+                "encryption",
+                "--json",
+            ]
+        )
         assert rc == 0  # Clean analysis, no shared LTK / exclusive device detected
 
         captured = capsys.readouterr()
@@ -245,9 +223,7 @@ class TestDifferentialEncryptionCliAndPcap:
         assert report["overall_verdict"] == Verdict.REJECTED_UNTRUSTED.value
         assert report["confirmed_exclusive_devices"] == []
 
-    def test_negative_extended_reject_pcap_cli(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_negative_extended_reject_pcap_cli(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         pcap_path = tmp_path / "ext_rejected_ltk.pcap"
         generate_encryption_trace(
             shared_ltk=False,
@@ -257,23 +233,23 @@ class TestDifferentialEncryptionCliAndPcap:
             output_path=pcap_path,
         )
 
-        rc = main([
-            "sidechannel",
-            "--pcap",
-            str(pcap_path),
-            "--analyzer",
-            "encryption",
-            "--json",
-        ])
+        rc = main(
+            [
+                "sidechannel",
+                "--pcap",
+                str(pcap_path),
+                "--analyzer",
+                "encryption",
+                "--json",
+            ]
+        )
         assert rc == 0
         captured = capsys.readouterr()
         report = json.loads(captured.out)
         assert report["has_detections"] is False
         assert report["overall_verdict"] == Verdict.REJECTED_UNTRUSTED.value
 
-    def test_differential_encryption_target_filter(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_differential_encryption_target_filter(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         pcap_path = tmp_path / "filtered_ltk.pcap"
         generate_encryption_trace(
             shared_ltk=True,
@@ -283,29 +259,33 @@ class TestDifferentialEncryptionCliAndPcap:
         )
 
         # Match target filter
-        rc_match = main([
-            "sidechannel",
-            "--pcap",
-            str(pcap_path),
-            "--analyzer",
-            "encryption",
-            "--target",
-            "AA:BB:CC:DD:EE:02",
-            "--json",
-        ])
+        rc_match = main(
+            [
+                "sidechannel",
+                "--pcap",
+                str(pcap_path),
+                "--analyzer",
+                "encryption",
+                "--target",
+                "AA:BB:CC:DD:EE:02",
+                "--json",
+            ]
+        )
         assert rc_match == 1
 
         # Mismatch target filter
-        rc_mismatch = main([
-            "sidechannel",
-            "--pcap",
-            str(pcap_path),
-            "--analyzer",
-            "encryption",
-            "--target",
-            "FF:FF:FF:FF:FF:FF",
-            "--json",
-        ])
+        rc_mismatch = main(
+            [
+                "sidechannel",
+                "--pcap",
+                str(pcap_path),
+                "--analyzer",
+                "encryption",
+                "--target",
+                "FF:FF:FF:FF:FF:FF",
+                "--json",
+            ]
+        )
         assert rc_mismatch == 0
 
 
@@ -315,9 +295,7 @@ class TestDifferentialEncryptionCliAndPcap:
 class TestCsrkCounterCliAndPcap:
     """Tests CSRK counter analyzer integration via CLI and PCAP."""
 
-    def test_csrk_sequential_monotonic_clean_cli(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_csrk_sequential_monotonic_clean_cli(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         csrk = b"\x11" * 16
         pcap_path = tmp_path / "csrk_sequential.pcap"
         generate_csrk_trace(
@@ -328,25 +306,25 @@ class TestCsrkCounterCliAndPcap:
             output_path=pcap_path,
         )
 
-        rc = main([
-            "sidechannel",
-            "--pcap",
-            str(pcap_path),
-            "--analyzer",
-            "csrk",
-            "--csrk",
-            csrk.hex(),
-            "--json",
-        ])
+        rc = main(
+            [
+                "sidechannel",
+                "--pcap",
+                str(pcap_path),
+                "--analyzer",
+                "csrk",
+                "--csrk",
+                csrk.hex(),
+                "--json",
+            ]
+        )
         assert rc == 0  # Sequential normal monotonic, no anomaly
         captured = capsys.readouterr()
         report = json.loads(captured.out)
         assert report["has_detections"] is False
         assert report["overall_verdict"] == Verdict.SEQUENTIAL_MONOTONIC.value
 
-    def test_csrk_replay_anomaly_cli(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_csrk_replay_anomaly_cli(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         csrk = b"\x22" * 16
         pcap_path = tmp_path / "csrk_replay.pcap"
         generate_csrk_trace(
@@ -357,29 +335,27 @@ class TestCsrkCounterCliAndPcap:
             output_path=pcap_path,
         )
 
-        rc = main([
-            "sidechannel",
-            "--pcap",
-            str(pcap_path),
-            "--analyzer",
-            "csrk",
-            "--csrk",
-            csrk.hex(),
-            "--json",
-        ])
+        rc = main(
+            [
+                "sidechannel",
+                "--pcap",
+                str(pcap_path),
+                "--analyzer",
+                "csrk",
+                "--csrk",
+                csrk.hex(),
+                "--json",
+            ]
+        )
         assert rc == 1  # Anomaly detected
         captured = capsys.readouterr()
         report = json.loads(captured.out)
         assert report["has_detections"] is True
         assert report["overall_verdict"] == Verdict.ANOMALY_REPLAY.value
-        replay_finding = next(
-            f for f in report["findings"] if f["verdict"] == Verdict.ANOMALY_REPLAY.value
-        )
+        replay_finding = next(f for f in report["findings"] if f["verdict"] == Verdict.ANOMALY_REPLAY.value)
         assert replay_finding["details"]["counter"] == 101
 
-    def test_csrk_jump_anomaly_cli(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_csrk_jump_anomaly_cli(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         csrk = b"\x33" * 16
         pcap_path = tmp_path / "csrk_jump.pcap"
         generate_csrk_trace(
@@ -388,16 +364,18 @@ class TestCsrkCounterCliAndPcap:
             output_path=pcap_path,
         )
 
-        rc = main([
-            "sidechannel",
-            "--pcap",
-            str(pcap_path),
-            "--analyzer",
-            "csrk",
-            "--csrk",
-            csrk.hex(),
-            "--json",
-        ])
+        rc = main(
+            [
+                "sidechannel",
+                "--pcap",
+                str(pcap_path),
+                "--analyzer",
+                "csrk",
+                "--csrk",
+                csrk.hex(),
+                "--json",
+            ]
+        )
         assert rc == 1
         captured = capsys.readouterr()
         report = json.loads(captured.out)
@@ -416,25 +394,25 @@ class TestCsrkCounterCliAndPcap:
             output_path=pcap_path,
         )
 
-        rc = main([
-            "sidechannel",
-            "--pcap",
-            str(pcap_path),
-            "--analyzer",
-            "csrk",
-            "--csrk",
-            csrk.hex(),
-            "--json",
-        ])
+        rc = main(
+            [
+                "sidechannel",
+                "--pcap",
+                str(pcap_path),
+                "--analyzer",
+                "csrk",
+                "--csrk",
+                csrk.hex(),
+                "--json",
+            ]
+        )
         assert rc == 1
         captured = capsys.readouterr()
         report = json.loads(captured.out)
         assert report["has_detections"] is True
         assert report["overall_verdict"] == Verdict.VERIFICATION_FAILED.value
 
-    def test_csrk_cross_rpa_linking_cli(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_csrk_cross_rpa_linking_cli(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         csrk = b"\x55" * 16
         pcap_path = tmp_path / "csrk_cross_rpa.pcap"
         generate_csrk_trace(
@@ -447,16 +425,18 @@ class TestCsrkCounterCliAndPcap:
             output_path=pcap_path,
         )
 
-        rc = main([
-            "sidechannel",
-            "--pcap",
-            str(pcap_path),
-            "--analyzer",
-            "csrk",
-            "--csrk",
-            csrk.hex(),
-            "--json",
-        ])
+        rc = main(
+            [
+                "sidechannel",
+                "--pcap",
+                str(pcap_path),
+                "--analyzer",
+                "csrk",
+                "--csrk",
+                csrk.hex(),
+                "--json",
+            ]
+        )
         assert rc == 1
         captured = capsys.readouterr()
         report = json.loads(captured.out)
@@ -472,9 +452,7 @@ class TestCsrkCounterCliAndPcap:
 class TestBatAllowlistCliAndPcap:
     """Tests BAT allowlist analyzer integration via CLI and PCAP."""
 
-    def test_bat_allowlist_confirmed_cli(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_bat_allowlist_confirmed_cli(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         pcap_path = tmp_path / "bat_allowlist.pcap"
         generate_bat_allowlist_trace(
             allowlist_enabled=True,
@@ -485,14 +463,16 @@ class TestBatAllowlistCliAndPcap:
             output_path=pcap_path,
         )
 
-        rc = main([
-            "sidechannel",
-            "--pcap",
-            str(pcap_path),
-            "--analyzer",
-            "bat",
-            "--json",
-        ])
+        rc = main(
+            [
+                "sidechannel",
+                "--pcap",
+                str(pcap_path),
+                "--analyzer",
+                "bat",
+                "--json",
+            ]
+        )
         assert rc == 1
         captured = capsys.readouterr()
         report = json.loads(captured.out)
@@ -500,9 +480,7 @@ class TestBatAllowlistCliAndPcap:
         assert report["overall_verdict"] == Verdict.ALLOWLIST_CONFIRMED.value
         assert "11:22:33:44:55:66" in report["confirmed_exclusive_devices"]
 
-    def test_bat_open_advertiser_clean_cli(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_bat_open_advertiser_clean_cli(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         pcap_path = tmp_path / "bat_open.pcap"
         generate_bat_allowlist_trace(
             allowlist_enabled=False,
@@ -513,23 +491,23 @@ class TestBatAllowlistCliAndPcap:
             output_path=pcap_path,
         )
 
-        rc = main([
-            "sidechannel",
-            "--pcap",
-            str(pcap_path),
-            "--analyzer",
-            "bat",
-            "--json",
-        ])
+        rc = main(
+            [
+                "sidechannel",
+                "--pcap",
+                str(pcap_path),
+                "--analyzer",
+                "bat",
+                "--json",
+            ]
+        )
         assert rc == 0  # Clean open advertiser, no allowlist
         captured = capsys.readouterr()
         report = json.loads(captured.out)
         assert report["has_detections"] is False
         assert report["overall_verdict"] == Verdict.OPEN_ADVERTISER.value
 
-    def test_bat_directed_exclusive_advertising_cli(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_bat_directed_exclusive_advertising_cli(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         pcap_path = tmp_path / "bat_directed.pcap"
         generate_bat_allowlist_trace(
             target_rpa="AA:BB:CC:DD:EE:01",
@@ -538,23 +516,23 @@ class TestBatAllowlistCliAndPcap:
             output_path=pcap_path,
         )
 
-        rc = main([
-            "sidechannel",
-            "--pcap",
-            str(pcap_path),
-            "--analyzer",
-            "bat",
-            "--json",
-        ])
+        rc = main(
+            [
+                "sidechannel",
+                "--pcap",
+                str(pcap_path),
+                "--analyzer",
+                "bat",
+                "--json",
+            ]
+        )
         assert rc == 1
         captured = capsys.readouterr()
         report = json.loads(captured.out)
         assert report["has_detections"] is True
         assert report["overall_verdict"] == Verdict.DIRECTED_EXCLUSIVE.value
 
-    def test_bat_reconnection_profile_match_cli(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_bat_reconnection_profile_match_cli(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         pcap_path = tmp_path / "bat_profile.pcap"
         generate_bat_allowlist_trace(
             target_rpa="AA:BB:CC:DD:EE:01",
@@ -566,14 +544,16 @@ class TestBatAllowlistCliAndPcap:
             output_path=pcap_path,
         )
 
-        rc = main([
-            "sidechannel",
-            "--pcap",
-            str(pcap_path),
-            "--analyzer",
-            "bat",
-            "--json",
-        ])
+        rc = main(
+            [
+                "sidechannel",
+                "--pcap",
+                str(pcap_path),
+                "--analyzer",
+                "bat",
+                "--json",
+            ]
+        )
         assert rc == 1
         captured = capsys.readouterr()
         report = json.loads(captured.out)
@@ -597,9 +577,7 @@ class TestMockSimulationModeCli:
         assert "csrk_counter" in report["reports"]
         assert "bat_allowlist" in report["reports"]
 
-    def test_mock_selective_encryption_analyzer(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_mock_selective_encryption_analyzer(self, capsys: pytest.CaptureFixture[str]) -> None:
         rc = main(["sidechannel", "--mock", "--analyzer", "encryption", "--json"])
         assert rc == 1
         captured = capsys.readouterr()
@@ -608,9 +586,7 @@ class TestMockSimulationModeCli:
         assert "csrk_counter" not in report["reports"]
         assert "bat_allowlist" not in report["reports"]
 
-    def test_mock_selective_csrk_analyzer(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_mock_selective_csrk_analyzer(self, capsys: pytest.CaptureFixture[str]) -> None:
         csrk = (b"\x77" * 16).hex()
         rc = main(["sidechannel", "--mock", "--analyzer", "csrk", "--csrk", csrk, "--json"])
         assert rc in (0, 1)
@@ -619,9 +595,7 @@ class TestMockSimulationModeCli:
         assert "csrk_counter" in report["reports"]
         assert "differential_encryption" not in report["reports"]
 
-    def test_mock_selective_bat_analyzer(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_mock_selective_bat_analyzer(self, capsys: pytest.CaptureFixture[str]) -> None:
         rc = main(["sidechannel", "--mock", "--analyzer", "bat", "--json"])
         assert rc == 1
         captured = capsys.readouterr()

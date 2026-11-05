@@ -117,17 +117,19 @@ def render_rssi_trends(
                 mac = item.get("mac_address", "Unknown")
                 e_key = item.get("ephemeral_key", "")
                 k_short = (e_key if e_key else mac)[:16]
-                live_rows.append({
-                    "id": f"live-{idx}",
-                    "datetime_str": item.get("datetime_str", ""),
-                    "timestamp": float(item.get("timestamp", 0.0)),
-                    "mac_address": mac,
-                    "rssi": int(item.get("rssi", -100)),
-                    "network_type": net,
-                    "key_short": k_short,
-                    "ephemeral_key": e_key,
-                    "channel": item.get("channel", 37),
-                })
+                live_rows.append(
+                    {
+                        "id": f"live-{idx}",
+                        "datetime_str": item.get("datetime_str", ""),
+                        "timestamp": float(item.get("timestamp", 0.0)),
+                        "mac_address": mac,
+                        "rssi": int(item.get("rssi", -100)),
+                        "network_type": net,
+                        "key_short": k_short,
+                        "ephemeral_key": e_key,
+                        "channel": item.get("channel", 37),
+                    }
+                )
 
     df_db = pd.DataFrame()
     db_loaded = False
@@ -155,7 +157,6 @@ def render_rssi_trends(
         except Exception as e:
             st.error(f"Error loading signal telemetry from database: {e}")
 
-
     # 2. Combine historical DB records with live streaming packets
     frames_to_concat = []
     if not df_db.empty:
@@ -165,7 +166,9 @@ def render_rssi_trends(
         frames_to_concat.append(df_live)
 
     if not frames_to_concat:
-        st.info("No crowdsourced tracking beacons (Apple, Google, Tile, Samsung) recorded yet. Start Tshark capture in Radio Controls or inject beacon bursts.")
+        st.info(
+            "No crowdsourced tracking beacons (Apple, Google, Tile, Samsung) recorded yet. Start Tshark capture in Radio Controls or inject beacon bursts."
+        )
         return
 
     df = pd.concat(frames_to_concat, ignore_index=True)
@@ -173,7 +176,9 @@ def render_rssi_trends(
         df = df.sort_values(by="datetime_str", ascending=True)
 
     if live_rows:
-        st.caption(f"⚡ **Live Stream Active:** {len(live_rows)} in-memory tracker observations plotted alongside historical data.")
+        st.caption(
+            f"⚡ **Live Stream Active:** {len(live_rows)} in-memory tracker observations plotted alongside historical data."
+        )
 
     # Filter controls
     f_col1, f_col2 = st.columns([2, 1])

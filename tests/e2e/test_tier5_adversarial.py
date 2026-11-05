@@ -156,7 +156,7 @@ class TestFramingJitterAdversarial:
         valid_frame = encode_msg(MESSAGE_BLEFRAME, body)
 
         # Inject noise line followed by valid line
-        ser.inject_rx_bytes(b"\x00\xFF\xAA\x55InvalidNoiseLine\r\n")
+        ser.inject_rx_bytes(b"\x00\xff\xaa\x55InvalidNoiseLine\r\n")
         ser.inject_rx_bytes(valid_frame)
 
         # First line fails parsing
@@ -196,9 +196,7 @@ class TestMultiThreadedConcurrencyStress:
                     packet=pdu,
                 )
 
-        threads = [
-            threading.Thread(target=worker, args=(t,)) for t in range(threads_count)
-        ]
+        threads = [threading.Thread(target=worker, args=(t,)) for t in range(threads_count)]
         for t in threads:
             t.start()
         for t in threads:
@@ -221,9 +219,7 @@ class TestMultiThreadedConcurrencyStress:
             count = 0
             while not stop_event.is_set() and count < 100:
                 pdu = bytes([0x02, 6]) + mac
-                frame = dissect_advertising_pdu(
-                    pdu, chan=37 + (worker_id % 3), rssi=-60, ts_usec=1000 + count
-                )
+                frame = dissect_advertising_pdu(pdu, chan=37 + (worker_id % 3), rssi=-60, ts_usec=1000 + count)
                 session.record_packet(frame)
                 count += 1
 
@@ -232,9 +228,7 @@ class TestMultiThreadedConcurrencyStress:
                 _ = session.get_summary()
                 _ = session.to_json()
 
-        writers = [
-            threading.Thread(target=writer_worker, args=(w,)) for w in range(4)
-        ]
+        writers = [threading.Thread(target=writer_worker, args=(w,)) for w in range(4)]
         readers = [threading.Thread(target=reader_worker) for _ in range(4)]
 
         for r in readers:

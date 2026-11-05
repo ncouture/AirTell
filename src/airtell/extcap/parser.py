@@ -96,9 +96,7 @@ class TsharkBleJsonParser:
         self.default_channel: int = default_channel
         self.max_buffered_records: int = max_buffered_records
 
-        self.buffered_observations: collections.deque[dict[str, Any]] = collections.deque(
-            maxlen=max_buffered_records
-        )
+        self.buffered_observations: collections.deque[dict[str, Any]] = collections.deque(maxlen=max_buffered_records)
         self._lock: threading.Lock = threading.Lock()
         self._total_parsed: int = 0
         self._parse_errors: int = 0
@@ -196,7 +194,9 @@ class TsharkBleJsonParser:
                 btle_data.get("btle.initiator_address"),
                 btle_data.get("btle_btle_initiator_address"),
                 btcommon_data.get("btcommon.eir_ad.entry.device_address") if isinstance(btcommon_data, dict) else None,
-                btcommon_data.get("btcommon_btcommon_eir_ad_entry_device_address") if isinstance(btcommon_data, dict) else None,
+                btcommon_data.get("btcommon_btcommon_eir_ad_entry_device_address")
+                if isinstance(btcommon_data, dict)
+                else None,
             ]
         )
         if not raw_mac:
@@ -368,12 +368,16 @@ class TsharkBleJsonParser:
             parts.append(normalize_hex_payload(eir_data))
 
         # Direct service data (EK format)
-        svc_data = btle_data.get("btcommon_btcommon_eir_ad_entry_service_data") or btle_data.get("btcommon.eir_ad.entry.service_data")
+        svc_data = btle_data.get("btcommon_btcommon_eir_ad_entry_service_data") or btle_data.get(
+            "btcommon.eir_ad.entry.service_data"
+        )
         if svc_data:
             parts.append(normalize_hex_payload(svc_data))
 
         # Direct UUIDs (EK format)
-        uuid_data = btle_data.get("btcommon_btcommon_eir_ad_entry_uuid_16") or btle_data.get("btcommon.eir_ad.entry.uuid_16")
+        uuid_data = btle_data.get("btcommon_btcommon_eir_ad_entry_uuid_16") or btle_data.get(
+            "btcommon.eir_ad.entry.uuid_16"
+        )
         if uuid_data:
             parts.append(normalize_hex_payload(uuid_data))
 
@@ -405,7 +409,9 @@ class TsharkBleJsonParser:
             [
                 btle_data.get("btcommon_btcommon_eir_ad_entry_company_id"),
                 btle_data.get("btcommon.eir_ad.entry.company_id"),
-                btcommon_data.get("btcommon_btcommon_eir_ad_entry_company_id") if isinstance(btcommon_data, dict) else None,
+                btcommon_data.get("btcommon_btcommon_eir_ad_entry_company_id")
+                if isinstance(btcommon_data, dict)
+                else None,
                 btcommon_data.get("btcommon.eir_ad.entry.company_id") if isinstance(btcommon_data, dict) else None,
             ]
         )

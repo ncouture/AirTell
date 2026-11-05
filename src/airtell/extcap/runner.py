@@ -242,9 +242,7 @@ class TsharkExtcapRunner:
                 )
             except FileNotFoundError as exc:
                 self._running = False
-                raise FileNotFoundError(
-                    f"Tshark executable '{self.tshark_bin}' was not found on system PATH."
-                ) from exc
+                raise FileNotFoundError(f"Tshark executable '{self.tshark_bin}' was not found on system PATH.") from exc
 
             self._process = proc
             self._running = True

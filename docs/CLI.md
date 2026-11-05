@@ -1,6 +1,6 @@
 # AirTell Unified CLI Manual
 
-**Authoritative Production-Grade Command-Line Reference & Operational Guide**  
+**Authoritative Production-Grade Command-Line Reference & Operational Guide**
 **Framework**: `airtell` | **Specification Basis**: PoPETs 2025-0103 ("Your Signal, Their Data")
 
 ---
@@ -810,8 +810,8 @@ burst-001,C0:11:22:22:11:C0,AltBeacon,SCAN_REQ,6C:79:B8:AA:BB:CC,RPA,8.15,38,-70
 
 ### 7.1 Linux Serial Port Permissions (`dialout`)
 
-**Symptom**: `PermissionError: [Errno 13] Permission denied: '/dev/ttyUSB0'`  
-**Cause**: Serial character devices (`/dev/ttyUSB*`, `/dev/ttyACM*`) are restricted to `root:dialout`.  
+**Symptom**: `PermissionError: [Errno 13] Permission denied: '/dev/ttyUSB0'`
+**Cause**: Serial character devices (`/dev/ttyUSB*`, `/dev/ttyACM*`) are restricted to `root:dialout`.
 **Remediation**:
 ```bash
 sudo usermod -a -G dialout,uucp $USER
@@ -841,8 +841,8 @@ sudo udevadm trigger
 
 ### 7.3 Serial Port Contention & Lock Detection (`lsof`)
 
-**Symptom**: `OSError: [Errno 16] Device or resource busy: '/dev/ttyUSB0'`  
-**Cause**: Background sniffer processes, `tshark`, or `ModemManager` hold open file descriptors.  
+**Symptom**: `OSError: [Errno 16] Device or resource busy: '/dev/ttyUSB0'`
+**Cause**: Background sniffer processes, `tshark`, or `ModemManager` hold open file descriptors.
 **Remediation**:
 ```bash
 # Identify holding PID
@@ -876,8 +876,8 @@ ls -la /dev/serial/by-id/
 
 ### 7.6 Synchronization Loss & Hardware Reset
 
-**Symptom**: `Marker sync timed out after 0.50 seconds` or unresponsiveness during capture.  
-**Cause**: MCU crash, FIFO desynchronization, or unprogrammed factory firmware.  
+**Symptom**: `Marker sync timed out after 0.50 seconds` or unresponsiveness during capture.
+**Cause**: MCU crash, FIFO desynchronization, or unprogrammed factory firmware.
 **Remediation**:
 ```bash
 # Execute soft reset and marker sync burst
@@ -887,8 +887,8 @@ If using a LaunchPad, press the mechanical `RESET` button adjacent to the USB re
 
 ### 7.7 Wireshark & TShark PCAP Dissection
 
-**Symptom**: Wireshark displays `[Malformed Packet: BT Common]`.  
-**Cause**: Missing pseudo-header flags (`0x0400` CRC checked or `0x0800` CRC valid), or missing 3-byte BLE CRC checksum.  
+**Symptom**: Wireshark displays `[Malformed Packet: BT Common]`.
+**Cause**: Missing pseudo-header flags (`0x0400` CRC checked or `0x0800` CRC valid), or missing 3-byte BLE CRC checksum.
 **Validation**:
 ```bash
 # Dissect capture with verbose link-layer tree in tshark

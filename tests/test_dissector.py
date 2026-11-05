@@ -114,8 +114,8 @@ class TestPduDemuxing:
         # Latency(2B), Timeout(2B), ChM(5B), Hop+SCA(1B)
         lldata = (
             struct.pack("<I", 0x12345678)  # AA
-            + bytes([0x55, 0x55, 0x55])   # CRCInit
-            + bytes([2])                   # WinSize
+            + bytes([0x55, 0x55, 0x55])  # CRCInit
+            + bytes([2])  # WinSize
             + struct.pack("<HHHH", 6, 24, 0, 100)  # WinOffset, Interval, Latency, Timeout
             + bytes([0xFF, 0xFF, 0xFF, 0xFF, 0x1F])  # ChM
             + bytes([0x27])  # Hop=7, SCA=1 (0x20 | 0x07)
@@ -222,9 +222,7 @@ class TestBeaconDecodingGroundTruth:
         assert frame.beacon_info.mfg_id == 0x0118
         assert frame.beacon_info.beacon_code == 0xBEAC
         assert frame.beacon_info.ref_rssi == -59
-        assert frame.beacon_info.beacon_id == bytes.fromhex(
-            "e2c56db5dffb48d2b060d0f5a71096e000010002"
-        )
+        assert frame.beacon_info.beacon_id == bytes.fromhex("e2c56db5dffb48d2b060d0f5a71096e000010002")
 
     def test_vector_3_eddystone_uid(self, ground_truth_vectors):
         """Vector 3: Google Eddystone-UID reverse extraction."""
@@ -339,13 +337,21 @@ class TestDissectorEdgeCases:
     def test_microsoft_cdp_decoding(self):
         """MS-CDP 27-byte beacon structure decoding."""
         # 0x0006 Company ID, 25B payload
-        mfg_data = bytes([
-            0x01,  # Scenario
-            0x09,  # Device Type: Windows 10 Desktop
-            0x00,  # Flags
-            0x01,  # Status
-            0x10, 0x20, 0x30, 0x40,  # Salt
-        ]) + b"\xAA" * 19  # Device Hash
+        mfg_data = (
+            bytes(
+                [
+                    0x01,  # Scenario
+                    0x09,  # Device Type: Windows 10 Desktop
+                    0x00,  # Flags
+                    0x01,  # Status
+                    0x10,
+                    0x20,
+                    0x30,
+                    0x40,  # Salt
+                ]
+            )
+            + b"\xaa" * 19
+        )  # Device Hash
 
         ad_payload = bytes([len(mfg_data) + 3, 0xFF, 0x06, 0x00]) + mfg_data
         adv_a = bytes.fromhex("112233445566")
@@ -380,26 +386,37 @@ class TestDissectorEdgeCases:
         """Service Data with 32-bit UUID (0x20) and 128-bit UUID (0x21)."""
         sd32 = bytes([0x06, 0x20, 0x78, 0x56, 0x34, 0x12, 0xAA])  # 32-bit UUID 0x12345678, payload 0xAA
         sd128_uuid = UUID("12345678-1234-5678-1234-567812345678")
-        sd128 = bytes([1 + 16 + 2, 0x21]) + sd128_uuid.bytes + b"\xBB\xCC"
+        sd128 = bytes([1 + 16 + 2, 0x21]) + sd128_uuid.bytes + b"\xbb\xcc"
         adv_a = bytes.fromhex("112233445566")
         pdu = bytes([0x02, 6 + len(sd32) + len(sd128)]) + adv_a + sd32 + sd128
 
         frame = dissect_advertising_pdu(pdu)
         assert "0x12345678" in frame.service_data
-        assert frame.service_data["0x12345678"] == b"\xAA"
+        assert frame.service_data["0x12345678"] == b"\xaa"
         assert str(sd128_uuid) in frame.service_data
-        assert frame.service_data[str(sd128_uuid)] == b"\xBB\xCC"
+        assert frame.service_data[str(sd128_uuid)] == b"\xbb\xcc"
 
     def test_eddystone_uncalibrated_temp(self):
         """Eddystone-TLM with temperature field 0x8000 (-128.0) yields temp_c None."""
         # 0x20 TLM, version 0, VBATT 3000mV, Temp 0x8000, AdvCnt 100, SecCnt 200
-        tlm_bytes = bytes([
-            0x20, 0x00,
-            0x0B, 0xB8,
-            0x80, 0x00,  # 0x8000
-            0x00, 0x00, 0x00, 0x64,
-            0x00, 0x00, 0x00, 0xC8,
-        ])
+        tlm_bytes = bytes(
+            [
+                0x20,
+                0x00,
+                0x0B,
+                0xB8,
+                0x80,
+                0x00,  # 0x8000
+                0x00,
+                0x00,
+                0x00,
+                0x64,
+                0x00,
+                0x00,
+                0x00,
+                0xC8,
+            ]
+        )
         ad_payload = bytes([len(tlm_bytes) + 3, 0x16, 0xAA, 0xFE]) + tlm_bytes
         adv_a = bytes.fromhex("c011222211c0")
         pdu = bytes([0x42, 6 + len(ad_payload)]) + adv_a + ad_payload

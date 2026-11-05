@@ -255,7 +255,7 @@ class TestTier1FeatureIsolation:
                 chan=1,
                 aa=conn_aa,
                 direction=1,
-                body=build_ll_start_enc_rsp(mic=b"\xAA\xBB\xCC\xDD"),
+                body=build_ll_start_enc_rsp(mic=b"\xaa\xbb\xcc\xdd"),
             ),
         ]
         records = [BlePacketRecord.coerce(ev) for ev in events]
@@ -771,7 +771,7 @@ class TestTier3CrossFeatureCombinations:
                 chan=1,
                 aa=conn_aa,
                 direction=1,
-                body=build_ll_start_enc_rsp(mic=b"\xAA\xBB\xCC\xDD"),
+                body=build_ll_start_enc_rsp(mic=b"\xaa\xbb\xcc\xdd"),
             ),
         ]
         # 2. Interleaved CSRK Signed Writes
@@ -811,12 +811,31 @@ class TestTier3CrossFeatureCombinations:
             SyntheticEvent(ts_usec=1_030_000, chan=37, aa=BLE_ADV_AA, body=build_scan_req(target_rpa, periph_addr)),
             SyntheticEvent(ts_usec=1_030_150, chan=37, aa=BLE_ADV_AA, body=build_scan_rsp(periph_addr)),
             # 2. Connection and encryption setup
-            SyntheticEvent(ts_usec=1_100_000, chan=37, aa=BLE_ADV_AA, body=build_connect_ind(target_rpa, periph_addr, conn_aa=conn_aa)),
-            SyntheticEvent(ts_usec=1_150_000, chan=1, aa=conn_aa, direction=0, body=build_ll_enc_req(rand=b"\x01"*8, ediv=0x1234, skdm=b"\x02"*8, ivm=b"\x03"*4)),
-            SyntheticEvent(ts_usec=1_160_000, chan=1, aa=conn_aa, direction=1, body=build_ll_enc_rsp(skds=b"\x04"*8, ivs=b"\x05"*4)),
+            SyntheticEvent(
+                ts_usec=1_100_000,
+                chan=37,
+                aa=BLE_ADV_AA,
+                body=build_connect_ind(target_rpa, periph_addr, conn_aa=conn_aa),
+            ),
+            SyntheticEvent(
+                ts_usec=1_150_000,
+                chan=1,
+                aa=conn_aa,
+                direction=0,
+                body=build_ll_enc_req(rand=b"\x01" * 8, ediv=0x1234, skdm=b"\x02" * 8, ivm=b"\x03" * 4),
+            ),
+            SyntheticEvent(
+                ts_usec=1_160_000,
+                chan=1,
+                aa=conn_aa,
+                direction=1,
+                body=build_ll_enc_rsp(skds=b"\x04" * 8, ivs=b"\x05" * 4),
+            ),
             SyntheticEvent(ts_usec=1_170_000, chan=1, aa=conn_aa, direction=1, body=build_ll_start_enc_req()),
             SyntheticEvent(ts_usec=1_180_000, chan=1, aa=conn_aa, direction=0, body=build_ll_start_enc_rsp()),
-            SyntheticEvent(ts_usec=1_190_000, chan=1, aa=conn_aa, direction=1, body=build_ll_start_enc_rsp(mic=b"\xAA\xBB\xCC\xDD")),
+            SyntheticEvent(
+                ts_usec=1_190_000, chan=1, aa=conn_aa, direction=1, body=build_ll_start_enc_rsp(mic=b"\xaa\xbb\xcc\xdd")
+            ),
         ]
 
         pcap_data = generate_synthetic_pcap(events)
@@ -836,26 +855,89 @@ class TestTier3CrossFeatureCombinations:
 
         events = [
             # Session 1 with RPA 1: Connect, Encrypt, Signed Writes SC=10, 11
-            SyntheticEvent(ts_usec=1_000_000, chan=37, aa=BLE_ADV_AA, body=build_connect_ind(rpa_1, periph, conn_aa=conn_aa1)),
-            SyntheticEvent(ts_usec=1_010_000, chan=1, aa=conn_aa1, direction=0, body=build_ll_enc_req(rand=b"\x01"*8, ediv=0x1234, skdm=b"\x02"*8, ivm=b"\x03"*4)),
-            SyntheticEvent(ts_usec=1_020_000, chan=1, aa=conn_aa1, direction=1, body=build_ll_enc_rsp(skds=b"\x04"*8, ivs=b"\x05"*4)),
+            SyntheticEvent(
+                ts_usec=1_000_000, chan=37, aa=BLE_ADV_AA, body=build_connect_ind(rpa_1, periph, conn_aa=conn_aa1)
+            ),
+            SyntheticEvent(
+                ts_usec=1_010_000,
+                chan=1,
+                aa=conn_aa1,
+                direction=0,
+                body=build_ll_enc_req(rand=b"\x01" * 8, ediv=0x1234, skdm=b"\x02" * 8, ivm=b"\x03" * 4),
+            ),
+            SyntheticEvent(
+                ts_usec=1_020_000,
+                chan=1,
+                aa=conn_aa1,
+                direction=1,
+                body=build_ll_enc_rsp(skds=b"\x04" * 8, ivs=b"\x05" * 4),
+            ),
             SyntheticEvent(ts_usec=1_030_000, chan=1, aa=conn_aa1, direction=1, body=build_ll_start_enc_req()),
             SyntheticEvent(ts_usec=1_040_000, chan=1, aa=conn_aa1, direction=0, body=build_ll_start_enc_rsp()),
-            SyntheticEvent(ts_usec=1_050_000, chan=1, aa=conn_aa1, direction=1, body=build_ll_start_enc_rsp(mic=b"\xAA\xBB\xCC\xDD")),
-            SyntheticEvent(ts_usec=1_060_000, chan=1, aa=conn_aa1, direction=0, body=build_att_signed_write(csrk=CSRK_TEST_KEY_1, handle=0x0012, value=b"\x01", counter=10)),
-            SyntheticEvent(ts_usec=1_070_000, chan=1, aa=conn_aa1, direction=0, body=build_att_signed_write(csrk=CSRK_TEST_KEY_1, handle=0x0012, value=b"\x01", counter=11)),
+            SyntheticEvent(
+                ts_usec=1_050_000,
+                chan=1,
+                aa=conn_aa1,
+                direction=1,
+                body=build_ll_start_enc_rsp(mic=b"\xaa\xbb\xcc\xdd"),
+            ),
+            SyntheticEvent(
+                ts_usec=1_060_000,
+                chan=1,
+                aa=conn_aa1,
+                direction=0,
+                body=build_att_signed_write(csrk=CSRK_TEST_KEY_1, handle=0x0012, value=b"\x01", counter=10),
+            ),
+            SyntheticEvent(
+                ts_usec=1_070_000,
+                chan=1,
+                aa=conn_aa1,
+                direction=0,
+                body=build_att_signed_write(csrk=CSRK_TEST_KEY_1, handle=0x0012, value=b"\x01", counter=11),
+            ),
             # Disconnect
             SyntheticEvent(ts_usec=1_080_000, chan=1, aa=conn_aa1, direction=0, body=build_ll_terminate_ind(0x13)),
-
             # Session 2 with RPA 2 (within 300s window): Connect, Encrypt, Signed Writes SC=12, 13
-            SyntheticEvent(ts_usec=2_000_000, chan=37, aa=BLE_ADV_AA, body=build_connect_ind(rpa_2, periph, conn_aa=conn_aa2)),
-            SyntheticEvent(ts_usec=2_010_000, chan=1, aa=conn_aa2, direction=0, body=build_ll_enc_req(rand=b"\x01"*8, ediv=0x1234, skdm=b"\x02"*8, ivm=b"\x03"*4)),
-            SyntheticEvent(ts_usec=2_020_000, chan=1, aa=conn_aa2, direction=1, body=build_ll_enc_rsp(skds=b"\x04"*8, ivs=b"\x05"*4)),
+            SyntheticEvent(
+                ts_usec=2_000_000, chan=37, aa=BLE_ADV_AA, body=build_connect_ind(rpa_2, periph, conn_aa=conn_aa2)
+            ),
+            SyntheticEvent(
+                ts_usec=2_010_000,
+                chan=1,
+                aa=conn_aa2,
+                direction=0,
+                body=build_ll_enc_req(rand=b"\x01" * 8, ediv=0x1234, skdm=b"\x02" * 8, ivm=b"\x03" * 4),
+            ),
+            SyntheticEvent(
+                ts_usec=2_020_000,
+                chan=1,
+                aa=conn_aa2,
+                direction=1,
+                body=build_ll_enc_rsp(skds=b"\x04" * 8, ivs=b"\x05" * 4),
+            ),
             SyntheticEvent(ts_usec=2_030_000, chan=1, aa=conn_aa2, direction=1, body=build_ll_start_enc_req()),
             SyntheticEvent(ts_usec=2_040_000, chan=1, aa=conn_aa2, direction=0, body=build_ll_start_enc_rsp()),
-            SyntheticEvent(ts_usec=2_050_000, chan=1, aa=conn_aa2, direction=1, body=build_ll_start_enc_rsp(mic=b"\xAA\xBB\xCC\xDD")),
-            SyntheticEvent(ts_usec=2_060_000, chan=1, aa=conn_aa2, direction=0, body=build_att_signed_write(csrk=CSRK_TEST_KEY_1, handle=0x0012, value=b"\x01", counter=12)),
-            SyntheticEvent(ts_usec=2_070_000, chan=1, aa=conn_aa2, direction=0, body=build_att_signed_write(csrk=CSRK_TEST_KEY_1, handle=0x0012, value=b"\x01", counter=13)),
+            SyntheticEvent(
+                ts_usec=2_050_000,
+                chan=1,
+                aa=conn_aa2,
+                direction=1,
+                body=build_ll_start_enc_rsp(mic=b"\xaa\xbb\xcc\xdd"),
+            ),
+            SyntheticEvent(
+                ts_usec=2_060_000,
+                chan=1,
+                aa=conn_aa2,
+                direction=0,
+                body=build_att_signed_write(csrk=CSRK_TEST_KEY_1, handle=0x0012, value=b"\x01", counter=12),
+            ),
+            SyntheticEvent(
+                ts_usec=2_070_000,
+                chan=1,
+                aa=conn_aa2,
+                direction=0,
+                body=build_att_signed_write(csrk=CSRK_TEST_KEY_1, handle=0x0012, value=b"\x01", counter=13),
+            ),
         ]
 
         pcap_data = generate_synthetic_pcap(events)
@@ -876,14 +958,19 @@ class TestTier3CrossFeatureCombinations:
         )
         out_json = tmp_path / "pairwise_out.json"
 
-        rc = main([
-            "sidechannel",
-            "--pcap", str(pcap_file),
-            "--analyzer", "bat",
-            "--json",
-            "--output", str(out_json),
-            "--summary",
-        ])
+        rc = main(
+            [
+                "sidechannel",
+                "--pcap",
+                str(pcap_file),
+                "--analyzer",
+                "bat",
+                "--json",
+                "--output",
+                str(out_json),
+                "--summary",
+            ]
+        )
         assert rc == 1
         assert out_json.exists()
         doc = json.loads(out_json.read_text(encoding="utf-8"))
@@ -899,17 +986,52 @@ class TestTier3CrossFeatureCombinations:
 
         events = [
             # Target connection
-            SyntheticEvent(ts_usec=1000, chan=37, aa=BLE_ADV_AA, body=build_connect_ind("AA:BB:CC:DD:EE:01", target, conn_aa=conn_aa_target)),
-            SyntheticEvent(ts_usec=2000, chan=1, aa=conn_aa_target, direction=0, body=build_ll_enc_req(rand=b"\x01"*8, ediv=0x1234, skdm=b"\x02"*8, ivm=b"\x03"*4)),
-            SyntheticEvent(ts_usec=3000, chan=1, aa=conn_aa_target, direction=1, body=build_ll_enc_rsp(skds=b"\x04"*8, ivs=b"\x05"*4)),
+            SyntheticEvent(
+                ts_usec=1000,
+                chan=37,
+                aa=BLE_ADV_AA,
+                body=build_connect_ind("AA:BB:CC:DD:EE:01", target, conn_aa=conn_aa_target),
+            ),
+            SyntheticEvent(
+                ts_usec=2000,
+                chan=1,
+                aa=conn_aa_target,
+                direction=0,
+                body=build_ll_enc_req(rand=b"\x01" * 8, ediv=0x1234, skdm=b"\x02" * 8, ivm=b"\x03" * 4),
+            ),
+            SyntheticEvent(
+                ts_usec=3000,
+                chan=1,
+                aa=conn_aa_target,
+                direction=1,
+                body=build_ll_enc_rsp(skds=b"\x04" * 8, ivs=b"\x05" * 4),
+            ),
             SyntheticEvent(ts_usec=4000, chan=1, aa=conn_aa_target, direction=1, body=build_ll_start_enc_req()),
             SyntheticEvent(ts_usec=5000, chan=1, aa=conn_aa_target, direction=0, body=build_ll_start_enc_rsp()),
-            SyntheticEvent(ts_usec=6000, chan=1, aa=conn_aa_target, direction=1, body=build_ll_start_enc_rsp(mic=b"\xAA\xBB\xCC\xDD")),
-
+            SyntheticEvent(
+                ts_usec=6000,
+                chan=1,
+                aa=conn_aa_target,
+                direction=1,
+                body=build_ll_start_enc_rsp(mic=b"\xaa\xbb\xcc\xdd"),
+            ),
             # Other unrelated connection (should be filtered out)
-            SyntheticEvent(ts_usec=7000, chan=37, aa=BLE_ADV_AA, body=build_connect_ind("88:88:88:88:88:88", other, conn_aa=conn_aa_other)),
-            SyntheticEvent(ts_usec=8000, chan=1, aa=conn_aa_other, direction=0, body=build_ll_enc_req(rand=b"\x01"*8, ediv=0x1234, skdm=b"\x02"*8, ivm=b"\x03"*4)),
-            SyntheticEvent(ts_usec=9000, chan=1, aa=conn_aa_other, direction=1, body=build_ll_reject_ind(ERROR_PIN_OR_KEY_MISSING)),
+            SyntheticEvent(
+                ts_usec=7000,
+                chan=37,
+                aa=BLE_ADV_AA,
+                body=build_connect_ind("88:88:88:88:88:88", other, conn_aa=conn_aa_other),
+            ),
+            SyntheticEvent(
+                ts_usec=8000,
+                chan=1,
+                aa=conn_aa_other,
+                direction=0,
+                body=build_ll_enc_req(rand=b"\x01" * 8, ediv=0x1234, skdm=b"\x02" * 8, ivm=b"\x03" * 4),
+            ),
+            SyntheticEvent(
+                ts_usec=9000, chan=1, aa=conn_aa_other, direction=1, body=build_ll_reject_ind(ERROR_PIN_OR_KEY_MISSING)
+            ),
         ]
 
         pcap_data = generate_synthetic_pcap(events)
@@ -927,17 +1049,44 @@ class TestTier3CrossFeatureCombinations:
 
         events = [
             # Session 1: Rejected encryption
-            SyntheticEvent(ts_usec=1000, chan=37, aa=BLE_ADV_AA, body=build_connect_ind("AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02", conn_aa=conn_aa1)),
-            SyntheticEvent(ts_usec=2000, chan=1, aa=conn_aa1, direction=0, body=build_ll_enc_req(rand=b"\x01"*8, ediv=0x1234, skdm=b"\x02"*8, ivm=b"\x03"*4)),
-            SyntheticEvent(ts_usec=3000, chan=1, aa=conn_aa1, direction=1, body=build_ll_reject_ind(ERROR_PIN_OR_KEY_MISSING)),
-
+            SyntheticEvent(
+                ts_usec=1000,
+                chan=37,
+                aa=BLE_ADV_AA,
+                body=build_connect_ind("AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02", conn_aa=conn_aa1),
+            ),
+            SyntheticEvent(
+                ts_usec=2000,
+                chan=1,
+                aa=conn_aa1,
+                direction=0,
+                body=build_ll_enc_req(rand=b"\x01" * 8, ediv=0x1234, skdm=b"\x02" * 8, ivm=b"\x03" * 4),
+            ),
+            SyntheticEvent(
+                ts_usec=3000, chan=1, aa=conn_aa1, direction=1, body=build_ll_reject_ind(ERROR_PIN_OR_KEY_MISSING)
+            ),
             # Session 2: Confirmed shared LTK
-            SyntheticEvent(ts_usec=4000, chan=37, aa=BLE_ADV_AA, body=build_connect_ind("AA:BB:CC:DD:EE:03", "AA:BB:CC:DD:EE:04", conn_aa=conn_aa2)),
-            SyntheticEvent(ts_usec=5000, chan=1, aa=conn_aa2, direction=0, body=build_ll_enc_req(rand=b"\x01"*8, ediv=0x1234, skdm=b"\x02"*8, ivm=b"\x03"*4)),
-            SyntheticEvent(ts_usec=6000, chan=1, aa=conn_aa2, direction=1, body=build_ll_enc_rsp(skds=b"\x04"*8, ivs=b"\x05"*4)),
+            SyntheticEvent(
+                ts_usec=4000,
+                chan=37,
+                aa=BLE_ADV_AA,
+                body=build_connect_ind("AA:BB:CC:DD:EE:03", "AA:BB:CC:DD:EE:04", conn_aa=conn_aa2),
+            ),
+            SyntheticEvent(
+                ts_usec=5000,
+                chan=1,
+                aa=conn_aa2,
+                direction=0,
+                body=build_ll_enc_req(rand=b"\x01" * 8, ediv=0x1234, skdm=b"\x02" * 8, ivm=b"\x03" * 4),
+            ),
+            SyntheticEvent(
+                ts_usec=6000, chan=1, aa=conn_aa2, direction=1, body=build_ll_enc_rsp(skds=b"\x04" * 8, ivs=b"\x05" * 4)
+            ),
             SyntheticEvent(ts_usec=7000, chan=1, aa=conn_aa2, direction=1, body=build_ll_start_enc_req()),
             SyntheticEvent(ts_usec=8000, chan=1, aa=conn_aa2, direction=0, body=build_ll_start_enc_rsp()),
-            SyntheticEvent(ts_usec=9000, chan=1, aa=conn_aa2, direction=1, body=build_ll_start_enc_rsp(mic=b"\xAA\xBB\xCC\xDD")),
+            SyntheticEvent(
+                ts_usec=9000, chan=1, aa=conn_aa2, direction=1, body=build_ll_start_enc_rsp(mic=b"\xaa\xbb\xcc\xdd")
+            ),
         ]
 
         pcap_data = generate_synthetic_pcap(events)
@@ -973,36 +1122,96 @@ class TestTier4RealWorldWorkloads:
             conn_aa = 0x50000000 + epoch_idx
 
             # 1. Advertising phase: BAT allowlist probe discrimination
-            events.append(SyntheticEvent(ts_usec=base_epoch_us, chan=37, aa=BLE_ADV_AA, body=build_adv_ind(periph_addr)))
+            events.append(
+                SyntheticEvent(ts_usec=base_epoch_us, chan=37, aa=BLE_ADV_AA, body=build_adv_ind(periph_addr))
+            )
             # Foreign probe (ignored by peripheral)
-            events.append(SyntheticEvent(ts_usec=base_epoch_us + 10_000, chan=37, aa=BLE_ADV_AA, body=build_scan_req(foreign_scanner, periph_addr)))
+            events.append(
+                SyntheticEvent(
+                    ts_usec=base_epoch_us + 10_000,
+                    chan=37,
+                    aa=BLE_ADV_AA,
+                    body=build_scan_req(foreign_scanner, periph_addr),
+                )
+            )
             # Authorized Central probe (answered in 150us)
-            events.append(SyntheticEvent(ts_usec=base_epoch_us + 30_000, chan=37, aa=BLE_ADV_AA, body=build_scan_req(c_rpa, periph_addr)))
-            events.append(SyntheticEvent(ts_usec=base_epoch_us + 30_150, chan=37, aa=BLE_ADV_AA, body=build_scan_rsp(periph_addr)))
+            events.append(
+                SyntheticEvent(
+                    ts_usec=base_epoch_us + 30_000, chan=37, aa=BLE_ADV_AA, body=build_scan_req(c_rpa, periph_addr)
+                )
+            )
+            events.append(
+                SyntheticEvent(ts_usec=base_epoch_us + 30_150, chan=37, aa=BLE_ADV_AA, body=build_scan_rsp(periph_addr))
+            )
 
             # 2. Connection establishment
-            events.append(SyntheticEvent(ts_usec=base_epoch_us + 100_000, chan=37, aa=BLE_ADV_AA, body=build_connect_ind(c_rpa, periph_addr, conn_aa=conn_aa)))
+            events.append(
+                SyntheticEvent(
+                    ts_usec=base_epoch_us + 100_000,
+                    chan=37,
+                    aa=BLE_ADV_AA,
+                    body=build_connect_ind(c_rpa, periph_addr, conn_aa=conn_aa),
+                )
+            )
 
             # 3. Differential Encryption Handshake (Shared LTK confirmed)
-            events.append(SyntheticEvent(ts_usec=base_epoch_us + 150_000, chan=1, aa=conn_aa, direction=0, body=build_ll_enc_req(rand=b"\x01"*8, ediv=0x1234, skdm=b"\x02"*8, ivm=b"\x03"*4)))
-            events.append(SyntheticEvent(ts_usec=base_epoch_us + 160_000, chan=1, aa=conn_aa, direction=1, body=build_ll_enc_rsp(skds=b"\x04"*8, ivs=b"\x05"*4)))
-            events.append(SyntheticEvent(ts_usec=base_epoch_us + 170_000, chan=1, aa=conn_aa, direction=1, body=build_ll_start_enc_req()))
-            events.append(SyntheticEvent(ts_usec=base_epoch_us + 180_000, chan=1, aa=conn_aa, direction=0, body=build_ll_start_enc_rsp()))
-            events.append(SyntheticEvent(ts_usec=base_epoch_us + 190_000, chan=1, aa=conn_aa, direction=1, body=build_ll_start_enc_rsp(mic=b"\xAA\xBB\xCC\xDD")))
-
-            # 4. Continuous Signed Writes (3 packets per epoch)
-            for _ in range(3):
-                events.append(SyntheticEvent(
-                    ts_usec=base_epoch_us + 250_000 + ((sc - 100) * 20_000),
+            events.append(
+                SyntheticEvent(
+                    ts_usec=base_epoch_us + 150_000,
                     chan=1,
                     aa=conn_aa,
                     direction=0,
-                    body=build_att_signed_write(csrk=CSRK_TEST_KEY_1, handle=0x0015, value=b"\x01", counter=sc),
-                ))
+                    body=build_ll_enc_req(rand=b"\x01" * 8, ediv=0x1234, skdm=b"\x02" * 8, ivm=b"\x03" * 4),
+                )
+            )
+            events.append(
+                SyntheticEvent(
+                    ts_usec=base_epoch_us + 160_000,
+                    chan=1,
+                    aa=conn_aa,
+                    direction=1,
+                    body=build_ll_enc_rsp(skds=b"\x04" * 8, ivs=b"\x05" * 4),
+                )
+            )
+            events.append(
+                SyntheticEvent(
+                    ts_usec=base_epoch_us + 170_000, chan=1, aa=conn_aa, direction=1, body=build_ll_start_enc_req()
+                )
+            )
+            events.append(
+                SyntheticEvent(
+                    ts_usec=base_epoch_us + 180_000, chan=1, aa=conn_aa, direction=0, body=build_ll_start_enc_rsp()
+                )
+            )
+            events.append(
+                SyntheticEvent(
+                    ts_usec=base_epoch_us + 190_000,
+                    chan=1,
+                    aa=conn_aa,
+                    direction=1,
+                    body=build_ll_start_enc_rsp(mic=b"\xaa\xbb\xcc\xdd"),
+                )
+            )
+
+            # 4. Continuous Signed Writes (3 packets per epoch)
+            for _ in range(3):
+                events.append(
+                    SyntheticEvent(
+                        ts_usec=base_epoch_us + 250_000 + ((sc - 100) * 20_000),
+                        chan=1,
+                        aa=conn_aa,
+                        direction=0,
+                        body=build_att_signed_write(csrk=CSRK_TEST_KEY_1, handle=0x0015, value=b"\x01", counter=sc),
+                    )
+                )
                 sc += 1
 
             # 5. Clean disconnect
-            events.append(SyntheticEvent(ts_usec=base_epoch_us + 350_000, chan=1, aa=conn_aa, direction=0, body=build_ll_terminate_ind(0x13)))
+            events.append(
+                SyntheticEvent(
+                    ts_usec=base_epoch_us + 350_000, chan=1, aa=conn_aa, direction=0, body=build_ll_terminate_ind(0x13)
+                )
+            )
 
         pcap_data = generate_synthetic_pcap(events)
         report = analyze_pcap(pcap_data, analyzers=["all"], csrk=CSRK_TEST_KEY_1)
@@ -1038,34 +1247,108 @@ class TestTier4RealWorldWorkloads:
 
         # D1: Public beacon
         for i in range(10):
-            events.append(SyntheticEvent(ts_usec=1_000_000 + (i * 100_000), chan=37 + (i % 3), aa=BLE_ADV_AA, body=build_adv_ind(d1_beacon)))
+            events.append(
+                SyntheticEvent(
+                    ts_usec=1_000_000 + (i * 100_000), chan=37 + (i % 3), aa=BLE_ADV_AA, body=build_adv_ind(d1_beacon)
+                )
+            )
 
         # D2: Open sensor (responds to 2 distinct scanners)
         events.append(SyntheticEvent(ts_usec=1_050_000, chan=37, aa=BLE_ADV_AA, body=build_adv_ind(d2_sensor)))
-        events.append(SyntheticEvent(ts_usec=1_060_000, chan=37, aa=BLE_ADV_AA, body=build_scan_req("10:00:00:00:00:01", d2_sensor)))
+        events.append(
+            SyntheticEvent(
+                ts_usec=1_060_000, chan=37, aa=BLE_ADV_AA, body=build_scan_req("10:00:00:00:00:01", d2_sensor)
+            )
+        )
         events.append(SyntheticEvent(ts_usec=1_060_150, chan=37, aa=BLE_ADV_AA, body=build_scan_rsp(d2_sensor)))
-        events.append(SyntheticEvent(ts_usec=1_070_000, chan=38, aa=BLE_ADV_AA, body=build_scan_req("10:00:00:00:00:02", d2_sensor)))
+        events.append(
+            SyntheticEvent(
+                ts_usec=1_070_000, chan=38, aa=BLE_ADV_AA, body=build_scan_req("10:00:00:00:00:02", d2_sensor)
+            )
+        )
         events.append(SyntheticEvent(ts_usec=1_070_150, chan=38, aa=BLE_ADV_AA, body=build_scan_rsp(d2_sensor)))
 
         # D3: Unpaired peripheral rejected
         conn_aa_d3 = 0x33333333
-        events.append(SyntheticEvent(ts_usec=1_100_000, chan=37, aa=BLE_ADV_AA, body=build_connect_ind("C0:00:00:00:00:03", d3_unpaired, conn_aa=conn_aa_d3)))
-        events.append(SyntheticEvent(ts_usec=1_150_000, chan=1, aa=conn_aa_d3, direction=0, body=build_ll_enc_req(rand=b"\x01"*8, ediv=0x1234, skdm=b"\x02"*8, ivm=b"\x03"*4)))
-        events.append(SyntheticEvent(ts_usec=1_160_000, chan=1, aa=conn_aa_d3, direction=1, body=build_ll_reject_ind(ERROR_PIN_OR_KEY_MISSING)))
+        events.append(
+            SyntheticEvent(
+                ts_usec=1_100_000,
+                chan=37,
+                aa=BLE_ADV_AA,
+                body=build_connect_ind("C0:00:00:00:00:03", d3_unpaired, conn_aa=conn_aa_d3),
+            )
+        )
+        events.append(
+            SyntheticEvent(
+                ts_usec=1_150_000,
+                chan=1,
+                aa=conn_aa_d3,
+                direction=0,
+                body=build_ll_enc_req(rand=b"\x01" * 8, ediv=0x1234, skdm=b"\x02" * 8, ivm=b"\x03" * 4),
+            )
+        )
+        events.append(
+            SyntheticEvent(
+                ts_usec=1_160_000,
+                chan=1,
+                aa=conn_aa_d3,
+                direction=1,
+                body=build_ll_reject_ind(ERROR_PIN_OR_KEY_MISSING),
+            )
+        )
 
         # D4: Bonded badge shared LTK
         conn_aa_d4 = 0x44444444
-        events.append(SyntheticEvent(ts_usec=1_200_000, chan=37, aa=BLE_ADV_AA, body=build_connect_ind("C0:00:00:00:00:04", d4_bonded, conn_aa=conn_aa_d4)))
-        events.append(SyntheticEvent(ts_usec=1_250_000, chan=2, aa=conn_aa_d4, direction=0, body=build_ll_enc_req(rand=b"\x01"*8, ediv=0x1234, skdm=b"\x02"*8, ivm=b"\x03"*4)))
-        events.append(SyntheticEvent(ts_usec=1_260_000, chan=2, aa=conn_aa_d4, direction=1, body=build_ll_enc_rsp(skds=b"\x04"*8, ivs=b"\x05"*4)))
-        events.append(SyntheticEvent(ts_usec=1_270_000, chan=2, aa=conn_aa_d4, direction=1, body=build_ll_start_enc_req()))
-        events.append(SyntheticEvent(ts_usec=1_280_000, chan=2, aa=conn_aa_d4, direction=0, body=build_ll_start_enc_rsp()))
-        events.append(SyntheticEvent(ts_usec=1_290_000, chan=2, aa=conn_aa_d4, direction=1, body=build_ll_start_enc_rsp(mic=b"\xAA\xBB\xCC\xDD")))
+        events.append(
+            SyntheticEvent(
+                ts_usec=1_200_000,
+                chan=37,
+                aa=BLE_ADV_AA,
+                body=build_connect_ind("C0:00:00:00:00:04", d4_bonded, conn_aa=conn_aa_d4),
+            )
+        )
+        events.append(
+            SyntheticEvent(
+                ts_usec=1_250_000,
+                chan=2,
+                aa=conn_aa_d4,
+                direction=0,
+                body=build_ll_enc_req(rand=b"\x01" * 8, ediv=0x1234, skdm=b"\x02" * 8, ivm=b"\x03" * 4),
+            )
+        )
+        events.append(
+            SyntheticEvent(
+                ts_usec=1_260_000,
+                chan=2,
+                aa=conn_aa_d4,
+                direction=1,
+                body=build_ll_enc_rsp(skds=b"\x04" * 8, ivs=b"\x05" * 4),
+            )
+        )
+        events.append(
+            SyntheticEvent(ts_usec=1_270_000, chan=2, aa=conn_aa_d4, direction=1, body=build_ll_start_enc_req())
+        )
+        events.append(
+            SyntheticEvent(ts_usec=1_280_000, chan=2, aa=conn_aa_d4, direction=0, body=build_ll_start_enc_rsp())
+        )
+        events.append(
+            SyntheticEvent(
+                ts_usec=1_290_000,
+                chan=2,
+                aa=conn_aa_d4,
+                direction=1,
+                body=build_ll_start_enc_rsp(mic=b"\xaa\xbb\xcc\xdd"),
+            )
+        )
 
         # D5: Smart lock with BAT allowlist (silent to walk-by phone, selective to key owner)
         events.append(SyntheticEvent(ts_usec=1_300_000, chan=37, aa=BLE_ADV_AA, body=build_adv_ind(d5_lock)))
-        events.append(SyntheticEvent(ts_usec=1_310_000, chan=37, aa=BLE_ADV_AA, body=build_scan_req("F0:00:00:00:00:05", d5_lock)))  # Silent drop
-        events.append(SyntheticEvent(ts_usec=1_350_000, chan=37, aa=BLE_ADV_AA, body=build_scan_req("A0:00:00:00:00:05", d5_lock)))  # Owner
+        events.append(
+            SyntheticEvent(ts_usec=1_310_000, chan=37, aa=BLE_ADV_AA, body=build_scan_req("F0:00:00:00:00:05", d5_lock))
+        )  # Silent drop
+        events.append(
+            SyntheticEvent(ts_usec=1_350_000, chan=37, aa=BLE_ADV_AA, body=build_scan_req("A0:00:00:00:00:05", d5_lock))
+        )  # Owner
         events.append(SyntheticEvent(ts_usec=1_350_150, chan=37, aa=BLE_ADV_AA, body=build_scan_rsp(d5_lock)))
 
         # Sort events deterministically by timestamp
@@ -1099,15 +1382,47 @@ class TestTier4RealWorldWorkloads:
         periph = "AA:BB:CC:DD:EE:02"
 
         events = [
-            SyntheticEvent(ts_usec=1_000_000, chan=37, aa=BLE_ADV_AA, body=build_connect_ind(central, periph, conn_aa=conn_aa)),
+            SyntheticEvent(
+                ts_usec=1_000_000, chan=37, aa=BLE_ADV_AA, body=build_connect_ind(central, periph, conn_aa=conn_aa)
+            ),
             # Legitimate writes
-            SyntheticEvent(ts_usec=1_050_000, chan=1, aa=conn_aa, direction=0, body=build_att_signed_write(csrk=CSRK_TEST_KEY_1, handle=0x0012, value=b"\x01", counter=50)),
-            SyntheticEvent(ts_usec=1_100_000, chan=1, aa=conn_aa, direction=0, body=build_att_signed_write(csrk=CSRK_TEST_KEY_1, handle=0x0012, value=b"\x01", counter=51)),
+            SyntheticEvent(
+                ts_usec=1_050_000,
+                chan=1,
+                aa=conn_aa,
+                direction=0,
+                body=build_att_signed_write(csrk=CSRK_TEST_KEY_1, handle=0x0012, value=b"\x01", counter=50),
+            ),
+            SyntheticEvent(
+                ts_usec=1_100_000,
+                chan=1,
+                aa=conn_aa,
+                direction=0,
+                body=build_att_signed_write(csrk=CSRK_TEST_KEY_1, handle=0x0012, value=b"\x01", counter=51),
+            ),
             # Attacker replay burst
-            SyntheticEvent(ts_usec=1_150_000, chan=1, aa=conn_aa, direction=0, body=build_att_signed_write(csrk=CSRK_TEST_KEY_1, handle=0x0012, value=b"\x01", counter=51)),
-            SyntheticEvent(ts_usec=1_200_000, chan=1, aa=conn_aa, direction=0, body=build_att_signed_write(csrk=CSRK_TEST_KEY_1, handle=0x0012, value=b"\x01", counter=51)),
+            SyntheticEvent(
+                ts_usec=1_150_000,
+                chan=1,
+                aa=conn_aa,
+                direction=0,
+                body=build_att_signed_write(csrk=CSRK_TEST_KEY_1, handle=0x0012, value=b"\x01", counter=51),
+            ),
+            SyntheticEvent(
+                ts_usec=1_200_000,
+                chan=1,
+                aa=conn_aa,
+                direction=0,
+                body=build_att_signed_write(csrk=CSRK_TEST_KEY_1, handle=0x0012, value=b"\x01", counter=51),
+            ),
             # Legitimate next write SC=52
-            SyntheticEvent(ts_usec=1_250_000, chan=1, aa=conn_aa, direction=0, body=build_att_signed_write(csrk=CSRK_TEST_KEY_1, handle=0x0012, value=b"\x01", counter=52)),
+            SyntheticEvent(
+                ts_usec=1_250_000,
+                chan=1,
+                aa=conn_aa,
+                direction=0,
+                body=build_att_signed_write(csrk=CSRK_TEST_KEY_1, handle=0x0012, value=b"\x01", counter=52),
+            ),
         ]
 
         pcap_data = generate_synthetic_pcap(events)
@@ -1128,8 +1443,19 @@ class TestTier4RealWorldWorkloads:
             conn_aa = 0x60000000 + i
             ts = 1_000_000 + (i * 500_000)
             events.append(SyntheticEvent(ts_usec=ts, chan=37, aa=BLE_ADV_AA, body=build_adv_ind(periph)))
-            events.append(SyntheticEvent(ts_usec=ts + 10_000, chan=37, aa=BLE_ADV_AA, body=build_connect_ind(central, periph, conn_aa=conn_aa, interval=24, latency=0, timeout=100, hop=5)))
-            events.append(SyntheticEvent(ts_usec=ts + 50_000, chan=1, aa=conn_aa, direction=0, body=build_ll_terminate_ind(0x13)))
+            events.append(
+                SyntheticEvent(
+                    ts_usec=ts + 10_000,
+                    chan=37,
+                    aa=BLE_ADV_AA,
+                    body=build_connect_ind(
+                        central, periph, conn_aa=conn_aa, interval=24, latency=0, timeout=100, hop=5
+                    ),
+                )
+            )
+            events.append(
+                SyntheticEvent(ts_usec=ts + 50_000, chan=1, aa=conn_aa, direction=0, body=build_ll_terminate_ind(0x13))
+            )
 
         pcap_data = generate_synthetic_pcap(events)
         report = analyze_pcap(pcap_data, analyzers=["bat"])
@@ -1218,7 +1544,14 @@ class TestTier5AdversarialStressSubprocess:
         """2000 synthetic packets processed through full analysis suite in under 2.0 seconds."""
         events: list[SyntheticEvent] = []
         conn_aa = 0x12344321
-        events.append(SyntheticEvent(ts_usec=1000, chan=37, aa=BLE_ADV_AA, body=build_connect_ind("AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02", conn_aa=conn_aa)))
+        events.append(
+            SyntheticEvent(
+                ts_usec=1000,
+                chan=37,
+                aa=BLE_ADV_AA,
+                body=build_connect_ind("AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02", conn_aa=conn_aa),
+            )
+        )
 
         # Build 2000 sequential data packets
         for i in range(2000):
@@ -1247,13 +1580,36 @@ class TestTier5AdversarialStressSubprocess:
         """Packets with invalid L2CAP CID, truncated headers, and negative lengths handled gracefully."""
         conn_aa = 0x99998888
         events = [
-            SyntheticEvent(ts_usec=1000, chan=37, aa=BLE_ADV_AA, body=build_connect_ind("AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02", conn_aa=conn_aa)),
+            SyntheticEvent(
+                ts_usec=1000,
+                chan=37,
+                aa=BLE_ADV_AA,
+                body=build_connect_ind("AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02", conn_aa=conn_aa),
+            ),
             # LLID=0b10 (L2CAP start), but L2CAP declared length is 0x0080 (128) with only 4 bytes payload
-            SyntheticEvent(ts_usec=2000, chan=1, aa=conn_aa, direction=0, body=build_ll_header(0b10, 8) + struct.pack("<HH", 128, 0x0004) + b"\xD2\x01\x02\x03"),
+            SyntheticEvent(
+                ts_usec=2000,
+                chan=1,
+                aa=conn_aa,
+                direction=0,
+                body=build_ll_header(0b10, 8) + struct.pack("<HH", 128, 0x0004) + b"\xd2\x01\x02\x03",
+            ),
             # LLID=0b10 with invalid CID 0xFFFF
-            SyntheticEvent(ts_usec=3000, chan=1, aa=conn_aa, direction=0, body=build_ll_header(0b10, 6) + struct.pack("<HH", 2, 0xFFFF) + b"\x00\x00"),
+            SyntheticEvent(
+                ts_usec=3000,
+                chan=1,
+                aa=conn_aa,
+                direction=0,
+                body=build_ll_header(0b10, 6) + struct.pack("<HH", 2, 0xFFFF) + b"\x00\x00",
+            ),
             # LLID=0b10 with ATT signed write opcode 0xD2, but payload truncated to only 2 bytes (missing 12B signature)
-            SyntheticEvent(ts_usec=4000, chan=1, aa=conn_aa, direction=0, body=build_ll_header(0b10, 6) + struct.pack("<HH", 2, 0x0004) + b"\xD2\x01"),
+            SyntheticEvent(
+                ts_usec=4000,
+                chan=1,
+                aa=conn_aa,
+                direction=0,
+                body=build_ll_header(0b10, 6) + struct.pack("<HH", 2, 0x0004) + b"\xd2\x01",
+            ),
         ]
 
         pcap_data = generate_synthetic_pcap(events)

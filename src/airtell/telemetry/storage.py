@@ -1086,7 +1086,9 @@ class DuckDBBackend(DatabaseBackend):
                     max_r = row[5]
                     avg_r = row[6]
 
-                    if self.is_whitelisted("ephemeral_key", tracker_id) or self.is_whitelisted("mac_address", tracker_id):
+                    if self.is_whitelisted("ephemeral_key", tracker_id) or self.is_whitelisted(
+                        "mac_address", tracker_id
+                    ):
                         continue
 
                     duration_sec = max(0.0, float(last_s - first_s))
@@ -1297,10 +1299,14 @@ def get_database_backend(
                     memory_limit=memory_limit,
                     **kwargs,
                 )
-                logger.info("Initialized DuckDBBackend for %s (threads=%d, memory_limit=%s)", db_path, threads, memory_limit)
+                logger.info(
+                    "Initialized DuckDBBackend for %s (threads=%d, memory_limit=%s)", db_path, threads, memory_limit
+                )
                 return backend
             except Exception as e:
-                logger.warning("Failed initializing DuckDBBackend on %s (%s). Falling back to SQLiteBackend.", db_path, e)
+                logger.warning(
+                    "Failed initializing DuckDBBackend on %s (%s). Falling back to SQLiteBackend.", db_path, e
+                )
                 return SQLiteBackend(db_path=db_path, **kwargs)
         else:
             logger.info("duckdb not installed. Falling back to SQLiteBackend.")

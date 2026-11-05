@@ -18,7 +18,7 @@ class StreamDemuxer:
     def process_sample(self, sample: LinkSample, port_name: str | None = None) -> tuple[tuple[str, str], float, float]:
         self.samples_processed += 1
         link_key = (sample.rx_id, sample.tx_mac)
-        
+
         if self.verbose:
             port_info = f" ({port_name})" if port_name else ""
             print(f"[PACKET #{self.samples_processed:04d} | {sample.rx_id}{port_info}] "

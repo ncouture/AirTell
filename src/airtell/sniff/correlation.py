@@ -139,9 +139,7 @@ class StimulusResponseCorrelator:
 
         return record
 
-    def process_frame(
-        self, frame: DissectedBleFrame
-    ) -> CorrelationMatch | None:
+    def process_frame(self, frame: DissectedBleFrame) -> CorrelationMatch | None:
         """Evaluates an observed frame against active stimulus bursts."""
         target_mac: str | None = None
         responder_mac: str | None = None
@@ -215,9 +213,7 @@ class StimulusResponseCorrelator:
 
         return None
 
-    def process_frames(
-        self, frames: list[DissectedBleFrame]
-    ) -> list[CorrelationMatch]:
+    def process_frames(self, frames: list[DissectedBleFrame]) -> list[CorrelationMatch]:
         """Processes a batch of captured frames, returning all correlated matches."""
         matches: list[CorrelationMatch] = []
         for frame in frames:
@@ -226,9 +222,7 @@ class StimulusResponseCorrelator:
                 matches.append(m)
         return matches
 
-    def get_matches_for_stimulus(
-        self, stimulus_id: str
-    ) -> list[CorrelationMatch]:
+    def get_matches_for_stimulus(self, stimulus_id: str) -> list[CorrelationMatch]:
         """Retrieves all response matches associated with a specific stimulus ID."""
         return [m for m in self._matches if m.stimulus_id == stimulus_id]
 

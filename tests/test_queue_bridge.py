@@ -74,10 +74,7 @@ def test_queue_concurrent_producers_and_consumer() -> None:
     consumer_thread = threading.Thread(target=consumer)
     consumer_thread.start()
 
-    producer_threads = [
-        threading.Thread(target=producer, args=(t_id,))
-        for t_id in range(num_threads)
-    ]
+    producer_threads = [threading.Thread(target=producer, args=(t_id,)) for t_id in range(num_threads)]
     for pt in producer_threads:
         pt.start()
     for pt in producer_threads:
@@ -124,4 +121,3 @@ def test_queue_non_destructive_reads() -> None:
     assert len(all_items) == 10
     assert [p["pkt"] for p in all_items] == list(range(10))
     assert q.size() == 10
-

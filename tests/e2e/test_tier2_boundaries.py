@@ -578,7 +578,7 @@ class TestFeature14DissectorBoundaries:
     def test_f14_corrupted_utf8_fallback(self) -> None:
         # Invalid UTF-8 sequence in Complete Local Name (0x09)
         adv_a = bytes(6)
-        invalid_utf8 = b"\xFF\xFE\xFD"
+        invalid_utf8 = b"\xff\xfe\xfd"
         ad_payload = bytes([len(invalid_utf8) + 1, 0x09]) + invalid_utf8
         pdu = bytes([0x00, len(adv_a) + len(ad_payload)]) + adv_a + ad_payload
         frame = dissect_advertising_pdu(pdu)

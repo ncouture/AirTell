@@ -324,6 +324,7 @@ class TsharkTopologyManager:
 
     def _start_consumer(self, port: str, runner: TsharkExtcapRunner) -> None:
         """Spawn background consumer thread that drains runner stdout lines and parses them."""
+
         def _consumer() -> None:
             while not self._stop_event.is_set():
                 lines = runner.drain_lines(max_count=100)
