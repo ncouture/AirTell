@@ -209,10 +209,17 @@ class PcapBleReader:
     def __init__(self, _input=None):
         if isinstance(_input, (BufferedIOBase, RawIOBase)):
             self.input = _input
+            self._owns_stream = False
         else:
             self.input = open(_input, 'rb')
+            self._owns_stream = True
 
-        self.read_header()
+        try:
+            self.read_header()
+        except Exception:
+            if self._owns_stream:
+                self.input.close()
+            raise
         self.decoder_state = SniffleDecoderState()
 
     def __enter__(self):

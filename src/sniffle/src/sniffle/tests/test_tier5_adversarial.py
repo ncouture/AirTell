@@ -21,6 +21,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+import serial
 
 _SNIFFLE_CLI = Path(__file__).resolve().parents[1]
 if str(_SNIFFLE_CLI) not in sys.path:
@@ -282,8 +283,8 @@ def test_adversarial_11_nan_inf_in_mahalanobis_vector():
         dm_inf, zm_inf, _ = engine.compute_mahalanobis_anomaly(keys, inf_vec)
         # If solver produces value, verify it is float
         assert isinstance(dm_inf, float)
-    except Exception as err:
-        assert isinstance(err, (ValueError, FloatingPointError))
+    except (ValueError, FloatingPointError, np.linalg.LinAlgError) as err:
+        assert isinstance(err, (ValueError, FloatingPointError, np.linalg.LinAlgError))
 
 
 def test_adversarial_12_tomography_nan_inf_anomalies_handling():
@@ -767,7 +768,7 @@ def test_adversarial_37_cli_nonexistent_serial_ports_strict_mode():
         fallback_to_mock=False,
     )
     # HardwareSniffleSource will fail to open nonexistent port
-    with pytest.raises(Exception):
+    with pytest.raises(serial.SerialException):
         mgr.start()
     mgr.stop()
 

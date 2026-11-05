@@ -75,10 +75,11 @@ class TestDissectorFuzzingAdversarial:
             payload = rng.randbytes(length)
             try:
                 frame = dissect_advertising_pdu(payload, chan=37, rssi=-60, ts_usec=i)
-                assert frame is not None
-                assert isinstance(frame.is_malformed, bool)
-            except Exception as ex:
+            except (struct.error, IndexError, ValueError, KeyError, TypeError) as ex:
                 crashes.append((i, type(ex).__name__, str(ex)))
+                continue
+            assert frame is not None
+            assert isinstance(frame.is_malformed, bool)
 
         assert not crashes, f"Dissector crashed on {len(crashes)} fuzzed inputs: {crashes[:5]}"
 
@@ -104,9 +105,10 @@ class TestDissectorFuzzingAdversarial:
             for cut in range(2, len(pdu) + 1):
                 try:
                     frame = dissect_advertising_pdu(pdu[:cut])
-                    assert frame is not None
-                except Exception as ex:
+                except (struct.error, IndexError, ValueError, KeyError, TypeError) as ex:
                     crashes.append((f"{name}_trunc_{cut}", cut, str(ex)))
+                    continue
+                assert frame is not None
 
         # Single byte mutation across all offsets with boundary bytes
         boundary_bytes = [0x00, 0x01, 0x3F, 0x7F, 0x80, 0xC0, 0xFE, 0xFF]
@@ -117,9 +119,10 @@ class TestDissectorFuzzingAdversarial:
                     mutated[off] = b
                     try:
                         frame = dissect_advertising_pdu(bytes(mutated))
-                        assert frame is not None
-                    except Exception as ex:
+                    except (struct.error, IndexError, ValueError, KeyError, TypeError) as ex:
                         crashes.append((f"{name}_mut_{off}_{b}", off, str(ex)))
+                        continue
+                    assert frame is not None
 
         assert not crashes, f"Dissector crashed on mutations: {crashes[:5]}"
 

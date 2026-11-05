@@ -248,24 +248,19 @@ class TestMultiThreadedConcurrencyStress:
     def test_rapid_thread_spawn_join_on_virtual_radio_bus(self) -> None:
         """VirtualRadioBus handles high thread concurrency for device register/unregister/deliver."""
         bus = VirtualRadioBus()
-        errors: list[Exception] = []
 
         def client_task(task_id: int) -> None:
-            try:
-                ser = MockSerialInterface(bus=bus)
-                pdu = bytes([0x02, 6, 0x40, task_id, 0x11, 0x11, task_id, 0x40])
-                bus.deliver_raw_packet(pdu, chan=37, rssi=-65)
-                time.sleep(0.001)
-                bus.unregister_device(ser)
-                ser.close()
-            except Exception as exc:
-                errors.append(exc)
+            ser = MockSerialInterface(bus=bus)
+            pdu = bytes([0x02, 6, 0x40, task_id, 0x11, 0x11, task_id, 0x40])
+            bus.deliver_raw_packet(pdu, chan=37, rssi=-65)
+            time.sleep(0.001)
+            bus.unregister_device(ser)
+            ser.close()
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
             futures = [executor.submit(client_task, i) for i in range(50)]
-            concurrent.futures.wait(futures)
-
-        assert not errors
+            for future in concurrent.futures.as_completed(futures):
+                future.result()
 
 
 # ==============================================================================
