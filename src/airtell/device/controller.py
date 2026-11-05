@@ -22,6 +22,8 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
+import serial
+
 from airtell.device.mock import MockSerialInterface, VirtualRadioBus
 from airtell.device.serial_port import open_sniffle_serial
 from airtell.protocol.mac import str_to_mac
@@ -187,7 +189,7 @@ class SniffleDeviceController:
         while self._running and self.ser is not None:
             try:
                 line = self.ser.readline()
-            except (OSError, RuntimeError):
+            except (OSError, RuntimeError, TypeError, serial.SerialException):
                 break
 
             if not self._running:
