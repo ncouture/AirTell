@@ -110,6 +110,14 @@ def extract_cli_commands(file_path: Path) -> list[str]:
                 stripped = stripped[2:].strip()
             elif stripped.startswith("$ airtell "):
                 stripped = stripped[2:].strip()
+            elif stripped.startswith("uv run bluetooth-sniffle "):
+                stripped = stripped[len("uv run "):].strip()
+            elif stripped.startswith("uv run airtell "):
+                stripped = stripped[len("uv run "):].strip()
+            elif stripped.startswith("$ uv run bluetooth-sniffle "):
+                stripped = stripped[len("$ uv run "):].strip()
+            elif stripped.startswith("$ uv run airtell "):
+                stripped = stripped[len("$ uv run "):].strip()
 
             if stripped.startswith("bluetooth-sniffle ") or stripped.startswith("airtell "):
                 if current_cmd:
@@ -157,7 +165,10 @@ def extract_cli_commands(file_path: Path) -> list[str]:
 def main() -> int:
     """Validate documentation links and CLI snippets."""
     errors = 0
-    doc_files = [REPO_ROOT / "README.md"] + sorted((REPO_ROOT / "docs").glob("*.md"))
+    doc_files = [REPO_ROOT / "README.md"]
+    if (REPO_ROOT / "CONTRIBUTE.md").exists():
+        doc_files.append(REPO_ROOT / "CONTRIBUTE.md")
+    doc_files.extend(sorted((REPO_ROOT / "docs").glob("*.md")))
 
     print(f"Validating {len(doc_files)} documentation files...")
 
@@ -207,6 +218,8 @@ def main() -> int:
     # Validate CLI snippet syntax
     parser = create_parser()
     cli_docs = [REPO_ROOT / "README.md", REPO_ROOT / "docs" / "CLI.md"]
+    if (REPO_ROOT / "CONTRIBUTE.md").exists():
+        cli_docs.append(REPO_ROOT / "CONTRIBUTE.md")
     for doc in cli_docs:
         rel_path = doc.relative_to(REPO_ROOT)
         commands = extract_cli_commands(doc)
