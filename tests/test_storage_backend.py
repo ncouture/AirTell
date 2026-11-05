@@ -502,6 +502,3 @@ def test_duckdb_sqlite_attach_path_with_single_quote(tmp_path: Path) -> None:
     assert len(df) == 1
     assert df["val"].iloc[0] == 1
     duck_be.close()
-
-
-

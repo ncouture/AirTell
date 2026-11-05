@@ -328,7 +328,9 @@ class CsrkCounterAnalyzer(SideChannelAnalyzer):
                 else:
                     sender_state.rollback_count += 1
                     verdict = Verdict.ANOMALY_ROLLBACK.value
-                    summary = f"SignCounter rollback detected: SC decreased from {sender_state.last_counter} to {counter}."
+                    summary = (
+                        f"SignCounter rollback detected: SC decreased from {sender_state.last_counter} to {counter}."
+                    )
 
                 finding = CsrkCounterFinding(
                     finding_type=SideChannelType.CSRK_COUNTER.value,

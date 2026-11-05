@@ -192,16 +192,18 @@ class TestTelemetryExporters:
             timestamp_usec=100_000,
         )
         session.record_packet(frame)
-        session.record_event({
-            "burst_id": 1,
-            "stimulus_mac": "C0:11:22:22:11:C0",
-            "stimulus_type": "iBeacon",
-            "response_pdu_type": "SCAN_REQ",
-            "responder_mac": "40:AA:BB:CC:DD:40",
-            "responder_mac_type": "RPA",
-            "delta_ms": 150.0,
-            "timestamp_usec": 250_000,
-        })
+        session.record_event(
+            {
+                "burst_id": 1,
+                "stimulus_mac": "C0:11:22:22:11:C0",
+                "stimulus_type": "iBeacon",
+                "response_pdu_type": "SCAN_REQ",
+                "responder_mac": "40:AA:BB:CC:DD:40",
+                "responder_mac_type": "RPA",
+                "delta_ms": 150.0,
+                "timestamp_usec": 250_000,
+            }
+        )
 
         out_json = tmp_path / "session.json"
         session.export_json(out_json)
@@ -254,18 +256,20 @@ class TestTelemetryExporters:
 
     def test_csv_events_export_structure(self, tmp_path: Path):
         session = TelemetrySession(base_epoch=1700000000.0)
-        session.record_event({
-            "burst_id": 2,
-            "stimulus_mac": "C0:11:22:22:11:C0",
-            "stimulus_type": "AltBeacon",
-            "response_pdu_type": "SCAN_REQ",
-            "responder_mac": "40:AA:BB:CC:DD:50",
-            "responder_mac_type": "RPA",
-            "delta_ms": 320.5,
-            "chan": 38,
-            "rssi": -68,
-            "timestamp_usec": 500_000,
-        })
+        session.record_event(
+            {
+                "burst_id": 2,
+                "stimulus_mac": "C0:11:22:22:11:C0",
+                "stimulus_type": "AltBeacon",
+                "response_pdu_type": "SCAN_REQ",
+                "responder_mac": "40:AA:BB:CC:DD:50",
+                "responder_mac_type": "RPA",
+                "delta_ms": 320.5,
+                "chan": 38,
+                "rssi": -68,
+                "timestamp_usec": 500_000,
+            }
+        )
 
         out_csv = tmp_path / "events.csv"
         session.export_events_csv(out_csv)
@@ -319,11 +323,13 @@ class TestTelemetryExporters:
                     timestamp_usec=i * 1000,
                 )
                 session.record_packet(f)
-                session.record_event({
-                    "burst_id": thread_id,
-                    "stimulus_mac": "C0:11:22:22:11:C0",
-                    "responder_mac": f"40:AA:BB:CC:DD:{thread_id:02X}",
-                })
+                session.record_event(
+                    {
+                        "burst_id": thread_id,
+                        "stimulus_mac": "C0:11:22:22:11:C0",
+                        "responder_mac": f"40:AA:BB:CC:DD:{thread_id:02X}",
+                    }
+                )
 
         threads = [threading.Thread(target=worker, args=(t,)) for t in range(10)]
         for t in threads:
@@ -361,12 +367,14 @@ class TestTelemetryExporters:
 
     def test_export_csv_routing(self, tmp_path: Path):
         session = TelemetrySession()
-        session.record_event({
-            "burst_id": 1,
-            "stimulus_mac": "C0:11:22:22:11:C0",
-            "responder_mac": "40:AA:BB:CC:DD:40",
-            "delta_ms": 12.3,
-        })
+        session.record_event(
+            {
+                "burst_id": 1,
+                "stimulus_mac": "C0:11:22:22:11:C0",
+                "responder_mac": "40:AA:BB:CC:DD:40",
+                "delta_ms": 12.3,
+            }
+        )
         events_csv = tmp_path / "table_events.csv"
         session.export_csv(events_csv, table_type="events")
         assert events_csv.exists()

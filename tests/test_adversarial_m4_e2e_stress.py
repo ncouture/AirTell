@@ -79,7 +79,7 @@ class TestAdversarialPcapExtremeConditions:
     def test_pcap_truncated_global_header_raises_value_error(self) -> None:
         """PCAP shorter than 24-byte global header raises ValueError."""
         with pytest.raises(ValueError, match="File too short for PCAP global header"):
-            analyze_pcap(b"\xD4\xC3\xB2\xA1\x02\x00")
+            analyze_pcap(b"\xd4\xc3\xb2\xa1\x02\x00")
 
     def test_pcap_truncated_packet_header_handled_as_eof(self) -> None:
         """Valid 24-byte global header followed by truncated 7-byte packet header yields 0 packets."""
@@ -130,7 +130,7 @@ class TestAdversarialFrameTruncationsAndMalformations:
 
     def test_truncated_connect_ind_missing_lldata(self) -> None:
         """CONNECT_IND with addresses but truncated LLData does not produce invalid connection profiles."""
-        pdu = dissect_advertising_pdu(b"\x05\x0C" + b"\x11" * 6 + b"\x22" * 6)
+        pdu = dissect_advertising_pdu(b"\x05\x0c" + b"\x11" * 6 + b"\x22" * 6)
         assert pdu is not None
         assert pdu.conn_aa is None
         assert pdu.interval is None
@@ -165,7 +165,7 @@ class TestAdversarialFrameTruncationsAndMalformations:
     def test_att_signed_write_truncated_missing_signature(self) -> None:
         """ATT Signed Write (Opcode 0xD2) with length < 15 bytes yields att_frame=None."""
         # LLID=0b10, L2CAP len=5, CID=0x0004, Opcode=0xD2, handle=0x0001 (only 1B value, missing 12B sig)
-        raw = build_ll_header(0b10, 8) + struct.pack("<HH", 4, 0x0004) + b"\xD2\x01\x00\x00"
+        raw = build_ll_header(0b10, 8) + struct.pack("<HH", 4, 0x0004) + b"\xd2\x01\x00\x00"
         pdu = dissect_data_channel_pdu(raw)
         assert pdu is not None
         assert pdu.att_frame is None
@@ -235,11 +235,33 @@ class TestAdversarialTimestampCorruptionsAndJitter:
         conn_aa2 = 0x33334444
         events = [
             # Session 1 at t=1,000s
-            SyntheticEvent(ts_usec=1_000_000_000, chan=37, aa=BLE_ADV_AA, body=build_connect_ind("44:55:66:77:88:01", "AA:BB:CC:DD:EE:02", conn_aa=conn_aa1)),
-            SyntheticEvent(ts_usec=1_000_010_000, chan=1, aa=conn_aa1, direction=0, body=build_att_signed_write(csrk=CSRK_TEST_KEY, handle=0x0012, value=b"\x01", counter=10)),
+            SyntheticEvent(
+                ts_usec=1_000_000_000,
+                chan=37,
+                aa=BLE_ADV_AA,
+                body=build_connect_ind("44:55:66:77:88:01", "AA:BB:CC:DD:EE:02", conn_aa=conn_aa1),
+            ),
+            SyntheticEvent(
+                ts_usec=1_000_010_000,
+                chan=1,
+                aa=conn_aa1,
+                direction=0,
+                body=build_att_signed_write(csrk=CSRK_TEST_KEY, handle=0x0012, value=b"\x01", counter=10),
+            ),
             # Session 2 at t=4,600s (+3600s, well beyond 300s temporal linking limit)
-            SyntheticEvent(ts_usec=4_600_000_000, chan=37, aa=BLE_ADV_AA, body=build_connect_ind("44:55:66:77:88:02", "AA:BB:CC:DD:EE:02", conn_aa=conn_aa2)),
-            SyntheticEvent(ts_usec=4_600_010_000, chan=1, aa=conn_aa2, direction=0, body=build_att_signed_write(csrk=CSRK_TEST_KEY, handle=0x0012, value=b"\x01", counter=11)),
+            SyntheticEvent(
+                ts_usec=4_600_000_000,
+                chan=37,
+                aa=BLE_ADV_AA,
+                body=build_connect_ind("44:55:66:77:88:02", "AA:BB:CC:DD:EE:02", conn_aa=conn_aa2),
+            ),
+            SyntheticEvent(
+                ts_usec=4_600_010_000,
+                chan=1,
+                aa=conn_aa2,
+                direction=0,
+                body=build_att_signed_write(csrk=CSRK_TEST_KEY, handle=0x0012, value=b"\x01", counter=11),
+            ),
         ]
         pcap_data = generate_synthetic_pcap(events)
         rep = analyze_pcap(pcap_data, analyzers=["csrk"], csrk=CSRK_TEST_KEY)
@@ -296,7 +318,9 @@ class TestAdversarialHighVolumeAndBurstStress:
         for i in range(3000):
             records.append(
                 BlePacketRecord(
-                    body=build_scan_req(f"10:00:00:{(i//65536)%256:02X}:{(i//256)%256:02X}:{i%256:02X}", periph),
+                    body=build_scan_req(
+                        f"10:00:00:{(i // 65536) % 256:02X}:{(i // 256) % 256:02X}:{i % 256:02X}", periph
+                    ),
                     channel=37,
                     rssi=-55,
                     timestamp_usec=base_ts + (i % 500),
@@ -366,8 +390,19 @@ class TestAdversarialRapidConnectionTearDowns:
         """LL_ENC_REQ followed immediately by LL_TERMINATE_IND resets session without false findings."""
         conn_aa = 0x55443322
         events = [
-            SyntheticEvent(ts_usec=1000, chan=37, aa=BLE_ADV_AA, body=build_connect_ind("AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02", conn_aa=conn_aa)),
-            SyntheticEvent(ts_usec=2000, chan=1, aa=conn_aa, direction=0, body=build_ll_enc_req(rand=b"\x01"*8, ediv=0x1234, skdm=b"\x02"*8, ivm=b"\x03"*4)),
+            SyntheticEvent(
+                ts_usec=1000,
+                chan=37,
+                aa=BLE_ADV_AA,
+                body=build_connect_ind("AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02", conn_aa=conn_aa),
+            ),
+            SyntheticEvent(
+                ts_usec=2000,
+                chan=1,
+                aa=conn_aa,
+                direction=0,
+                body=build_ll_enc_req(rand=b"\x01" * 8, ediv=0x1234, skdm=b"\x02" * 8, ivm=b"\x03" * 4),
+            ),
             SyntheticEvent(ts_usec=3000, chan=1, aa=conn_aa, direction=0, body=build_ll_terminate_ind(0x13)),
         ]
         pcap_data = generate_synthetic_pcap(events)
@@ -381,18 +416,53 @@ class TestAdversarialRapidConnectionTearDowns:
         conn_aa2 = 0x8899AACC
         events = [
             # Connection 1: Shared LTK
-            SyntheticEvent(ts_usec=1_000_000, chan=37, aa=BLE_ADV_AA, body=build_connect_ind("AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02", conn_aa=conn_aa1)),
-            SyntheticEvent(ts_usec=1_010_000, chan=1, aa=conn_aa1, direction=0, body=build_ll_enc_req(rand=b"\x01"*8, ediv=0x1234, skdm=b"\x02"*8, ivm=b"\x03"*4)),
-            SyntheticEvent(ts_usec=1_020_000, chan=1, aa=conn_aa1, direction=1, body=build_ll_enc_rsp(skds=b"\x04"*8, ivs=b"\x05"*4)),
+            SyntheticEvent(
+                ts_usec=1_000_000,
+                chan=37,
+                aa=BLE_ADV_AA,
+                body=build_connect_ind("AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02", conn_aa=conn_aa1),
+            ),
+            SyntheticEvent(
+                ts_usec=1_010_000,
+                chan=1,
+                aa=conn_aa1,
+                direction=0,
+                body=build_ll_enc_req(rand=b"\x01" * 8, ediv=0x1234, skdm=b"\x02" * 8, ivm=b"\x03" * 4),
+            ),
+            SyntheticEvent(
+                ts_usec=1_020_000,
+                chan=1,
+                aa=conn_aa1,
+                direction=1,
+                body=build_ll_enc_rsp(skds=b"\x04" * 8, ivs=b"\x05" * 4),
+            ),
             SyntheticEvent(ts_usec=1_030_000, chan=1, aa=conn_aa1, direction=1, body=build_ll_start_enc_req()),
             SyntheticEvent(ts_usec=1_040_000, chan=1, aa=conn_aa1, direction=0, body=build_ll_start_enc_rsp()),
-            SyntheticEvent(ts_usec=1_050_000, chan=1, aa=conn_aa1, direction=1, body=build_ll_start_enc_rsp(mic=b"\xAA\xBB\xCC\xDD")),
+            SyntheticEvent(
+                ts_usec=1_050_000,
+                chan=1,
+                aa=conn_aa1,
+                direction=1,
+                body=build_ll_start_enc_rsp(mic=b"\xaa\xbb\xcc\xdd"),
+            ),
             SyntheticEvent(ts_usec=1_060_000, chan=1, aa=conn_aa1, direction=0, body=build_ll_terminate_ind(0x13)),
-
             # Connection 2: Rejected
-            SyntheticEvent(ts_usec=2_000_000, chan=37, aa=BLE_ADV_AA, body=build_connect_ind("AA:BB:CC:DD:EE:03", "AA:BB:CC:DD:EE:04", conn_aa=conn_aa2)),
-            SyntheticEvent(ts_usec=2_010_000, chan=1, aa=conn_aa2, direction=0, body=build_ll_enc_req(rand=b"\x01"*8, ediv=0x1234, skdm=b"\x02"*8, ivm=b"\x03"*4)),
-            SyntheticEvent(ts_usec=2_020_000, chan=1, aa=conn_aa2, direction=1, body=build_ll_reject_ind(ERROR_PIN_OR_KEY_MISSING)),
+            SyntheticEvent(
+                ts_usec=2_000_000,
+                chan=37,
+                aa=BLE_ADV_AA,
+                body=build_connect_ind("AA:BB:CC:DD:EE:03", "AA:BB:CC:DD:EE:04", conn_aa=conn_aa2),
+            ),
+            SyntheticEvent(
+                ts_usec=2_010_000,
+                chan=1,
+                aa=conn_aa2,
+                direction=0,
+                body=build_ll_enc_req(rand=b"\x01" * 8, ediv=0x1234, skdm=b"\x02" * 8, ivm=b"\x03" * 4),
+            ),
+            SyntheticEvent(
+                ts_usec=2_020_000, chan=1, aa=conn_aa2, direction=1, body=build_ll_reject_ind(ERROR_PIN_OR_KEY_MISSING)
+            ),
         ]
         pcap_data = generate_synthetic_pcap(events)
         rep = analyze_pcap(pcap_data, analyzers=["encryption"])
@@ -403,18 +473,49 @@ class TestAdversarialRapidConnectionTearDowns:
         conn_aa = 0x8899AABB
         events = [
             # Connection 1: Shared LTK
-            SyntheticEvent(ts_usec=1_000_000, chan=37, aa=BLE_ADV_AA, body=build_connect_ind("AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02", conn_aa=conn_aa)),
-            SyntheticEvent(ts_usec=1_010_000, chan=1, aa=conn_aa, direction=0, body=build_ll_enc_req(rand=b"\x01"*8, ediv=0x1234, skdm=b"\x02"*8, ivm=b"\x03"*4)),
-            SyntheticEvent(ts_usec=1_020_000, chan=1, aa=conn_aa, direction=1, body=build_ll_enc_rsp(skds=b"\x04"*8, ivs=b"\x05"*4)),
+            SyntheticEvent(
+                ts_usec=1_000_000,
+                chan=37,
+                aa=BLE_ADV_AA,
+                body=build_connect_ind("AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02", conn_aa=conn_aa),
+            ),
+            SyntheticEvent(
+                ts_usec=1_010_000,
+                chan=1,
+                aa=conn_aa,
+                direction=0,
+                body=build_ll_enc_req(rand=b"\x01" * 8, ediv=0x1234, skdm=b"\x02" * 8, ivm=b"\x03" * 4),
+            ),
+            SyntheticEvent(
+                ts_usec=1_020_000,
+                chan=1,
+                aa=conn_aa,
+                direction=1,
+                body=build_ll_enc_rsp(skds=b"\x04" * 8, ivs=b"\x05" * 4),
+            ),
             SyntheticEvent(ts_usec=1_030_000, chan=1, aa=conn_aa, direction=1, body=build_ll_start_enc_req()),
             SyntheticEvent(ts_usec=1_040_000, chan=1, aa=conn_aa, direction=0, body=build_ll_start_enc_rsp()),
-            SyntheticEvent(ts_usec=1_050_000, chan=1, aa=conn_aa, direction=1, body=build_ll_start_enc_rsp(mic=b"\xAA\xBB\xCC\xDD")),
+            SyntheticEvent(
+                ts_usec=1_050_000, chan=1, aa=conn_aa, direction=1, body=build_ll_start_enc_rsp(mic=b"\xaa\xbb\xcc\xdd")
+            ),
             SyntheticEvent(ts_usec=1_060_000, chan=1, aa=conn_aa, direction=0, body=build_ll_terminate_ind(0x13)),
-
             # Connection 2: Reusing conn_aa, Rejected
-            SyntheticEvent(ts_usec=2_000_000, chan=37, aa=BLE_ADV_AA, body=build_connect_ind("AA:BB:CC:DD:EE:03", "AA:BB:CC:DD:EE:04", conn_aa=conn_aa)),
-            SyntheticEvent(ts_usec=2_010_000, chan=1, aa=conn_aa, direction=0, body=build_ll_enc_req(rand=b"\x01"*8, ediv=0x1234, skdm=b"\x02"*8, ivm=b"\x03"*4)),
-            SyntheticEvent(ts_usec=2_020_000, chan=1, aa=conn_aa, direction=1, body=build_ll_reject_ind(ERROR_PIN_OR_KEY_MISSING)),
+            SyntheticEvent(
+                ts_usec=2_000_000,
+                chan=37,
+                aa=BLE_ADV_AA,
+                body=build_connect_ind("AA:BB:CC:DD:EE:03", "AA:BB:CC:DD:EE:04", conn_aa=conn_aa),
+            ),
+            SyntheticEvent(
+                ts_usec=2_010_000,
+                chan=1,
+                aa=conn_aa,
+                direction=0,
+                body=build_ll_enc_req(rand=b"\x01" * 8, ediv=0x1234, skdm=b"\x02" * 8, ivm=b"\x03" * 4),
+            ),
+            SyntheticEvent(
+                ts_usec=2_020_000, chan=1, aa=conn_aa, direction=1, body=build_ll_reject_ind(ERROR_PIN_OR_KEY_MISSING)
+            ),
         ]
         pcap_data = generate_synthetic_pcap(events)
         rep = analyze_pcap(pcap_data, analyzers=["encryption"])

@@ -84,19 +84,15 @@ class TestPcapngReader:
         shb = (
             struct.pack("<II", 0x0A0D0D0A, 28)
             + struct.pack("<I", 0x1A2B3C4D)  # Byte-order magic (little-endian)
-            + struct.pack("<HH", 1, 0)        # Version 1.0
-            + struct.pack("<q", -1)           # Section length unspecified
+            + struct.pack("<HH", 1, 0)  # Version 1.0
+            + struct.pack("<q", -1)  # Section length unspecified
             + struct.pack("<I", 28)
         )
 
         # 2. IDB (Interface Description Block, type 0x00000001)
         # Body: 2B link_type (256), 2B reserved, 4B snaplen (65535) = 8 bytes
         # Total len = 4 + 4 + 8 + 4 = 20 bytes
-        idb = (
-            struct.pack("<II", 0x00000001, 20)
-            + struct.pack("<HHI", 256, 0, 65535)
-            + struct.pack("<I", 20)
-        )
+        idb = struct.pack("<II", 0x00000001, 20) + struct.pack("<HHI", 256, 0, 65535) + struct.pack("<I", 20)
 
         # 3. EPB (Enhanced Packet Block, type 0x00000006)
         # BLE packet payload:

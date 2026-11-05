@@ -51,20 +51,20 @@ def parse_uploaded_pcap(pcap_bytes: bytes) -> list[dict[str, Any]]:
                     adv_payload_hex = body.hex()
 
                 net_type, eph_key = classify_payload(adv_payload_hex)
-                dt_str = time.strftime(
-                    "%Y-%m-%d %H:%M:%S", time.localtime(pkt.ts_epoch)
-                )
+                dt_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(pkt.ts_epoch))
 
-                observations.append({
-                    "timestamp": pkt.ts_epoch,
-                    "datetime_str": dt_str,
-                    "channel": pkt.ble_chan,
-                    "rssi": pkt.rssi,
-                    "mac_address": mac_str,
-                    "network_type": net_type,
-                    "ephemeral_key": eph_key,
-                    "raw_payload": adv_payload_hex,
-                })
+                observations.append(
+                    {
+                        "timestamp": pkt.ts_epoch,
+                        "datetime_str": dt_str,
+                        "channel": pkt.ble_chan,
+                        "rssi": pkt.rssi,
+                        "mac_address": mac_str,
+                        "network_type": net_type,
+                        "ephemeral_key": eph_key,
+                        "raw_payload": adv_payload_hex,
+                    }
+                )
     except Exception as e:
         st.warning(f"Warning parsing PCAP stream: {e}")
 
@@ -138,4 +138,6 @@ def render_offline_replay(
                         timestamp=r["timestamp"],
                     )
                     imported += 1
-                st.success(f"Successfully imported {imported:,} records into database! You can now analyze them in Telemetry, RSSI Trends, and Alert Feed.")
+                st.success(
+                    f"Successfully imported {imported:,} records into database! You can now analyze them in Telemetry, RSSI Trends, and Alert Feed."
+                )

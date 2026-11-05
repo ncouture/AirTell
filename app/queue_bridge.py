@@ -251,4 +251,3 @@ def get_event_queue() -> EventQueue:
         Shared EventQueue instance.
     """
     return EventQueue(maxsize=10000)
-

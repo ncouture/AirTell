@@ -56,9 +56,7 @@ def render_telemetry_overview(
 ) -> None:
     """Render the Live Telemetry Overview dashboard view."""
     st.subheader("📡 Live Radio Telemetry & Signal Throughput")
-    st.markdown(
-        "Real-time packet throughput, multi-channel distribution, and active tracking network monitors."
-    )
+    st.markdown("Real-time packet throughput, multi-channel distribution, and active tracking network monitors.")
 
     # Ingest live queue items into a snapshot without destructive draining
     live_items: list[dict[str, Any]] = []
@@ -97,20 +95,21 @@ def render_telemetry_overview(
                 """
             )
             for row in cursor.fetchall():
-                obs_list.append({
-                    "channel": row[0],
-                    "network_type": row[1],
-                    "mac_address": row[2],
-                    "rssi": row[3],
-                    "datetime_str": row[4],
-                })
+                obs_list.append(
+                    {
+                        "channel": row[0],
+                        "network_type": row[1],
+                        "mac_address": row[2],
+                        "rssi": row[3],
+                        "datetime_str": row[4],
+                    }
+                )
         except Exception as e:
             st.error(f"Error querying telemetry observations: {e}")
 
     # Combine with any in-flight live items
     all_observations = live_items + obs_list
     metrics = compute_telemetry_metrics(all_observations)
-
 
     # Metric Cards Row
     col1, col2, col3, col4 = st.columns(4)

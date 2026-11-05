@@ -149,4 +149,3 @@ def test_get_device_status_none_input() -> None:
         assert status["device"] == "/dev/ttyUSB0"
         assert status["in_use"] is False
         assert status["status"] == "IDLE"
-

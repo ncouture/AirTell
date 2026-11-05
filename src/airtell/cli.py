@@ -177,7 +177,9 @@ def handle_topology_a(args: argparse.Namespace) -> int:
             logger.info("Single-dongle passive capture mode active: stimulus injection is inactive.")
             print("Notice: Single-dongle passive capture mode active (stimulus injection disabled).")
             if args.correlate:
-                logger.info("Stimulus-response correlation disabled in single-dongle passive mode (no stimulus emitted).")
+                logger.info(
+                    "Stimulus-response correlation disabled in single-dongle passive mode (no stimulus emitted)."
+                )
                 print("Notice: Correlation disabled in single-dongle passive mode (stimulus injection inactive).")
         else:
             pal_mac = generate_palindromic_mac("static", seed=b"topo-a-static")
@@ -228,18 +230,20 @@ def handle_topology_a(args: argparse.Namespace) -> int:
                         if correlator is not None:
                             match = correlator.process_frame(frame)
                             if match and telemetry_session is not None:
-                                telemetry_session.record_event({
-                                    "burst_id": match.stimulus_id,
-                                    "stimulus_mac": match.stimulus_adv_a,
-                                    "stimulus_type": args.burst_type,
-                                    "response_pdu_type": match.response_pdu_type,
-                                    "responder_mac": match.responder_mac,
-                                    "responder_mac_type": match.responder_type,
-                                    "delta_ms": match.latency_ms,
-                                    "chan": match.channel,
-                                    "rssi": match.rssi,
-                                    "timestamp_usec": match.response_timestamp_usec,
-                                })
+                                telemetry_session.record_event(
+                                    {
+                                        "burst_id": match.stimulus_id,
+                                        "stimulus_mac": match.stimulus_adv_a,
+                                        "stimulus_type": args.burst_type,
+                                        "response_pdu_type": match.response_pdu_type,
+                                        "responder_mac": match.responder_mac,
+                                        "responder_mac_type": match.responder_type,
+                                        "delta_ms": match.latency_ms,
+                                        "chan": match.channel,
+                                        "rssi": match.rssi,
+                                        "timestamp_usec": match.response_timestamp_usec,
+                                    }
+                                )
                     except Exception as ex:
                         logger.debug("Frame processing error: %s", ex)
 
@@ -387,8 +391,18 @@ def handle_mock_simulate(args: argparse.Namespace) -> int:
 
     test_beacons: list[tuple[str, bytes]] = [
         ("iBeacon", build_ibeacon(uuid="e2c56db5-dffb-48d2-b060-d0f5a71096e0", major=10, minor=20, tx_power=-59)),
-        ("AltBeacon", build_altbeacon(mfg_id=0x0118, beacon_id=bytes.fromhex("e2c56db5dffb48d2b060d0f5a71096e000010002"), ref_rssi=-59)),
-        ("Eddystone-UID", build_eddystone_uid(namespace=bytes.fromhex("0102030405060708090a"), instance=bytes.fromhex("010203040506"), tx_power=-20)),
+        (
+            "AltBeacon",
+            build_altbeacon(
+                mfg_id=0x0118, beacon_id=bytes.fromhex("e2c56db5dffb48d2b060d0f5a71096e000010002"), ref_rssi=-59
+            ),
+        ),
+        (
+            "Eddystone-UID",
+            build_eddystone_uid(
+                namespace=bytes.fromhex("0102030405060708090a"), instance=bytes.fromhex("010203040506"), tx_power=-20
+            ),
+        ),
         ("Eddystone-URL", build_eddystone_url(url="https://example.com/mock", tx_power=-18)),
         ("Eddystone-TLM", build_eddystone_tlm(vbatt_mv=3300, temp_c=25.0, adv_cnt=500, sec_cnt=10000)),
         ("GAEN", build_gaen(rpi=bytes.fromhex("0102030405060708090a0b0c0d0e0f10"), aem=bytes.fromhex("01020304"))),
@@ -435,7 +449,10 @@ def handle_mock_simulate(args: argparse.Namespace) -> int:
 
         if missing_types:
             logger.error("Simulation failed fidelity check: missing %s", missing_types)
-            print(f"ERROR: Simulation failed fidelity check. Missing beacon types: {sorted(list(missing_types))}", file=sys.stderr)
+            print(
+                f"ERROR: Simulation failed fidelity check. Missing beacon types: {sorted(list(missing_types))}",
+                file=sys.stderr,
+            )
             return 1
 
         if args.pcap:
@@ -535,13 +552,19 @@ def handle_verify_hardware(args: argparse.Namespace) -> int:
             (
                 2,
                 "Radius Networks AltBeacon",
-                build_altbeacon(mfg_id=0x0118, beacon_id=bytes.fromhex("e2c56db5dffb48d2b060d0f5a71096e000010002"), ref_rssi=-59),
+                build_altbeacon(
+                    mfg_id=0x0118, beacon_id=bytes.fromhex("e2c56db5dffb48d2b060d0f5a71096e000010002"), ref_rssi=-59
+                ),
                 "AltBeacon",
             ),
             (
                 3,
                 "Google Eddystone-UID",
-                build_eddystone_uid(namespace=bytes.fromhex("0102030405060708090a"), instance=bytes.fromhex("010203040506"), tx_power=-20),
+                build_eddystone_uid(
+                    namespace=bytes.fromhex("0102030405060708090a"),
+                    instance=bytes.fromhex("010203040506"),
+                    tx_power=-20,
+                ),
                 "Eddystone-UID",
             ),
             (
@@ -593,7 +616,12 @@ def handle_verify_hardware(args: argparse.Namespace) -> int:
                 logger.info("Stage %d/5 (%s): PASSED", stage_idx, stage_desc)
                 passed_stages += 1
             else:
-                logger.error("Stage %d/5 (%s): FAILED (no matching %s beacon captured)", stage_idx, stage_desc, expected_beacon_type)
+                logger.error(
+                    "Stage %d/5 (%s): FAILED (no matching %s beacon captured)",
+                    stage_idx,
+                    stage_desc,
+                    expected_beacon_type,
+                )
 
         cleanup()
         coord.unregister(cleanup)
@@ -602,7 +630,9 @@ def handle_verify_hardware(args: argparse.Namespace) -> int:
             print(f"Hardware loopback verification PASSED: {passed_stages}/{len(stages)} stages verified.")
             return 0
         else:
-            print(f"Hardware loopback verification FAILED: {passed_stages}/{len(stages)} stages passed.", file=sys.stderr)
+            print(
+                f"Hardware loopback verification FAILED: {passed_stages}/{len(stages)} stages passed.", file=sys.stderr
+            )
             return 1
 
     except KeyboardInterrupt:
@@ -895,13 +925,15 @@ def handle_deanonymize(args: argparse.Namespace) -> int:
             writer = csv.writer(f)
             writer.writerow(["trajectory_id", "mac_addresses", "observations_count", "primary_network", "confidence"])
             for idx, t in enumerate(trajectories, start=1):
-                writer.writerow([
-                    idx,
-                    ";".join(sorted(t.mac_addresses)),
-                    len(t.observations),
-                    t.observations[0].network_type if t.observations else "Unknown",
-                    f"{t.confidence:.2f}",
-                ])
+                writer.writerow(
+                    [
+                        idx,
+                        ";".join(sorted(t.mac_addresses)),
+                        len(t.observations),
+                        t.observations[0].network_type if t.observations else "Unknown",
+                        f"{t.confidence:.2f}",
+                    ]
+                )
 
     return 0
 
@@ -915,21 +947,13 @@ def handle_rogue_inject(args: argparse.Namespace) -> int:
         print("ERROR: Count must be positive", file=sys.stderr)
         return 2
 
-    interval_sec = (
-        args.interval_ms / 1000.0
-        if getattr(args, "interval_ms", None) is not None
-        else args.interval
-    )
+    interval_sec = args.interval_ms / 1000.0 if getattr(args, "interval_ms", None) is not None else args.interval
     if interval_sec <= 0:
         logger.error("Interval must be positive (got %s)", interval_sec)
         print("ERROR: Interval must be positive", file=sys.stderr)
         return 2
 
-    jitter_sec = (
-        args.jitter_ms / 1000.0
-        if getattr(args, "jitter_ms", None) is not None
-        else args.jitter
-    )
+    jitter_sec = args.jitter_ms / 1000.0 if getattr(args, "jitter_ms", None) is not None else args.jitter
     if jitter_sec < 0:
         logger.error("Jitter must be non-negative (got %s)", jitter_sec)
         print("ERROR: Jitter must be non-negative", file=sys.stderr)
@@ -941,11 +965,17 @@ def handle_rogue_inject(args: argparse.Namespace) -> int:
             channels_list = [int(c.strip()) for c in args.channels.split(",") if c.strip()]
             if not channels_list or any(c not in (37, 38, 39) for c in channels_list):
                 logger.error("Invalid channel sequence: %s", args.channels)
-                print(f"ERROR: Invalid channel sequence '{args.channels}'. Channels must be 37, 38, or 39.", file=sys.stderr)
+                print(
+                    f"ERROR: Invalid channel sequence '{args.channels}'. Channels must be 37, 38, or 39.",
+                    file=sys.stderr,
+                )
                 return 2
         except ValueError:
             logger.error("Failed to parse --channels: %s", args.channels)
-            print(f"ERROR: Failed to parse --channels '{args.channels}'. Expected comma-separated integers.", file=sys.stderr)
+            print(
+                f"ERROR: Failed to parse --channels '{args.channels}'. Expected comma-separated integers.",
+                file=sys.stderr,
+            )
             return 2
     else:
         channels_list = [args.channel]
@@ -1089,11 +1119,7 @@ def handle_sidechannel(args: argparse.Namespace) -> int:
             return 2
 
     # 4. Configure active analyzers
-    analyzers: list[str] = (
-        ["encryption", "csrk", "bat"]
-        if args.analyzer == "all"
-        else [args.analyzer]
-    )
+    analyzers: list[str] = ["encryption", "csrk", "bat"] if args.analyzer == "all" else [args.analyzer]
 
     runner = SideChannelAnalysisRunner(
         analyzers=analyzers,
@@ -1175,7 +1201,11 @@ def create_parser(prog: str = "airtell") -> argparse.ArgumentParser:
         description="AirTell: Dual-Device Bluetooth Low Energy Sniffle Testbed Framework (PoPETs 2025-0103)",
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose debug logging")
-    ver_str = f"{prog} 0.2.0 (bluetooth-sniffle 0.2.0)" if prog != "bluetooth-sniffle" else "bluetooth-sniffle 0.2.0 (airtell 0.2.0)"
+    ver_str = (
+        f"{prog} 0.2.0 (bluetooth-sniffle 0.2.0)"
+        if prog != "bluetooth-sniffle"
+        else "bluetooth-sniffle 0.2.0 (airtell 0.2.0)"
+    )
     parser.add_argument("--version", action="version", version=ver_str)
 
     subparsers = parser.add_subparsers(dest="command", help="Available subcommands")
@@ -1189,7 +1219,9 @@ def create_parser(prog: str = "airtell") -> argparse.ArgumentParser:
     p_topo_a.add_argument("--dev1", type=str, default=None, help="Device 1 serial port (stimulator)")
     p_topo_a.add_argument("--dev2", type=str, default=None, help="Device 2 serial port (observer)")
     p_topo_a.add_argument("--mock", action="store_true", help="Run with in-memory mock serial devices")
-    p_topo_a.add_argument("--chan", type=int, default=37, choices=[37, 38, 39], help="Observer capture channel (default: 37)")
+    p_topo_a.add_argument(
+        "--chan", type=int, default=37, choices=[37, 38, 39], help="Observer capture channel (default: 37)"
+    )
     p_topo_a.add_argument(
         "--burst-type",
         type=str,
@@ -1197,8 +1229,12 @@ def create_parser(prog: str = "airtell") -> argparse.ArgumentParser:
         choices=["ibeacon", "altbeacon", "eddystone-uid", "eddystone-url", "eddystone-tlm", "gaen"],
         help="Beacon advertising profile to inject (default: ibeacon)",
     )
-    p_topo_a.add_argument("--interval-ms", type=int, default=100, help="Advertising interval in milliseconds (default: 100)")
-    p_topo_a.add_argument("--duration-sec", type=float, default=5.0, help="Total execution duration in seconds (default: 5.0)")
+    p_topo_a.add_argument(
+        "--interval-ms", type=int, default=100, help="Advertising interval in milliseconds (default: 100)"
+    )
+    p_topo_a.add_argument(
+        "--duration-sec", type=float, default=5.0, help="Total execution duration in seconds (default: 5.0)"
+    )
     p_topo_a.add_argument("--pcap", type=str, default=None, help="Output PCAP file path")
     p_topo_a.add_argument("--json", type=str, default=None, help="Output JSON session telemetry path")
     p_topo_a.add_argument("--csv", type=str, default=None, help="Output CSV summary path")
@@ -1219,9 +1255,15 @@ def create_parser(prog: str = "airtell") -> argparse.ArgumentParser:
     p_topo_b.add_argument("--dev1", type=str, default=None, help="Device 1 serial port")
     p_topo_b.add_argument("--dev2", type=str, default=None, help="Device 2 serial port")
     p_topo_b.add_argument("--mock", action="store_true", help="Run with in-memory mock serial devices")
-    p_topo_b.add_argument("--chan1", type=int, default=37, choices=[37, 38, 39], help="Channel for Device 1 (default: 37)")
-    p_topo_b.add_argument("--chan2", type=int, default=38, choices=[37, 38, 39], help="Channel for Device 2 (default: 38)")
-    p_topo_b.add_argument("--duration-sec", type=float, default=5.0, help="Total execution duration in seconds (default: 5.0)")
+    p_topo_b.add_argument(
+        "--chan1", type=int, default=37, choices=[37, 38, 39], help="Channel for Device 1 (default: 37)"
+    )
+    p_topo_b.add_argument(
+        "--chan2", type=int, default=38, choices=[37, 38, 39], help="Channel for Device 2 (default: 38)"
+    )
+    p_topo_b.add_argument(
+        "--duration-sec", type=float, default=5.0, help="Total execution duration in seconds (default: 5.0)"
+    )
     p_topo_b.add_argument("--pcap", type=str, default=None, help="Output PCAP file path")
     p_topo_b.add_argument("--json", type=str, default=None, help="Output JSON session telemetry path")
     p_topo_b.add_argument("--csv", type=str, default=None, help="Output CSV summary path")
@@ -1235,8 +1277,12 @@ def create_parser(prog: str = "airtell") -> argparse.ArgumentParser:
     p_mock_sim.add_argument("--pcap", type=str, default=None, help="Output PCAP file path (optional)")
     p_mock_sim.add_argument("--json", type=str, default=None, help="Output JSON telemetry path (optional)")
     p_mock_sim.add_argument("--csv", type=str, default=None, help="Output CSV summary path (optional)")
-    p_mock_sim.add_argument("--duration-sec", type=float, default=2.0, help="Simulation duration in seconds (default: 2.0)")
-    p_mock_sim.add_argument("--interval-ms", type=int, default=50, help="Stimulus injection interval in ms (default: 50)")
+    p_mock_sim.add_argument(
+        "--duration-sec", type=float, default=2.0, help="Simulation duration in seconds (default: 2.0)"
+    )
+    p_mock_sim.add_argument(
+        "--interval-ms", type=int, default=50, help="Stimulus injection interval in ms (default: 50)"
+    )
 
     # 4. Verify Hardware
     p_verify_hw = subparsers.add_parser(
@@ -1246,9 +1292,15 @@ def create_parser(prog: str = "airtell") -> argparse.ArgumentParser:
     p_verify_hw.add_argument("--dev1", type=str, default=None, help="Device 1 serial port")
     p_verify_hw.add_argument("--dev2", type=str, default=None, help="Device 2 serial port")
     p_verify_hw.add_argument("--mock", action="store_true", help="Run in mock/offline mode (CI compatible)")
-    p_verify_hw.add_argument("--chan", type=int, default=37, choices=[37, 38, 39], help="Observer capture channel (default: 37)")
-    p_verify_hw.add_argument("--burst-duration-sec", type=float, default=0.5, help="Duration for each burst stage in seconds (default: 0.5)")
-    p_verify_hw.add_argument("--interval-ms", type=int, default=50, help="Advertising interval in milliseconds (default: 50)")
+    p_verify_hw.add_argument(
+        "--chan", type=int, default=37, choices=[37, 38, 39], help="Observer capture channel (default: 37)"
+    )
+    p_verify_hw.add_argument(
+        "--burst-duration-sec", type=float, default=0.5, help="Duration for each burst stage in seconds (default: 0.5)"
+    )
+    p_verify_hw.add_argument(
+        "--interval-ms", type=int, default=50, help="Advertising interval in milliseconds (default: 50)"
+    )
     p_verify_hw.add_argument("--pcap", type=str, default=None, help="Output PCAP file path (optional)")
     p_verify_hw.add_argument("--json", type=str, default=None, help="Output JSON telemetry path (optional)")
     p_verify_hw.add_argument("--csv", type=str, default=None, help="Output CSV summary path (optional)")
@@ -1270,8 +1322,12 @@ def create_parser(prog: str = "airtell") -> argparse.ArgumentParser:
     )
     p_deanon.add_argument("--pcap", type=str, default=None, help="PCAP capture file to analyze")
     p_deanon.add_argument("--mock", action="store_true", help="Run on mock synthetic traces")
-    p_deanon.add_argument("--max-gap", type=float, default=30.0, help="Max time gap for trajectory linkability in seconds")
-    p_deanon.add_argument("--max-rssi-delta", type=float, default=15.0, help="Max RSSI delta for trajectory linkability in dBm")
+    p_deanon.add_argument(
+        "--max-gap", type=float, default=30.0, help="Max time gap for trajectory linkability in seconds"
+    )
+    p_deanon.add_argument(
+        "--max-rssi-delta", type=float, default=15.0, help="Max RSSI delta for trajectory linkability in dBm"
+    )
     p_deanon.add_argument("--json", type=str, default=None, help="Output JSON analysis summary path (optional)")
     p_deanon.add_argument("--csv", type=str, default=None, help="Output CSV trajectories summary path (optional)")
 
@@ -1294,7 +1350,9 @@ def create_parser(prog: str = "airtell") -> argparse.ArgumentParser:
     p_rogue.add_argument("--jitter-ms", type=int, default=None, help="Timing jitter in milliseconds")
     p_rogue.add_argument("--port", type=str, default="/dev/ttyUSB0", help="Serial port for injection")
     p_rogue.add_argument("--channel", type=int, default=37, choices=[37, 38, 39], help="Advertising channel")
-    p_rogue.add_argument("--channels", type=str, default=None, help="Advertising channels comma-separated (e.g., '37,38,39')")
+    p_rogue.add_argument(
+        "--channels", type=str, default=None, help="Advertising channels comma-separated (e.g., '37,38,39')"
+    )
     p_rogue.add_argument("--key", type=str, default=None, help="Custom ephemeral public key hex string")
     p_rogue.add_argument("--mac", type=str, default=None, help="Custom MAC address")
     p_rogue.add_argument("--mock", action="store_true", help="Simulate burst injection in mock mode")
@@ -1305,7 +1363,9 @@ def create_parser(prog: str = "airtell") -> argparse.ArgumentParser:
         aliases=["side-channel", "analyze-sidechannel"],
         help="Run exclusive-use BLE side-channel detection and analysis (PoPETs 2025)",
     )
-    p_side.add_argument("-i", "--pcap", "--input", dest="pcap", type=str, default=None, help="Path to input PCAP / capture file")
+    p_side.add_argument(
+        "-i", "--pcap", "--input", dest="pcap", type=str, default=None, help="Path to input PCAP / capture file"
+    )
     p_side.add_argument("--live", type=str, default=None, help="Serial port / interface for live sniffing stream")
     p_side.add_argument("--mock", action="store_true", help="Run with mock simulation stream")
     p_side.add_argument(
@@ -1316,11 +1376,17 @@ def create_parser(prog: str = "airtell") -> argparse.ArgumentParser:
         help="Analyzer selection: 'all', 'encryption', 'csrk', or 'bat' (default: all)",
     )
     p_side.add_argument("--target", type=str, default=None, help="Target MAC / RPA address filter")
-    p_side.add_argument("--csrk", type=str, default=None, help="16-byte hex string CSRK for cryptographic signature verification")
+    p_side.add_argument(
+        "--csrk", type=str, default=None, help="16-byte hex string CSRK for cryptographic signature verification"
+    )
     p_side.add_argument("--json", action="store_true", help="Output report in JSON format")
-    p_side.add_argument("-o", "--output", dest="output", type=str, default=None, help="File path to save output report (JSON or text)")
+    p_side.add_argument(
+        "-o", "--output", dest="output", type=str, default=None, help="File path to save output report (JSON or text)"
+    )
     p_side.add_argument("--summary", action="store_true", help="Include verbose human-readable summary")
-    p_side.add_argument("--limit", "--max-packets", dest="limit", type=int, default=None, help="Maximum number of packets to process")
+    p_side.add_argument(
+        "--limit", "--max-packets", dest="limit", type=int, default=None, help="Maximum number of packets to process"
+    )
 
     return parser
 

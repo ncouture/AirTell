@@ -140,10 +140,7 @@ class DifferentialEncryptionAnalyzer(SideChannelAnalyzer):
         # Apply target filter if configured
         if self.target_mac:
             target_aa = self._addr_to_aa.get(self.target_mac)
-            matches_addr = (
-                session.periph_addr == self.target_mac
-                or session.central_addr == self.target_mac
-            )
+            matches_addr = session.periph_addr == self.target_mac or session.central_addr == self.target_mac
             matches_aa = target_aa is not None and record.access_address == target_aa
             if not matches_addr and not matches_aa:
                 return new_findings
@@ -168,9 +165,8 @@ class DifferentialEncryptionAnalyzer(SideChannelAnalyzer):
 
         elif opcode == OPCODE_LL_START_ENC_RSP:
             # Positive branch: Shared LTK confirmed
-            if (
-                session.state == EncryptionSessionState.ENCRYPTION_ESTABLISHED
-                or any(f.details.get("is_shared_ltk") is True for f in session.findings_emitted)
+            if session.state == EncryptionSessionState.ENCRYPTION_ESTABLISHED or any(
+                f.details.get("is_shared_ltk") is True for f in session.findings_emitted
             ):
                 # Suppress duplicate finding on retransmission or peer's LL_START_ENC_RSP
                 session.state = EncryptionSessionState.ENCRYPTION_ESTABLISHED
@@ -226,11 +222,7 @@ class DifferentialEncryptionAnalyzer(SideChannelAnalyzer):
             is_missing_key = error_code == ERROR_PIN_OR_KEY_MISSING
             is_unsupported = error_code == ERROR_UNSUPPORTED_REMOTE_FEATURE
 
-            verdict = (
-                Verdict.REJECTED_UNTRUSTED.value
-                if is_missing_key
-                else Verdict.UNPAIRED_KEY_REJECTED.value
-            )
+            verdict = Verdict.REJECTED_UNTRUSTED.value if is_missing_key else Verdict.UNPAIRED_KEY_REJECTED.value
             confidence = 1.0 if is_missing_key else 0.85
 
             err_str = f"0x{error_code:02X}" if error_code is not None else "UNKNOWN"
@@ -286,18 +278,14 @@ class DifferentialEncryptionAnalyzer(SideChannelAnalyzer):
         rejected_sessions = [
             s
             for s in self._sessions.values()
-            if s not in shared_ltk_sessions
-            and any(f.details.get("is_shared_ltk") is False for f in s.findings_emitted)
+            if s not in shared_ltk_sessions and any(f.details.get("is_shared_ltk") is False for f in s.findings_emitted)
         ]
         shared_ltk_count = len(shared_ltk_sessions)
         rejected_count = len(rejected_sessions)
         pin_missing_count = sum(
             1
             for s in rejected_sessions
-            if any(
-                f.details.get("error_code") == ERROR_PIN_OR_KEY_MISSING
-                for f in s.findings_emitted
-            )
+            if any(f.details.get("error_code") == ERROR_PIN_OR_KEY_MISSING for f in s.findings_emitted)
         )
 
         if shared_ltk_count > 0 and rejected_count == 0:
@@ -328,8 +316,7 @@ class DifferentialEncryptionAnalyzer(SideChannelAnalyzer):
         else:
             overall_verdict = Verdict.INCONCLUSIVE.value
             summary = (
-                f"No complete encryption initiation handshakes observed across {total_sessions} "
-                f"connection session(s)."
+                f"No complete encryption initiation handshakes observed across {total_sessions} connection session(s)."
             )
 
         metrics = {

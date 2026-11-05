@@ -35,18 +35,20 @@ from airtell.sidechannel.synthetic import (
 )
 from airtell.sniff.pcap import CapturedBlePacket, PcapBleReader
 
-DETECTION_VERDICTS: frozenset[str] = frozenset({
-    Verdict.CONFIRMED_EXCLUSIVE.value,
-    Verdict.PAIRED_SHARED_LTK.value,
-    Verdict.ALLOWLIST_CONFIRMED.value,
-    Verdict.DIRECTED_EXCLUSIVE.value,
-    Verdict.PROFILE_MATCH.value,
-    Verdict.CROSS_RPA_LINKED.value,
-    Verdict.ANOMALY_REPLAY.value,
-    Verdict.ANOMALY_ROLLBACK.value,
-    Verdict.ANOMALY_JUMP.value,
-    Verdict.VERIFICATION_FAILED.value,
-})
+DETECTION_VERDICTS: frozenset[str] = frozenset(
+    {
+        Verdict.CONFIRMED_EXCLUSIVE.value,
+        Verdict.PAIRED_SHARED_LTK.value,
+        Verdict.ALLOWLIST_CONFIRMED.value,
+        Verdict.DIRECTED_EXCLUSIVE.value,
+        Verdict.PROFILE_MATCH.value,
+        Verdict.CROSS_RPA_LINKED.value,
+        Verdict.ANOMALY_REPLAY.value,
+        Verdict.ANOMALY_ROLLBACK.value,
+        Verdict.ANOMALY_JUMP.value,
+        Verdict.VERIFICATION_FAILED.value,
+    }
+)
 
 
 @dataclass
@@ -209,7 +211,9 @@ class SideChannelSuiteReport:
                         lines.append(f"      - [{f.verdict}] {dev}{tgt} (conf: {f.confidence:.2f})")
                     if max_findings_per_analyzer is not None and len(rep.findings) > max_findings_per_analyzer:
                         omitted = len(rep.findings) - max_findings_per_analyzer
-                        lines.append(f"      ... and {omitted} more findings (export to file with -o/--output or use --json)")
+                        lines.append(
+                            f"      ... and {omitted} more findings (export to file with -o/--output or use --json)"
+                        )
         lines.append("=" * 70)
         return "\n".join(lines)
 
@@ -275,20 +279,20 @@ class SideChannelSuiteReport:
                     lines.append(f"- **Telemetry Metrics:** `{json.dumps(rep.metrics)}`")
                 lines.append("")
 
-        lines.extend([
-            "## 3. Discrete Link-Layer Findings",
-            "",
-            "| # | Timestamp | Finding Type | Verdict | Device (RPA) | Peer / Target | Confidence | Description |",
-            "| :- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
-        ])
+        lines.extend(
+            [
+                "## 3. Discrete Link-Layer Findings",
+                "",
+                "| # | Timestamp | Finding Type | Verdict | Device (RPA) | Peer / Target | Confidence | Description |",
+                "| :- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
+            ]
+        )
 
         if not self.findings:
             lines.append("| - | - | - | - | - | - | - | *No findings emitted during this session.* |")
         else:
             display_findings = (
-                self.findings[:max_findings_per_analyzer]
-                if max_findings_per_analyzer is not None
-                else self.findings
+                self.findings[:max_findings_per_analyzer] if max_findings_per_analyzer is not None else self.findings
             )
             for idx, f in enumerate(display_findings, start=1):
                 ts = f"{f.timestamp:.4f}"
@@ -299,25 +303,30 @@ class SideChannelSuiteReport:
                 conf = f"{f.confidence:.0%}"
                 summary = f.details.get("summary", "") or f.details.get("mechanism", "") or "-"
                 summary_clean = str(summary).replace("|", "/")
-                lines.append(f"| {idx} | {ts} | `{ftype}` | `{verdict}` | `{dev}` | `{tgt}` | {conf} | {summary_clean} |")
+                lines.append(
+                    f"| {idx} | {ts} | `{ftype}` | `{verdict}` | `{dev}` | `{tgt}` | {conf} | {summary_clean} |"
+                )
 
             if max_findings_per_analyzer is not None and len(self.findings) > max_findings_per_analyzer:
-                lines.append(f"| ... | ... | ... | ... | ... | ... | ... | *(Truncated {len(self.findings) - max_findings_per_analyzer} additional findings)* |")
+                lines.append(
+                    f"| ... | ... | ... | ... | ... | ... | ... | *(Truncated {len(self.findings) - max_findings_per_analyzer} additional findings)* |"
+                )
 
-        lines.extend([
-            "",
-            "## 4. Countermeasures & Remediation Guidance",
-            "",
-            "1. **Constant-Time Allowlist Probing**: Peripherals implementing Bluetooth Address Tracking allowlists must respond or delay all active probes uniformly to eliminate the $150\\,\\mu\\text{s}$ timing differential.",
-            "2. **SignCounter Random Offsets**: Operating systems and BLE stacks must randomize initial `SignCounter` offsets upon RPA rotation cycles to prevent cross-RPA linkability via strictly sequential counter trajectories.",
-            "3. **Uniform Link-Layer Reject Handling**: Handshake rejection opcodes (`LL_REJECT_IND` / `LL_REJECT_EXT_IND`) should not differentiate unbonded vs bonded errors with specific disclosure codes (`PIN_OR_KEY_MISSING`).",
-            "",
-            "---",
-            "*Report compiled autonomously by AirTell Exclusive-Use BLE Side-Channel Suite.*",
-        ])
+        lines.extend(
+            [
+                "",
+                "## 4. Countermeasures & Remediation Guidance",
+                "",
+                "1. **Constant-Time Allowlist Probing**: Peripherals implementing Bluetooth Address Tracking allowlists must respond or delay all active probes uniformly to eliminate the $150\\,\\mu\\text{s}$ timing differential.",
+                "2. **SignCounter Random Offsets**: Operating systems and BLE stacks must randomize initial `SignCounter` offsets upon RPA rotation cycles to prevent cross-RPA linkability via strictly sequential counter trajectories.",
+                "3. **Uniform Link-Layer Reject Handling**: Handshake rejection opcodes (`LL_REJECT_IND` / `LL_REJECT_EXT_IND`) should not differentiate unbonded vs bonded errors with specific disclosure codes (`PIN_OR_KEY_MISSING`).",
+                "",
+                "---",
+                "*Report compiled autonomously by AirTell Exclusive-Use BLE Side-Channel Suite.*",
+            ]
+        )
 
         return "\n".join(lines)
-
 
 
 class SideChannelAnalysisRunner:

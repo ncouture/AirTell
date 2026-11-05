@@ -140,7 +140,7 @@ class TestTruncatedPdusAndBufferDiscrepancies:
 
     def test_declared_length_smaller_than_actual_buffer(self) -> None:
         """Declared length = 2 but buffer has 100 bytes (trailing data)."""
-        raw = bytes([0x03, 0x02, 0x0D, 0x06]) + b"\xAA" * 96
+        raw = bytes([0x03, 0x02, 0x0D, 0x06]) + b"\xaa" * 96
         dissected = dissect_data_channel_pdu(raw)
         assert dissected is not None
         assert dissected.length == 2
@@ -166,7 +166,7 @@ class TestTruncatedPdusAndBufferDiscrepancies:
 
     def test_truncated_enc_rsp_payload_boundary_sweep(self) -> None:
         """LL_ENC_RSP requires 12 bytes. Slicing from 0 to 11 bytes must flag truncated."""
-        full_payload = b"\xAA" * 8 + b"\xBB" * 4
+        full_payload = b"\xaa" * 8 + b"\xbb" * 4
         for plen in range(12):
             ctr_data = bytes([0x04]) + full_payload[:plen]
             frame = dissect_ll_control_pdu(ctr_data)
@@ -176,7 +176,7 @@ class TestTruncatedPdusAndBufferDiscrepancies:
 
         valid_frame = dissect_ll_control_pdu(bytes([0x04]) + full_payload)
         assert valid_frame is not None
-        assert valid_frame.payload.get("skds") == b"\xAA" * 8
+        assert valid_frame.payload.get("skds") == b"\xaa" * 8
 
     def test_truncated_conn_update_ind_boundary_sweep(self) -> None:
         """LL_CONNECTION_UPDATE_IND requires 11 bytes. Slicing from 0 to 10 bytes must flag truncated."""
@@ -220,11 +220,7 @@ class TestTruncatedPdusAndBufferDiscrepancies:
         for plen in range(1, 15):
             # L2CAP payload: 0xD2 + garbage up to plen
             l2cap_body = bytes([0xD2]) + b"\x00" * (plen - 1)
-            pdu = (
-                build_ll_header(llid=2, length=4 + plen)
-                + struct.pack("<HH", plen, 0x0004)
-                + l2cap_body
-            )
+            pdu = build_ll_header(llid=2, length=4 + plen) + struct.pack("<HH", plen, 0x0004) + l2cap_body
             dissected = dissect_data_channel_pdu(pdu, csrk=csrk)
             assert dissected is not None
             assert dissected.att_frame is None
@@ -307,7 +303,13 @@ class TestAdversarialHandshakeStateTransitions:
             BlePacketRecord(body=build_ll_enc_req(), channel=1, rssi=-60, timestamp_usec=1000, access_address=aa)
         )
         analyzer.process_packet(
-            BlePacketRecord(body=build_ll_terminate_ind(error_code=0x13), channel=1, rssi=-60, timestamp_usec=2000, access_address=aa)
+            BlePacketRecord(
+                body=build_ll_terminate_ind(error_code=0x13),
+                channel=1,
+                rssi=-60,
+                timestamp_usec=2000,
+                access_address=aa,
+            )
         )
         report = analyzer.finalize()
         assert report.verdict == Verdict.INCONCLUSIVE.value
@@ -325,7 +327,13 @@ class TestAdversarialHandshakeStateTransitions:
             BlePacketRecord(body=build_ll_enc_rsp(), channel=1, rssi=-60, timestamp_usec=2000, access_address=aa)
         )
         analyzer.process_packet(
-            BlePacketRecord(body=build_ll_terminate_ind(error_code=0x13), channel=1, rssi=-60, timestamp_usec=3000, access_address=aa)
+            BlePacketRecord(
+                body=build_ll_terminate_ind(error_code=0x13),
+                channel=1,
+                rssi=-60,
+                timestamp_usec=3000,
+                access_address=aa,
+            )
         )
         report = analyzer.finalize()
         assert report.verdict == Verdict.INCONCLUSIVE.value
@@ -341,7 +349,9 @@ class TestAdversarialHandshakeStateTransitions:
             )
         # Followed by normal rejection
         analyzer.process_packet(
-            BlePacketRecord(body=build_ll_reject_ind(error_code=0x06), channel=1, rssi=-60, timestamp_usec=3000, access_address=aa)
+            BlePacketRecord(
+                body=build_ll_reject_ind(error_code=0x06), channel=1, rssi=-60, timestamp_usec=3000, access_address=aa
+            )
         )
         report = analyzer.finalize()
         assert report.verdict == Verdict.REJECTED_UNTRUSTED.value
@@ -400,13 +410,29 @@ class TestDiscoveredVulnerabilitiesEmpiricalVerification:
         aa = 0x99887766
 
         # Step 1: Successful encryption handshake
-        analyzer.process_packet(BlePacketRecord(body=build_ll_enc_req(), channel=1, rssi=-60, timestamp_usec=1000, access_address=aa))
-        analyzer.process_packet(BlePacketRecord(body=build_ll_enc_rsp(), channel=1, rssi=-60, timestamp_usec=2000, access_address=aa))
-        analyzer.process_packet(BlePacketRecord(body=build_ll_start_enc_req(), channel=1, rssi=-60, timestamp_usec=3000, access_address=aa))
-        analyzer.process_packet(BlePacketRecord(body=build_ll_start_enc_rsp(), channel=1, rssi=-60, timestamp_usec=4000, access_address=aa))
+        analyzer.process_packet(
+            BlePacketRecord(body=build_ll_enc_req(), channel=1, rssi=-60, timestamp_usec=1000, access_address=aa)
+        )
+        analyzer.process_packet(
+            BlePacketRecord(body=build_ll_enc_rsp(), channel=1, rssi=-60, timestamp_usec=2000, access_address=aa)
+        )
+        analyzer.process_packet(
+            BlePacketRecord(body=build_ll_start_enc_req(), channel=1, rssi=-60, timestamp_usec=3000, access_address=aa)
+        )
+        analyzer.process_packet(
+            BlePacketRecord(body=build_ll_start_enc_rsp(), channel=1, rssi=-60, timestamp_usec=4000, access_address=aa)
+        )
 
         # Step 2: Later, peer rejects connection parameter request (0x0F)
-        analyzer.process_packet(BlePacketRecord(body=build_ll_reject_ext_ind(reject_opcode=0x0F, error_code=0x20), channel=1, rssi=-60, timestamp_usec=5000, access_address=aa))
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_ll_reject_ext_ind(reject_opcode=0x0F, error_code=0x20),
+                channel=1,
+                rssi=-60,
+                timestamp_usec=5000,
+                access_address=aa,
+            )
+        )
 
         report = analyzer.finalize()
         # Session retains PAIRED_SHARED_LTK verdict without collision or demotion
@@ -434,8 +460,12 @@ class TestDiscoveredVulnerabilitiesEmpiricalVerification:
         aa = 0x11223344
 
         # Inject handshake without CONNECT_IND matching the target
-        analyzer.process_packet(BlePacketRecord(body=build_ll_enc_req(), channel=1, rssi=-60, timestamp_usec=1000, access_address=aa))
-        findings = analyzer.process_packet(BlePacketRecord(body=build_ll_start_enc_rsp(), channel=1, rssi=-60, timestamp_usec=2000, access_address=aa))
+        analyzer.process_packet(
+            BlePacketRecord(body=build_ll_enc_req(), channel=1, rssi=-60, timestamp_usec=1000, access_address=aa)
+        )
+        findings = analyzer.process_packet(
+            BlePacketRecord(body=build_ll_start_enc_rsp(), channel=1, rssi=-60, timestamp_usec=2000, access_address=aa)
+        )
 
         # Filter strictly enforced: no leak of untargeted sessions
         assert len(findings) == 0
@@ -533,15 +563,55 @@ class TestAdversarialInterleavedConnections:
         periph = "AA:BB:CC:DD:EE:99"
 
         # Conn 1: accepted
-        analyzer.process_packet(BlePacketRecord(body=build_connect_ind("11:11:11:11:11:11", periph, conn_aa=0x11111111), channel=37, rssi=-60, timestamp_usec=1000, access_address=BLE_ADV_AA))
-        analyzer.process_packet(BlePacketRecord(body=build_ll_enc_req(), channel=1, rssi=-60, timestamp_usec=2000, access_address=0x11111111))
-        analyzer.process_packet(BlePacketRecord(body=build_ll_start_enc_rsp(), channel=1, rssi=-60, timestamp_usec=3000, access_address=0x11111111))
-        analyzer.process_packet(BlePacketRecord(body=build_ll_terminate_ind(), channel=1, rssi=-60, timestamp_usec=4000, access_address=0x11111111))
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_connect_ind("11:11:11:11:11:11", periph, conn_aa=0x11111111),
+                channel=37,
+                rssi=-60,
+                timestamp_usec=1000,
+                access_address=BLE_ADV_AA,
+            )
+        )
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_ll_enc_req(), channel=1, rssi=-60, timestamp_usec=2000, access_address=0x11111111
+            )
+        )
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_ll_start_enc_rsp(), channel=1, rssi=-60, timestamp_usec=3000, access_address=0x11111111
+            )
+        )
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_ll_terminate_ind(), channel=1, rssi=-60, timestamp_usec=4000, access_address=0x11111111
+            )
+        )
 
         # Conn 2: rejected
-        analyzer.process_packet(BlePacketRecord(body=build_connect_ind("22:22:22:22:22:22", periph, conn_aa=0x22222222), channel=37, rssi=-60, timestamp_usec=5000, access_address=BLE_ADV_AA))
-        analyzer.process_packet(BlePacketRecord(body=build_ll_enc_req(), channel=1, rssi=-60, timestamp_usec=6000, access_address=0x22222222))
-        analyzer.process_packet(BlePacketRecord(body=build_ll_reject_ind(error_code=0x06), channel=1, rssi=-60, timestamp_usec=7000, access_address=0x22222222))
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_connect_ind("22:22:22:22:22:22", periph, conn_aa=0x22222222),
+                channel=37,
+                rssi=-60,
+                timestamp_usec=5000,
+                access_address=BLE_ADV_AA,
+            )
+        )
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_ll_enc_req(), channel=1, rssi=-60, timestamp_usec=6000, access_address=0x22222222
+            )
+        )
+        analyzer.process_packet(
+            BlePacketRecord(
+                body=build_ll_reject_ind(error_code=0x06),
+                channel=1,
+                rssi=-60,
+                timestamp_usec=7000,
+                access_address=0x22222222,
+            )
+        )
 
         report = analyzer.finalize()
         assert report.verdict == Verdict.CONFIRMED_EXCLUSIVE.value
@@ -561,8 +631,14 @@ class TestAnalyzerStreamingAndResetIntegrity:
         analyzer = DifferentialEncryptionAnalyzer()
         for cycle in range(50):
             aa = 0x30000000 + cycle
-            analyzer.process_packet(BlePacketRecord(body=build_ll_enc_req(), channel=1, rssi=-60, timestamp_usec=1000, access_address=aa))
-            analyzer.process_packet(BlePacketRecord(body=build_ll_start_enc_rsp(), channel=1, rssi=-60, timestamp_usec=2000, access_address=aa))
+            analyzer.process_packet(
+                BlePacketRecord(body=build_ll_enc_req(), channel=1, rssi=-60, timestamp_usec=1000, access_address=aa)
+            )
+            analyzer.process_packet(
+                BlePacketRecord(
+                    body=build_ll_start_enc_rsp(), channel=1, rssi=-60, timestamp_usec=2000, access_address=aa
+                )
+            )
             rep = analyzer.finalize()
             assert rep.verdict == Verdict.PAIRED_SHARED_LTK.value
             analyzer.reset()
@@ -573,7 +649,13 @@ class TestAnalyzerStreamingAndResetIntegrity:
     def test_coerced_packet_types_interleaved_stream(self) -> None:
         """Feed stream mixing BlePacketRecord, CapturedBlePacket, and SyntheticEvent."""
         aa = 0x44332211
-        p1 = BlePacketRecord(body=build_connect_ind("AA:BB:CC:00:11:22", "AA:BB:CC:33:44:55", conn_aa=aa), channel=37, rssi=-60, timestamp_usec=1000, access_address=BLE_ADV_AA)
+        p1 = BlePacketRecord(
+            body=build_connect_ind("AA:BB:CC:00:11:22", "AA:BB:CC:33:44:55", conn_aa=aa),
+            channel=37,
+            rssi=-60,
+            timestamp_usec=1000,
+            access_address=BLE_ADV_AA,
+        )
         p2 = SyntheticEvent(ts_usec=2000, chan=1, aa=aa, body=build_ll_enc_req(), direction=0)
         p3 = CapturedBlePacket(
             ts_sec=0,

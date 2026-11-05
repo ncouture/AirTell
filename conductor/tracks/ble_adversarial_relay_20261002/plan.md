@@ -58,4 +58,3 @@
   - [x] Run full test suite (`pytest -v -W error tests/`)
   - [x] Verify `ruff check .` lint cleanliness
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [82f41fe]
-

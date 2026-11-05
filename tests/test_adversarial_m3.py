@@ -132,10 +132,12 @@ class TestDissectorFuzzingAdversarial:
         for pdu_type_id in range(8):
             # Header claims 30 bytes, but only provide 0 to 15 payload bytes
             for payload_len in range(0, 16):
-                raw = bytes([pdu_type_id, 30]) + (b"\xAA" * payload_len)
+                raw = bytes([pdu_type_id, 30]) + (b"\xaa" * payload_len)
                 frame = dissect_advertising_pdu(raw)
                 assert frame.pdu_type_id == pdu_type_id
-                assert frame.is_malformed, f"PDU type {pdu_type_id} with {payload_len}B payload was not marked malformed"
+                assert frame.is_malformed, (
+                    f"PDU type {pdu_type_id} with {payload_len}B payload was not marked malformed"
+                )
                 assert frame.error_details is not None
                 assert "Truncated PDU" in frame.error_details or "Payload too short" in frame.error_details
 
@@ -209,12 +211,12 @@ class TestDissectorFuzzingAdversarial:
     def test_corrupted_local_name_utf8_fallback(self) -> None:
         """Tests local name decoding across varied invalid UTF-8 sequences."""
         invalid_utf8_cases = [
-            b"\xFF\xFE\xFD",                   # Invalid leading bytes
-            b"\xC0\xAF",                       # Overlong ASCII slash (security hazard)
-            b"\xED\xA0\x80",                   # UTF-16 surrogate half
-            b"\xF4\x90\x80\x80",               # Beyond Unicode range (> 0x10FFFF)
-            b"Hello\x80World",                 # Invalid continuation byte in ASCII
-            b"\xC2",                           # Incomplete 2-byte sequence
+            b"\xff\xfe\xfd",  # Invalid leading bytes
+            b"\xc0\xaf",  # Overlong ASCII slash (security hazard)
+            b"\xed\xa0\x80",  # UTF-16 surrogate half
+            b"\xf4\x90\x80\x80",  # Beyond Unicode range (> 0x10FFFF)
+            b"Hello\x80World",  # Invalid continuation byte in ASCII
+            b"\xc2",  # Incomplete 2-byte sequence
         ]
         for bad in invalid_utf8_cases:
             decoded = decode_local_name(bad)
@@ -245,7 +247,7 @@ class TestDissectorFuzzingAdversarial:
         assert msgs_zero[0].sub_type == 0x10
         assert msgs_zero[0].data == b""
         assert msgs_zero[1].sub_type == 0x08
-        assert msgs_zero[1].data == b"\xAA"
+        assert msgs_zero[1].data == b"\xaa"
 
         # 3. iBeacon signature (0x02, 0x15) but payload < 23 bytes
         truncated_ibeacon = bytes([0x02, 0x15, 0x01, 0x02, 0x03])
@@ -264,32 +266,40 @@ class TestDissectorFuzzingAdversarial:
         assert decode_microsoft_msd(b"") is None
 
         # 25-byte minimal MS-CDP payload
-        min_payload = bytes([
-            0x01,        # Scenario
-            0x01,        # Device type: Xbox One
-            0x25,        # Flags (bit 5 = bt_dev_id)
-            0x02,        # Status
-            0x11, 0x22, 0x33, 0x44,  # Salt
-        ]) + b"\xBB" * 17  # Hash (17 bytes)
+        min_payload = (
+            bytes(
+                [
+                    0x01,  # Scenario
+                    0x01,  # Device type: Xbox One
+                    0x25,  # Flags (bit 5 = bt_dev_id)
+                    0x02,  # Status
+                    0x11,
+                    0x22,
+                    0x33,
+                    0x44,  # Salt
+                ]
+            )
+            + b"\xbb" * 17
+        )  # Hash (17 bytes)
         cdp = decode_microsoft_msd(min_payload)
         assert cdp is not None
         assert cdp.scenario_type == 0x01
         assert cdp.device_type_name == "Xbox One"
         assert cdp.bt_addr_dev_id is True
         assert cdp.salt == 0x44332211
-        assert cdp.device_hash == b"\xBB" * 17
+        assert cdp.device_hash == b"\xbb" * 17
 
     def test_corrupted_altbeacon_msd(self) -> None:
         """Tests AltBeacon MSD decoding against invalid lengths and beacon codes."""
         # Length < 24 returns None
-        assert decode_altbeacon_msd(0x0118, b"\xBE\xAC" + (b"\x00" * 20)) is None
+        assert decode_altbeacon_msd(0x0118, b"\xbe\xac" + (b"\x00" * 20)) is None
 
         # Invalid beacon code != 0xBEAC returns None
-        bad_code = bytes([0x12, 0x34]) + (b"\xAA" * 20) + bytes([0xC5, 0x00])
+        bad_code = bytes([0x12, 0x34]) + (b"\xaa" * 20) + bytes([0xC5, 0x00])
         assert decode_altbeacon_msd(0x0118, bad_code) is None
 
         # Valid 24-byte AltBeacon payload
-        valid = bytes([0xBE, 0xAC]) + (b"\xCC" * 20) + bytes([0xD0, 0x42])
+        valid = bytes([0xBE, 0xAC]) + (b"\xcc" * 20) + bytes([0xD0, 0x42])
         alt = decode_altbeacon_msd(0x0118, valid)
         assert alt is not None
         assert alt.mfg_id == 0x0118
@@ -315,7 +325,7 @@ class TestDissectorFuzzingAdversarial:
 
         # 128-bit UUID with 18 bytes (type 0x07 + 17 value bytes -> 1 UUID + 1 orphan byte)
         u128_raw = b"\x01" * 16
-        pdu_128 = bytes([0x40, 6 + 1 + 18]) + adv_a + bytes([18, 0x07]) + u128_raw + b"\xBB"
+        pdu_128 = bytes([0x40, 6 + 1 + 18]) + adv_a + bytes([18, 0x07]) + u128_raw + b"\xbb"
         f128 = dissect_advertising_pdu(pdu_128)
         assert f128.is_malformed
         assert f128.service_uuids_128 == [UUID(bytes=u128_raw)]
@@ -344,10 +354,10 @@ class TestDissectorFuzzingAdversarial:
         """GAEN service data < 20 bytes returns None."""
         assert decode_gaen_service_data(b"\x00" * 19) is None
         assert decode_gaen_service_data(b"") is None
-        valid_gaen = decode_gaen_service_data(b"\xAA" * 16 + b"\xBB" * 4)
+        valid_gaen = decode_gaen_service_data(b"\xaa" * 16 + b"\xbb" * 4)
         assert valid_gaen is not None
-        assert valid_gaen.rpi == b"\xAA" * 16
-        assert valid_gaen.aem == b"\xBB" * 4
+        assert valid_gaen.rpi == b"\xaa" * 16
+        assert valid_gaen.aem == b"\xbb" * 4
 
     def test_short_pdu_raises_value_error(self) -> None:
         """Asserts that raw PDU < 2 bytes raises ValueError per API contract."""

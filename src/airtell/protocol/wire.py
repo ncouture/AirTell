@@ -16,38 +16,38 @@ from typing import Any
 # Host-to-Dongle Command Opcodes (from fw/CommandTask.h)
 # -----------------------------------------------------------------------------
 COMMAND_SETCHANAAPHY: int = 0x10  # Set channel, access address, phy, crci
-COMMAND_PAUSEDONE: int = 0x11     # Pause sniffer when followed connection terminates
-COMMAND_RSSIFILT: int = 0x12      # Minimum RSSI filter
-COMMAND_MACFILT: int = 0x13       # Target MAC address filter
-COMMAND_ADVHOP: int = 0x14        # Hop across primary advertising channels (37, 38, 39)
-COMMAND_FOLLOW: int = 0x15        # Follow connections upon observing CONNECT_IND
-COMMAND_AUXADV: int = 0x16        # Follow auxiliary pointers in BT5 extended advertising
-COMMAND_RESET: int = 0x17         # MCU soft reset
-COMMAND_MARKER: int = 0x18        # Sync marker request (dongle returns MarkerMessage)
-COMMAND_TRANSMIT: int = 0x19      # Transmit LL PDU during connection
-COMMAND_CONNECT: int = 0x1A       # Initiate connection with CONNECT_IND
-COMMAND_SETADDR: int = 0x1B       # Set local MAC address and random flag
-COMMAND_ADVERTISE: int = 0x1C     # Broadcast legacy BLE advertising frames
-COMMAND_ADVINTRVL: int = 0x1D     # Set advertising interval (milliseconds)
-COMMAND_SETIRK: int = 0x1E        # Set Identity Resolving Key (IRK)
-COMMAND_INSTAHOP: int = 0x1F      # Instant hop at connection event close
-COMMAND_SETMAP: int = 0x20        # Override channel map
-COMMAND_INTVL_PRELOAD: int = 0x21 # Preload connection interval updates
-COMMAND_SCAN: int = 0x22          # Enter active scanning mode (sends SCAN_REQ)
-COMMAND_PHY_PRELOAD: int = 0x23   # Preload PHY mode updates
-COMMAND_VERSION: int = 0x24       # Request firmware version report
-COMMAND_ADV_EXT: int = 0x25       # Broadcast BT5 extended advertising frames
-COMMAND_CRC_VALID: int = 0x26     # Validate CRC (discard or capture CRC-failed frames)
-COMMAND_TX_POWER: int = 0x27      # Set radio transmission output power (dBm)
+COMMAND_PAUSEDONE: int = 0x11  # Pause sniffer when followed connection terminates
+COMMAND_RSSIFILT: int = 0x12  # Minimum RSSI filter
+COMMAND_MACFILT: int = 0x13  # Target MAC address filter
+COMMAND_ADVHOP: int = 0x14  # Hop across primary advertising channels (37, 38, 39)
+COMMAND_FOLLOW: int = 0x15  # Follow connections upon observing CONNECT_IND
+COMMAND_AUXADV: int = 0x16  # Follow auxiliary pointers in BT5 extended advertising
+COMMAND_RESET: int = 0x17  # MCU soft reset
+COMMAND_MARKER: int = 0x18  # Sync marker request (dongle returns MarkerMessage)
+COMMAND_TRANSMIT: int = 0x19  # Transmit LL PDU during connection
+COMMAND_CONNECT: int = 0x1A  # Initiate connection with CONNECT_IND
+COMMAND_SETADDR: int = 0x1B  # Set local MAC address and random flag
+COMMAND_ADVERTISE: int = 0x1C  # Broadcast legacy BLE advertising frames
+COMMAND_ADVINTRVL: int = 0x1D  # Set advertising interval (milliseconds)
+COMMAND_SETIRK: int = 0x1E  # Set Identity Resolving Key (IRK)
+COMMAND_INSTAHOP: int = 0x1F  # Instant hop at connection event close
+COMMAND_SETMAP: int = 0x20  # Override channel map
+COMMAND_INTVL_PRELOAD: int = 0x21  # Preload connection interval updates
+COMMAND_SCAN: int = 0x22  # Enter active scanning mode (sends SCAN_REQ)
+COMMAND_PHY_PRELOAD: int = 0x23  # Preload PHY mode updates
+COMMAND_VERSION: int = 0x24  # Request firmware version report
+COMMAND_ADV_EXT: int = 0x25  # Broadcast BT5 extended advertising frames
+COMMAND_CRC_VALID: int = 0x26  # Validate CRC (discard or capture CRC-failed frames)
+COMMAND_TX_POWER: int = 0x27  # Set radio transmission output power (dBm)
 
 # -----------------------------------------------------------------------------
 # Dongle-to-Host Response Message Types (from fw/messenger.h)
 # -----------------------------------------------------------------------------
 MESSAGE_BLEFRAME: int = 0x10  # Captured radio packet
-MESSAGE_DEBUG: int = 0x11     # Firmware debug string
-MESSAGE_MARKER: int = 0x12    # Marker echo with microsecond timestamp
-MESSAGE_STATE: int = 0x13     # Sniffer operational state change
-MESSAGE_MEASURE: int = 0x14   # Measurement telemetry / version report
+MESSAGE_DEBUG: int = 0x11  # Firmware debug string
+MESSAGE_MARKER: int = 0x12  # Marker echo with microsecond timestamp
+MESSAGE_STATE: int = 0x13  # Sniffer operational state change
+MESSAGE_MEASURE: int = 0x14  # Measurement telemetry / version report
 
 # -----------------------------------------------------------------------------
 # Sniffer Operational States (from fw/messenger.h)
@@ -232,9 +232,7 @@ class PacketMessage:
         if isinstance(raw_msg_or_ts, (bytes, bytearray)):
             raw_msg = bytes(raw_msg_or_ts)
             if len(raw_msg) < 10:
-                raise ValueError(
-                    f"PacketMessage body too short ({len(raw_msg)} bytes, expected >= 10)"
-                )
+                raise ValueError(f"PacketMessage body too short ({len(raw_msg)} bytes, expected >= 10)")
             self.raw = raw_msg
             ts_val, l_field, ev_val, rssi_val, chan_phy = unpack("<LHHbB", raw_msg[:10])
             self.ts = ts_val
@@ -306,9 +304,7 @@ class MarkerMessage:
         if isinstance(raw_msg_or_ts, (bytes, bytearray)):
             raw_msg = bytes(raw_msg_or_ts)
             if len(raw_msg) < 4:
-                raise ValueError(
-                    f"MarkerMessage body too short ({len(raw_msg)} bytes, expected >= 4)"
-                )
+                raise ValueError(f"MarkerMessage body too short ({len(raw_msg)} bytes, expected >= 4)")
             self.ts = unpack("<L", raw_msg[:4])[0]
             self.marker_data = raw_msg[4:]
         else:
@@ -371,9 +367,7 @@ class MeasurementMessage:
         if isinstance(raw_msg_or_len, (bytes, bytearray)):
             raw_msg = bytes(raw_msg_or_len)
             if len(raw_msg) < 2:
-                raise ValueError(
-                    f"MeasurementMessage body too short ({len(raw_msg)} bytes, expected >= 2)"
-                )
+                raise ValueError(f"MeasurementMessage body too short ({len(raw_msg)} bytes, expected >= 2)")
             self.length = raw_msg[0]
             self.measure_type = raw_msg[1]
             self.data = raw_msg[2 : 2 + self.length]

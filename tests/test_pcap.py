@@ -41,9 +41,7 @@ class TestPcapHeaderAndChannelMaps:
         raw_header = stream.getvalue()[:24]
 
         assert len(raw_header) == 24
-        magic, major, minor, thiszone, sigfigs, snaplen, dlt = struct.unpack(
-            GLOBAL_HEADER_FORMAT, raw_header
-        )
+        magic, major, minor, thiszone, sigfigs, snaplen, dlt = struct.unpack(GLOBAL_HEADER_FORMAT, raw_header)
         assert magic == PCAP_MAGIC_USEC  # 0xA1B2C3D4
         assert major == PCAP_VERSION_MAJOR  # 2
         assert minor == PCAP_VERSION_MINOR  # 4
@@ -73,18 +71,14 @@ class TestPcapHeaderAndChannelMaps:
         assert len(data) >= 16 + 10 + 4 + len(pdu) + 3
 
         # Record header (16B)
-        ts_sec, ts_usec, incl_len, orig_len = struct.unpack(
-            PACKET_HEADER_FORMAT, data[:16]
-        )
+        ts_sec, ts_usec, incl_len, orig_len = struct.unpack(PACKET_HEADER_FORMAT, data[:16])
         assert ts_sec == 1700000000
         assert ts_usec == 500_000
         assert incl_len == orig_len
         assert incl_len == 10 + 4 + len(pdu) + 3
 
         # Pseudo-header (10B)
-        rf_chan, rssi, noise, aa_off, ref_aa, flags = struct.unpack(
-            PSEUDO_HEADER_FORMAT, data[16:26]
-        )
+        rf_chan, rssi, noise, aa_off, ref_aa, flags = struct.unpack(PSEUDO_HEADER_FORMAT, data[16:26])
         assert rf_chan == 0  # Ch 37 -> RF 0
         assert rssi == -60
         assert noise == -128
@@ -156,12 +150,8 @@ class TestPcapWriterReaderRoundTrip:
         pdu1 = bytes([0x02, 0x06, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66])
         pdu2 = bytes([0x03, 0x0C]) + bytes.fromhex("c011222211c0c033444433c0")
 
-        writer.write_packet(
-            ts_usec=1_000_000, chan=37, rssi=-55, packet=pdu1, crc_err=False
-        )
-        writer.write_packet(
-            ts_usec=2_500_000, chan=38, rssi=-70, packet=pdu2, crc_err=True
-        )
+        writer.write_packet(ts_usec=1_000_000, chan=37, rssi=-55, packet=pdu1, crc_err=False)
+        writer.write_packet(ts_usec=2_500_000, chan=38, rssi=-70, packet=pdu2, crc_err=True)
         writer.close()
 
         reader = PcapBleReader(pcap_file)
@@ -269,9 +259,7 @@ class TestPcapWriterReaderRoundTrip:
         pcap_file = tmp_path / "tshark_verify.pcap"
         with PcapBleWriter(output=pcap_file, base_epoch=1700000000.0) as writer:
             # Vector 1: iBeacon
-            ibeacon_pdu = bytes.fromhex(
-                "021e6655443322110201061aff4c000215e2c56db5dffb48d2b060d0f5a71096e000010002c5"
-            )
+            ibeacon_pdu = bytes.fromhex("021e6655443322110201061aff4c000215e2c56db5dffb48d2b060d0f5a71096e000010002c5")
             writer.write_packet(
                 ts_usec=1_000_000,
                 aa=BLE_ADV_AA,
@@ -419,6 +407,3 @@ def test_sniffle_pcap_writer_double_close_idempotent(tmp_path: Path):
     writer.close()
     # Calling close again should not raise ValueError
     writer.close()
-
-
-

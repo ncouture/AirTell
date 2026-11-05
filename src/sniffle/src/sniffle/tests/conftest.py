@@ -35,7 +35,7 @@ def standard_geometry() -> dict[str, Any]:
     room_dim = (20.0, 10.0)
     r1 = np.array([0.5, 0.5], dtype=np.float32)
     r2 = np.array([19.5, 0.5], dtype=np.float32)
-    
+
     tx_nodes = [
         np.array([2.0, 9.0], dtype=np.float32),
         np.array([6.0, 9.5], dtype=np.float32),

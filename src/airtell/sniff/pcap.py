@@ -25,46 +25,270 @@ PCAP_SNAPLEN: int = 65535
 DLT_BLUETOOTH_LE_LL_WITH_PHDR: int = 256  # 0x0100
 
 GLOBAL_HEADER_FORMAT: str = "<IHHIIII"  # 24 bytes
-PACKET_HEADER_FORMAT: str = "<IIII"    # 16 bytes
+PACKET_HEADER_FORMAT: str = "<IIII"  # 16 bytes
 PSEUDO_HEADER_FORMAT: str = "<BbbBIH"  # 10 bytes
 
 BLE_ADV_AA: int = 0x8E89BED6
-BLE_ADV_CRC_INIT_REV: int = 0xAAAAAA   # rbit24(0x555555)
+BLE_ADV_CRC_INIT_REV: int = 0xAAAAAA  # rbit24(0x555555)
 
 # 256-entry BLE CRC lookup table (from Sniffle / Dominic Spill)
 BLE_CRC_LUT: tuple[int, ...] = (
-    0x000000, 0x01b4c0, 0x036980, 0x02dd40, 0x06d300, 0x0767c0, 0x05ba80, 0x040e40,
-    0x0da600, 0x0c12c0, 0x0ecf80, 0x0f7b40, 0x0b7500, 0x0ac1c0, 0x081c80, 0x09a840,
-    0x1b4c00, 0x1af8c0, 0x182580, 0x199140, 0x1d9f00, 0x1c2bc0, 0x1ef680, 0x1f4240,
-    0x16ea00, 0x175ec0, 0x158380, 0x143740, 0x103900, 0x118dc0, 0x135080, 0x12e440,
-    0x369800, 0x372cc0, 0x35f180, 0x344540, 0x304b00, 0x31ffc0, 0x332280, 0x329640,
-    0x3b3e00, 0x3a8ac0, 0x385780, 0x39e340, 0x3ded00, 0x3c59c0, 0x3e8480, 0x3f3040,
-    0x2dd400, 0x2c60c0, 0x2ebd80, 0x2f0940, 0x2b0700, 0x2ab3c0, 0x286e80, 0x29da40,
-    0x207200, 0x21c6c0, 0x231b80, 0x22af40, 0x26a100, 0x2715c0, 0x25c880, 0x247c40,
-    0x6d3000, 0x6c84c0, 0x6e5980, 0x6fed40, 0x6be300, 0x6a57c0, 0x688a80, 0x693e40,
-    0x609600, 0x6122c0, 0x63ff80, 0x624b40, 0x664500, 0x67f1c0, 0x652c80, 0x649840,
-    0x767c00, 0x77c8c0, 0x751580, 0x74a140, 0x70af00, 0x711bc0, 0x73c680, 0x727240,
-    0x7bda00, 0x7a6ec0, 0x78b380, 0x790740, 0x7d0900, 0x7cbdc0, 0x7e6080, 0x7fd440,
-    0x5ba800, 0x5a1cc0, 0x58c180, 0x597540, 0x5d7b00, 0x5ccfc0, 0x5e1280, 0x5fa640,
-    0x560e00, 0x57bac0, 0x556780, 0x54d340, 0x50dd00, 0x5169c0, 0x53b480, 0x520040,
-    0x40e400, 0x4150c0, 0x438d80, 0x423940, 0x463700, 0x4783c0, 0x455e80, 0x44ea40,
-    0x4d4200, 0x4cf6c0, 0x4e2b80, 0x4f9f40, 0x4b9100, 0x4a25c0, 0x48f880, 0x494c40,
-    0xda6000, 0xdbd4c0, 0xd90980, 0xd8bd40, 0xdcb300, 0xdd07c0, 0xdfda80, 0xde6e40,
-    0xd7c600, 0xd672c0, 0xd4af80, 0xd51b40, 0xd11500, 0xd0a1c0, 0xd27c80, 0xd3c840,
-    0xc12c00, 0xc098c0, 0xc24580, 0xc3f140, 0xc7ff00, 0xc64bc0, 0xc49680, 0xc52240,
-    0xcc8a00, 0xcd3ec0, 0xcfe380, 0xce5740, 0xca5900, 0xcbedc0, 0xc93080, 0xc88440,
-    0xecf800, 0xed4cc0, 0xef9180, 0xee2540, 0xea2b00, 0xeb9fc0, 0xe94280, 0xe8f640,
-    0xe15e00, 0xe0eac0, 0xe23780, 0xe38340, 0xe78d00, 0xe639c0, 0xe4e480, 0xe55040,
-    0xf7b400, 0xf600c0, 0xf4dd80, 0xf56940, 0xf16700, 0xf0d3c0, 0xf20e80, 0xf3ba40,
-    0xfa1200, 0xfba6c0, 0xf97b80, 0xf8cf40, 0xfcc100, 0xfd75c0, 0xffa880, 0xfe1c40,
-    0xb75000, 0xb6e4c0, 0xb43980, 0xb58d40, 0xb18300, 0xb037c0, 0xb2ea80, 0xb35e40,
-    0xbaf600, 0xbb42c0, 0xb99f80, 0xb82b40, 0xbc2500, 0xbd91c0, 0xbf4c80, 0xbef840,
-    0xac1c00, 0xada8c0, 0xaf7580, 0xaec140, 0xaacf00, 0xab7bc0, 0xa9a680, 0xa81240,
-    0xa1ba00, 0xa00ec0, 0xa2d380, 0xa36740, 0xa76900, 0xa6ddc0, 0xa40080, 0xa5b440,
-    0x81c800, 0x807cc0, 0x82a180, 0x831540, 0x871b00, 0x86afc0, 0x847280, 0x85c640,
-    0x8c6e00, 0x8ddac0, 0x8f0780, 0x8eb340, 0x8abd00, 0x8b09c0, 0x89d480, 0x886040,
-    0x9a8400, 0x9b30c0, 0x99ed80, 0x985940, 0x9c5700, 0x9de3c0, 0x9f3e80, 0x9e8a40,
-    0x972200, 0x9696c0, 0x944b80, 0x95ff40, 0x91f100, 0x9045c0, 0x929880, 0x932c40,
+    0x000000,
+    0x01B4C0,
+    0x036980,
+    0x02DD40,
+    0x06D300,
+    0x0767C0,
+    0x05BA80,
+    0x040E40,
+    0x0DA600,
+    0x0C12C0,
+    0x0ECF80,
+    0x0F7B40,
+    0x0B7500,
+    0x0AC1C0,
+    0x081C80,
+    0x09A840,
+    0x1B4C00,
+    0x1AF8C0,
+    0x182580,
+    0x199140,
+    0x1D9F00,
+    0x1C2BC0,
+    0x1EF680,
+    0x1F4240,
+    0x16EA00,
+    0x175EC0,
+    0x158380,
+    0x143740,
+    0x103900,
+    0x118DC0,
+    0x135080,
+    0x12E440,
+    0x369800,
+    0x372CC0,
+    0x35F180,
+    0x344540,
+    0x304B00,
+    0x31FFC0,
+    0x332280,
+    0x329640,
+    0x3B3E00,
+    0x3A8AC0,
+    0x385780,
+    0x39E340,
+    0x3DED00,
+    0x3C59C0,
+    0x3E8480,
+    0x3F3040,
+    0x2DD400,
+    0x2C60C0,
+    0x2EBD80,
+    0x2F0940,
+    0x2B0700,
+    0x2AB3C0,
+    0x286E80,
+    0x29DA40,
+    0x207200,
+    0x21C6C0,
+    0x231B80,
+    0x22AF40,
+    0x26A100,
+    0x2715C0,
+    0x25C880,
+    0x247C40,
+    0x6D3000,
+    0x6C84C0,
+    0x6E5980,
+    0x6FED40,
+    0x6BE300,
+    0x6A57C0,
+    0x688A80,
+    0x693E40,
+    0x609600,
+    0x6122C0,
+    0x63FF80,
+    0x624B40,
+    0x664500,
+    0x67F1C0,
+    0x652C80,
+    0x649840,
+    0x767C00,
+    0x77C8C0,
+    0x751580,
+    0x74A140,
+    0x70AF00,
+    0x711BC0,
+    0x73C680,
+    0x727240,
+    0x7BDA00,
+    0x7A6EC0,
+    0x78B380,
+    0x790740,
+    0x7D0900,
+    0x7CBDC0,
+    0x7E6080,
+    0x7FD440,
+    0x5BA800,
+    0x5A1CC0,
+    0x58C180,
+    0x597540,
+    0x5D7B00,
+    0x5CCFC0,
+    0x5E1280,
+    0x5FA640,
+    0x560E00,
+    0x57BAC0,
+    0x556780,
+    0x54D340,
+    0x50DD00,
+    0x5169C0,
+    0x53B480,
+    0x520040,
+    0x40E400,
+    0x4150C0,
+    0x438D80,
+    0x423940,
+    0x463700,
+    0x4783C0,
+    0x455E80,
+    0x44EA40,
+    0x4D4200,
+    0x4CF6C0,
+    0x4E2B80,
+    0x4F9F40,
+    0x4B9100,
+    0x4A25C0,
+    0x48F880,
+    0x494C40,
+    0xDA6000,
+    0xDBD4C0,
+    0xD90980,
+    0xD8BD40,
+    0xDCB300,
+    0xDD07C0,
+    0xDFDA80,
+    0xDE6E40,
+    0xD7C600,
+    0xD672C0,
+    0xD4AF80,
+    0xD51B40,
+    0xD11500,
+    0xD0A1C0,
+    0xD27C80,
+    0xD3C840,
+    0xC12C00,
+    0xC098C0,
+    0xC24580,
+    0xC3F140,
+    0xC7FF00,
+    0xC64BC0,
+    0xC49680,
+    0xC52240,
+    0xCC8A00,
+    0xCD3EC0,
+    0xCFE380,
+    0xCE5740,
+    0xCA5900,
+    0xCBEDC0,
+    0xC93080,
+    0xC88440,
+    0xECF800,
+    0xED4CC0,
+    0xEF9180,
+    0xEE2540,
+    0xEA2B00,
+    0xEB9FC0,
+    0xE94280,
+    0xE8F640,
+    0xE15E00,
+    0xE0EAC0,
+    0xE23780,
+    0xE38340,
+    0xE78D00,
+    0xE639C0,
+    0xE4E480,
+    0xE55040,
+    0xF7B400,
+    0xF600C0,
+    0xF4DD80,
+    0xF56940,
+    0xF16700,
+    0xF0D3C0,
+    0xF20E80,
+    0xF3BA40,
+    0xFA1200,
+    0xFBA6C0,
+    0xF97B80,
+    0xF8CF40,
+    0xFCC100,
+    0xFD75C0,
+    0xFFA880,
+    0xFE1C40,
+    0xB75000,
+    0xB6E4C0,
+    0xB43980,
+    0xB58D40,
+    0xB18300,
+    0xB037C0,
+    0xB2EA80,
+    0xB35E40,
+    0xBAF600,
+    0xBB42C0,
+    0xB99F80,
+    0xB82B40,
+    0xBC2500,
+    0xBD91C0,
+    0xBF4C80,
+    0xBEF840,
+    0xAC1C00,
+    0xADA8C0,
+    0xAF7580,
+    0xAEC140,
+    0xAACF00,
+    0xAB7BC0,
+    0xA9A680,
+    0xA81240,
+    0xA1BA00,
+    0xA00EC0,
+    0xA2D380,
+    0xA36740,
+    0xA76900,
+    0xA6DDC0,
+    0xA40080,
+    0xA5B440,
+    0x81C800,
+    0x807CC0,
+    0x82A180,
+    0x831540,
+    0x871B00,
+    0x86AFC0,
+    0x847280,
+    0x85C640,
+    0x8C6E00,
+    0x8DDAC0,
+    0x8F0780,
+    0x8EB340,
+    0x8ABD00,
+    0x8B09C0,
+    0x89D480,
+    0x886040,
+    0x9A8400,
+    0x9B30C0,
+    0x99ED80,
+    0x985940,
+    0x9C5700,
+    0x9DE3C0,
+    0x9F3E80,
+    0x9E8A40,
+    0x972200,
+    0x9696C0,
+    0x944B80,
+    0x95FF40,
+    0x91F100,
+    0x9045C0,
+    0x929880,
+    0x932C40,
 )
 
 
@@ -255,9 +479,7 @@ class PcapBleWriter:
                 pdu_type=pdu_type,
                 aux_type=aux_type,
             )
-            pseudo_hdr = struct.pack(
-                PSEUDO_HEADER_FORMAT, rf_chan, norm_rssi, -128, 0, aa, flags
-            )
+            pseudo_hdr = struct.pack(PSEUDO_HEADER_FORMAT, rf_chan, norm_rssi, -128, 0, aa, flags)
 
             # 3. Coding indicator byte (for Coded PHY)
             if phy == 2:
@@ -287,9 +509,7 @@ class PcapBleWriter:
                 crc_bytes = bytes([c_val & 0xFF, (c_val >> 8) & 0xFF, (c_val >> 16) & 0xFF])
 
             payload = pseudo_hdr + struct.pack("<I", aa) + ci_b + pdu_bytes + crc_bytes
-            pkt_hdr = struct.pack(
-                PACKET_HEADER_FORMAT, ts_sec, ts_sub, len(payload), len(payload)
-            )
+            pkt_hdr = struct.pack(PACKET_HEADER_FORMAT, ts_sec, ts_sub, len(payload), len(payload))
 
             self.output.write(pkt_hdr)
             self.output.write(payload)
@@ -422,21 +642,15 @@ class PcapBleReader:
             self._endian = "<" if magic in (PCAP_MAGIC_USEC, PCAP_MAGIC_NANO) else ">"
             major, minor, _, _, _, dlt = struct.unpack(f"{self._endian}HHIIII", hdr[4:])
             if dlt != DLT_BLUETOOTH_LE_LL_WITH_PHDR:
-                raise ValueError(
-                    f"Unsupported LinkType: {dlt}, expected {DLT_BLUETOOTH_LE_LL_WITH_PHDR}"
-                )
+                raise ValueError(f"Unsupported LinkType: {dlt}, expected {DLT_BLUETOOTH_LE_LL_WITH_PHDR}")
         else:
             raise ValueError(f"Invalid PCAP magic: 0x{magic:08X}")
 
-    def _parse_ble_packet_payload(
-        self, data: bytes, ts_sec: int, ts_usec: int, ts_epoch: float
-    ) -> CapturedBlePacket:
+    def _parse_ble_packet_payload(self, data: bytes, ts_sec: int, ts_usec: int, ts_epoch: float) -> CapturedBlePacket:
         if len(data) < 17:  # 10B pseudo + 4B AA + 3B CRC
             raise ValueError(f"Payload too short for BLE PHDR ({len(data)} bytes)")
 
-        rf_chan, rssi, noise, _, aa, flags = struct.unpack(
-            PSEUDO_HEADER_FORMAT, data[:10]
-        )
+        rf_chan, rssi, noise, _, aa, flags = struct.unpack(PSEUDO_HEADER_FORMAT, data[:10])
         wire_aa = struct.unpack("<I", data[10:14])[0]
         crc_err = not bool(flags & 0x0800)
         phy = (flags >> 14) & 0x03
@@ -490,9 +704,7 @@ class PcapBleReader:
                     ts_factor = 1e-6  # default microsecond
                     opt_offset = 8
                     while opt_offset + 4 <= len(body):
-                        opt_code, opt_len = struct.unpack(
-                            f"{self._endian}HH", body[opt_offset:opt_offset + 4]
-                        )
+                        opt_code, opt_len = struct.unpack(f"{self._endian}HH", body[opt_offset : opt_offset + 4])
                         opt_offset += 4
                         if opt_code == 0:  # opt_endofopt
                             break
@@ -501,7 +713,7 @@ class PcapBleReader:
                             if res & 0x80:
                                 ts_factor = 2 ** -(res & 0x7F)
                             else:
-                                ts_factor = 10 ** -res
+                                ts_factor = 10**-res
                         padded_opt_len = (opt_len + 3) & ~3
                         opt_offset += padded_opt_len
                     self._iface_ts_factor[iface_idx] = ts_factor
@@ -509,10 +721,8 @@ class PcapBleReader:
             elif b_type == 0x00000006:  # EPB (Enhanced Packet Block)
                 if len(body) < 20:
                     continue
-                iface_id, ts_hi, ts_lo, cap_len, orig_len = struct.unpack(
-                    f"{self._endian}IIIII", body[:20]
-                )
-                data = body[20:20 + cap_len]
+                iface_id, ts_hi, ts_lo, cap_len, orig_len = struct.unpack(f"{self._endian}IIIII", body[:20])
+                data = body[20 : 20 + cap_len]
                 if len(data) < 17:
                     continue
                 ts_factor = self._iface_ts_factor.get(iface_id, 1e-6)
@@ -528,7 +738,7 @@ class PcapBleReader:
                     continue
                 orig_len = struct.unpack(f"{self._endian}I", body[:4])[0]
                 cap_len = min(orig_len, b_len - 16)
-                data = body[4:4 + cap_len]
+                data = body[4 : 4 + cap_len]
                 if len(data) < 17:
                     continue
                 return self._parse_ble_packet_payload(data, 0, 0, 0.0)

@@ -33,4 +33,3 @@ __all__ = [
     "mark_and_flush",
     "open_sniffle_serial",
 ]
-

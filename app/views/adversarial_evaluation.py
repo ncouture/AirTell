@@ -145,9 +145,9 @@ def build_timing_oracle_figure(
         points = list(data_points)
     elif report:
         bat_report = report.reports.get("bat_allowlist") or report.reports.get("bat")
-        findings = bat_report.findings if bat_report else [
-            f for f in report.findings if "bat" in f.finding_type.lower()
-        ]
+        findings = (
+            bat_report.findings if bat_report else [f for f in report.findings if "bat" in f.finding_type.lower()]
+        )
         seq = 1
         for f in findings:
             target = f.device_addr
@@ -155,65 +155,73 @@ def build_timing_oracle_figure(
             if "response_delay_usec" in f.details:
                 delay = f.details["response_delay_usec"]
                 adv_int = float(f.details.get("adv_interval_ms", f.details.get("interval_ms", 20.0)))
-                points.append({
-                    "seq": seq,
-                    "time": f.timestamp,
-                    "delta_t_usec": float(delay),
-                    "adv_interval_ms": adv_int,
-                    "device_addr": target,
-                    "peer_addr": scanner,
-                    "classification": "Allowed Peer (T_IFS ~150µs)",
-                    "pdu_type": "SCAN_RSP",
-                    "rssi": f.details.get("rssi", -58),
-                    "status": "Responded (Allowed)",
-                })
+                points.append(
+                    {
+                        "seq": seq,
+                        "time": f.timestamp,
+                        "delta_t_usec": float(delay),
+                        "adv_interval_ms": adv_int,
+                        "device_addr": target,
+                        "peer_addr": scanner,
+                        "classification": "Allowed Peer (T_IFS ~150µs)",
+                        "pdu_type": "SCAN_RSP",
+                        "rssi": f.details.get("rssi", -58),
+                        "status": "Responded (Allowed)",
+                    }
+                )
                 seq += 1
             if f.details.get("mechanism") == "SELECTIVE_PROBE_SILENCE":
                 silenced_count = f.details.get("silenced_count", 1)
                 adv_int = float(f.details.get("adv_interval_ms", 100.0))
                 for i in range(silenced_count):
-                    points.append({
-                        "seq": seq,
-                        "time": f.timestamp + (i * 0.02),
-                        "delta_t_usec": 5000.0 + (i * 150),
-                        "adv_interval_ms": adv_int,
-                        "device_addr": target,
-                        "peer_addr": scanner,
-                        "classification": "Silent Drop (Unauthorized)",
-                        "pdu_type": "SCAN_REQ (Dropped)",
-                        "rssi": -78,
-                        "status": "Silenced / Unbonded",
-                    })
+                    points.append(
+                        {
+                            "seq": seq,
+                            "time": f.timestamp + (i * 0.02),
+                            "delta_t_usec": 5000.0 + (i * 150),
+                            "adv_interval_ms": adv_int,
+                            "device_addr": target,
+                            "peer_addr": scanner,
+                            "classification": "Silent Drop (Unauthorized)",
+                            "pdu_type": "SCAN_REQ (Dropped)",
+                            "rssi": -78,
+                            "status": "Silenced / Unbonded",
+                        }
+                    )
                     seq += 1
             if f.details.get("mechanism") in ("CONNECTION_PARAMETERS", "LL_CONNECTION_UPDATE"):
                 interval_ms = float(f.details.get("interval_ms", 30.0))
-                points.append({
-                    "seq": seq,
-                    "time": f.timestamp,
-                    "delta_t_usec": float(interval_ms * 1000.0),
-                    "adv_interval_ms": interval_ms,
-                    "device_addr": f.device_addr,
-                    "peer_addr": f.target_addr or "Central",
-                    "classification": "Connection Interval Profile",
-                    "pdu_type": "CONNECT_IND / UPDATE",
-                    "rssi": -55,
-                    "status": f"Profile {f.details.get('profile_tuple', '')}",
-                })
+                points.append(
+                    {
+                        "seq": seq,
+                        "time": f.timestamp,
+                        "delta_t_usec": float(interval_ms * 1000.0),
+                        "adv_interval_ms": interval_ms,
+                        "device_addr": f.device_addr,
+                        "peer_addr": f.target_addr or "Central",
+                        "classification": "Connection Interval Profile",
+                        "pdu_type": "CONNECT_IND / UPDATE",
+                        "rssi": -55,
+                        "status": f"Profile {f.details.get('profile_tuple', '')}",
+                    }
+                )
                 seq += 1
             if f.details.get("mechanism") == "ADV_DIRECT_IND_BURST":
                 burst_cnt = f.details.get("burst_count", 1)
-                points.append({
-                    "seq": seq,
-                    "time": f.timestamp,
-                    "delta_t_usec": 3750.0,
-                    "adv_interval_ms": 3.75,
-                    "device_addr": target,
-                    "peer_addr": scanner,
-                    "classification": "Directed Adv Burst (Exclusive)",
-                    "pdu_type": "ADV_DIRECT_IND",
-                    "rssi": -62,
-                    "status": f"Burst Count {burst_cnt}",
-                })
+                points.append(
+                    {
+                        "seq": seq,
+                        "time": f.timestamp,
+                        "delta_t_usec": 3750.0,
+                        "adv_interval_ms": 3.75,
+                        "device_addr": target,
+                        "peer_addr": scanner,
+                        "classification": "Directed Adv Burst (Exclusive)",
+                        "pdu_type": "ADV_DIRECT_IND",
+                        "rssi": -62,
+                        "status": f"Burst Count {burst_cnt}",
+                    }
+                )
                 seq += 1
 
     x_col = "adv_interval_ms" if x_axis == "interval" else "seq"
@@ -252,7 +260,9 @@ def build_timing_oracle_figure(
                 mode="markers",
                 name=str(classification),
                 marker=dict(size=10, color=col, line=dict(width=1, color="#E1E2E8")),
-                customdata=group[["pdu_type", "device_addr", "peer_addr", "rssi", "status", "adv_interval_ms", "seq"]].values,
+                customdata=group[
+                    ["pdu_type", "device_addr", "peer_addr", "rssi", "status", "adv_interval_ms", "seq"]
+                ].values,
                 hovertemplate=(
                     "<b>%{name}</b><br>"
                     "Seq: #%{customdata[6]} | Interval: %{customdata[5]:.2f} ms<br>"
@@ -336,25 +346,27 @@ def build_csrk_trajectory_figure(
         points = list(data_points)
     elif report:
         csrk_report = report.reports.get("csrk_counter") or report.reports.get("csrk")
-        findings = csrk_report.findings if csrk_report else [
-            f for f in report.findings if "csrk" in f.finding_type.lower()
-        ]
+        findings = (
+            csrk_report.findings if csrk_report else [f for f in report.findings if "csrk" in f.finding_type.lower()]
+        )
         seq = 1
         for f in findings:
             counter = f.details.get("counter")
             if counter is not None:
-                points.append({
-                    "seq": seq,
-                    "timestamp": f.timestamp,
-                    "counter": int(counter),
-                    "delta": f.details.get("delta", 1 if f.details.get("initial_counter") else 0),
-                    "rpa": f.device_addr,
-                    "target": f.target_addr or "Unknown",
-                    "verdict": f.verdict,
-                    "is_anomaly": f.details.get("is_anomaly", False),
-                    "mac_valid": f.details.get("mac_valid"),
-                    "summary": f.details.get("summary", ""),
-                })
+                points.append(
+                    {
+                        "seq": seq,
+                        "timestamp": f.timestamp,
+                        "counter": int(counter),
+                        "delta": f.details.get("delta", 1 if f.details.get("initial_counter") else 0),
+                        "rpa": f.device_addr,
+                        "target": f.target_addr or "Unknown",
+                        "verdict": f.verdict,
+                        "is_anomaly": f.details.get("is_anomaly", False),
+                        "mac_valid": f.details.get("mac_valid"),
+                        "summary": f.details.get("summary", ""),
+                    }
+                )
                 seq += 1
 
     if not points:
@@ -478,9 +490,9 @@ def build_handshake_classification_df(
         return pd.DataFrame(columns=columns)
 
     enc_report = report.reports.get("differential_encryption") or report.reports.get("encryption")
-    findings = enc_report.findings if enc_report else [
-        f for f in report.findings if "encryption" in f.finding_type.lower()
-    ]
+    findings = (
+        enc_report.findings if enc_report else [f for f in report.findings if "encryption" in f.finding_type.lower()]
+    )
 
     rows: list[dict[str, Any]] = []
     for f in findings:
@@ -508,16 +520,18 @@ def build_handshake_classification_df(
             badge = "⚪ UNVERIFIED"
             state = f.verdict or "INCONCLUSIVE"
 
-        rows.append({
-            "Session AA": aa_str,
-            "Peripheral (Target)": f.device_addr or "N/A",
-            "Central (Initiator)": f.target_addr or "N/A",
-            "Handshake State": state,
-            "LL Control PDU": pdu_str,
-            "Error Code": err_str,
-            "Classification Badge": badge,
-            "Summary": f.details.get("summary", ""),
-        })
+        rows.append(
+            {
+                "Session AA": aa_str,
+                "Peripheral (Target)": f.device_addr or "N/A",
+                "Central (Initiator)": f.target_addr or "N/A",
+                "Handshake State": state,
+                "LL Control PDU": pdu_str,
+                "Error Code": err_str,
+                "Classification Badge": badge,
+                "Summary": f.details.get("summary", ""),
+            }
+        )
 
     return pd.DataFrame(rows) if rows else pd.DataFrame(columns=columns)
 
@@ -534,9 +548,7 @@ def render_sidechannel_metrics(report: SideChannelSuiteReport) -> None:
         else len({f.details.get("session_aa") for f in report.findings if f.details.get("session_aa")})
     )
     oracle_detections = (
-        len(bat_rep.findings)
-        if bat_rep
-        else sum(1 for f in report.findings if "bat" in f.finding_type.lower())
+        len(bat_rep.findings) if bat_rep else sum(1 for f in report.findings if "bat" in f.finding_type.lower())
     )
     csrk_trajectories = (
         csrk_rep.metrics.get("monitored_senders", len(csrk_rep.findings))
@@ -556,9 +568,15 @@ def render_sidechannel_metrics(report: SideChannelSuiteReport) -> None:
     with m_col1:
         st.metric("Monitored Sessions", f"{monitored_sessions}", delta=f"{report.total_packets:,} pkts")
     with m_col2:
-        st.metric("Oracle Detections", f"{oracle_detections}", delta="Allowlist Probes" if oracle_detections else "0 Probes")
+        st.metric(
+            "Oracle Detections", f"{oracle_detections}", delta="Allowlist Probes" if oracle_detections else "0 Probes"
+        )
     with m_col3:
-        st.metric("CSRK Trajectories", f"{csrk_trajectories}", delta=f"{len(report.confirmed_exclusive_devices)} Confirmed Exclusive")
+        st.metric(
+            "CSRK Trajectories",
+            f"{csrk_trajectories}",
+            delta=f"{len(report.confirmed_exclusive_devices)} Confirmed Exclusive",
+        )
     with m_col4:
         st.metric("Handshake Success Rate", handshake_str, delta="LL_START_ENC_RSP" if handshake_str != "N/A" else None)
 
@@ -597,12 +615,16 @@ def render_sidechannel_tab(
 
     col_opt1, col_opt2 = st.columns([2, 1])
     with col_opt1:
-        target_filter = st.text_input(
-            "Target Device MAC/RPA Filter (Optional):",
-            value="",
-            placeholder="e.g. AA:BB:CC:DD:EE:02",
-            key="sc_target_filter",
-        ).strip().upper()
+        target_filter = (
+            st.text_input(
+                "Target Device MAC/RPA Filter (Optional):",
+                value="",
+                placeholder="e.g. AA:BB:CC:DD:EE:02",
+                key="sc_target_filter",
+            )
+            .strip()
+            .upper()
+        )
     with col_opt2:
         csrk_input = st.text_input(
             "CSRK Hex (16-byte, Optional):",
@@ -704,14 +726,16 @@ def render_sidechannel_tab(
                 q_target = event_queue or get_event_queue()
                 mock_pkts = list(generate_mock_stream(analyzer_type="all"))
                 for p in mock_pkts:
-                    q_target.push({
-                        "timestamp": p.ts_epoch,
-                        "channel": p.ble_chan,
-                        "rssi": p.rssi,
-                        "mac_address": "AA:BB:CC:DD:EE:02",
-                        "network_type": "SideChannel-Live",
-                        "raw_payload": p.body.hex(),
-                    })
+                    q_target.push(
+                        {
+                            "timestamp": p.ts_epoch,
+                            "channel": p.ble_chan,
+                            "rssi": p.rssi,
+                            "mac_address": "AA:BB:CC:DD:EE:02",
+                            "network_type": "SideChannel-Live",
+                            "raw_payload": p.body.hex(),
+                        }
+                    )
                 st.success(f"Injected {len(mock_pkts)} side-channel packets into EventQueue.")
 
     # --- Mode 3: Synthetic Mock Stream ---
@@ -794,7 +818,9 @@ def render_sidechannel_tab(
         col_t1, col_t2 = st.columns([2, 1])
         with col_t1:
             st.markdown("##### ⏱️ Link-Layer Timing Oracle Scatter Plot")
-            st.caption("Visualizing inter-frame space timing ($T_{IFS} = 150\\,\\mu\\text{s} \\pm 2\\,\\mu\\text{s}$) to detect selective allowlist probe responses vs silent drops.")
+            st.caption(
+                "Visualizing inter-frame space timing ($T_{IFS} = 150\\,\\mu\\text{s} \\pm 2\\,\\mu\\text{s}$) to detect selective allowlist probe responses vs silent drops."
+            )
         with col_t2:
             timing_xaxis = st.radio(
                 "Timing Oracle X-Axis:",
@@ -807,7 +833,9 @@ def render_sidechannel_tab(
         st.plotly_chart(fig_timing, width="stretch")
 
         st.markdown("##### 📈 CSRK 32-bit SignCounter Monotonic Trajectory")
-        st.caption("Tracking 32-bit `SignCounter` monotonically increasing values across randomized resolvable private addresses (RPAs).")
+        st.caption(
+            "Tracking 32-bit `SignCounter` monotonically increasing values across randomized resolvable private addresses (RPAs)."
+        )
         fig_csrk = build_csrk_trajectory_figure(active_report)
         st.plotly_chart(fig_csrk, width="stretch")
 
@@ -858,7 +886,9 @@ def render_sidechannel_tab(
             )
 
     else:
-        st.info("ℹ️ Upload a PCAP/PCAPNG capture file, analyze live EventQueue packets, or trigger a synthetic evaluation to inspect side-channel vulnerabilities.")
+        st.info(
+            "ℹ️ Upload a PCAP/PCAPNG capture file, analyze live EventQueue packets, or trigger a synthetic evaluation to inspect side-channel vulnerabilities."
+        )
         # Render empty-state figures and table so the UI layout is visible
         st.plotly_chart(build_timing_oracle_figure(None, x_axis="interval"), width="stretch")
         st.plotly_chart(build_csrk_trajectory_figure(None), width="stretch")
@@ -876,13 +906,14 @@ def render_adversarial_evaluation(
         "Pairing relay analysis, rotating identifier linkability, and anti-stalking heuristic evasion benchmarks."
     )
 
-    tab_deanon, tab_relay, tab_evasion, tab_sidechannel = st.tabs([
-        "🔍 Identity Deanonymization",
-        "🔄 Pairing Relay",
-        "🎯 Evasion Benchmarks",
-        "⚡ Exclusive-Use Side-Channels",
-    ])
-
+    tab_deanon, tab_relay, tab_evasion, tab_sidechannel = st.tabs(
+        [
+            "🔍 Identity Deanonymization",
+            "🔄 Pairing Relay",
+            "🎯 Evasion Benchmarks",
+            "⚡ Exclusive-Use Side-Channels",
+        ]
+    )
 
     # --- TAB 1: Identity Deanonymization ---
     with tab_deanon:
@@ -934,11 +965,7 @@ def render_adversarial_evaluation(
             multi_mac_trajs = [t for t in trajectories if len(t.mac_addresses) > 1]
             st.metric("Correlated Rotating Trajectories", len(multi_mac_trajs))
         with m_col3:
-            avg_conf = (
-                sum(t.confidence for t in trajectories) / max(1, len(trajectories))
-                if trajectories
-                else 0.0
-            )
+            avg_conf = sum(t.confidence for t in trajectories) / max(1, len(trajectories)) if trajectories else 0.0
             st.metric("Mean Linkability Confidence", f"{avg_conf:.0%}")
 
         st.divider()
@@ -946,14 +973,17 @@ def render_adversarial_evaluation(
         if trajectories:
             traj_data = []
             for idx, traj in enumerate(trajectories[:20], start=1):
-                traj_data.append({
-                    "Trajectory #": idx,
-                    "Distinct MACs": len(traj.mac_addresses),
-                    "MAC Addresses": ", ".join(list(traj.mac_addresses)[:3]) + ("..." if len(traj.mac_addresses) > 3 else ""),
-                    "Packets": len(traj.observations),
-                    "Primary Network": traj.observations[0].network_type,
-                    "Linkability Confidence": f"{traj.confidence:.0%}",
-                })
+                traj_data.append(
+                    {
+                        "Trajectory #": idx,
+                        "Distinct MACs": len(traj.mac_addresses),
+                        "MAC Addresses": ", ".join(list(traj.mac_addresses)[:3])
+                        + ("..." if len(traj.mac_addresses) > 3 else ""),
+                        "Packets": len(traj.observations),
+                        "Primary Network": traj.observations[0].network_type,
+                        "Linkability Confidence": f"{traj.confidence:.0%}",
+                    }
+                )
             st.dataframe(pd.DataFrame(traj_data), width="stretch")
         else:
             st.info("No active trajectories reconstructed yet. Inject rogue bursts or connect live Sniffle radios.")
@@ -969,12 +999,16 @@ def render_adversarial_evaluation(
         with r_col1:
             relay_status = "IDLE (Awaiting Connection)"
             st.markdown(f"**Current Handshake State:** `{relay_status}`")
-            st.markdown("**Active Bridge Topology:** `Relay Master (/dev/ttyUSB0) ➔ TCP (Port 7352) ➔ Relay Slave (/dev/ttyUSB1)`")
+            st.markdown(
+                "**Active Bridge Topology:** `Relay Master (/dev/ttyUSB0) ➔ TCP (Port 7352) ➔ Relay Slave (/dev/ttyUSB1)`"
+            )
             m_used = check_device_usage("/dev/ttyUSB0")
             s_used = check_device_usage("/dev/ttyUSB1")
             m_badge = "🟢 IN USE (open)" if m_used else "⚪ IDLE (not open)"
             s_badge = "🟢 IN USE (open)" if s_used else "⚪ IDLE (not open)"
-            st.markdown(f"**Hardware Status:** Master (`/dev/ttyUSB0`): `{m_badge}` | Slave (`/dev/ttyUSB1`): `{s_badge}`")
+            st.markdown(
+                f"**Hardware Status:** Master (`/dev/ttyUSB0`): `{m_badge}` | Slave (`/dev/ttyUSB1`): `{s_badge}`"
+            )
 
         with r_col2:
             if st.button("Simulate Relay Handshake Burst", key="btn_sim_relay"):
@@ -1036,17 +1070,18 @@ def render_adversarial_evaluation(
                 else:
                     st.success("🛡️ **Evasion Successful**: Threat heuristics bypassed (0 alerts generated)!")
 
-                st.json({
-                    "Scenario": result.scenario_name,
-                    "Detected": result.is_detected,
-                    "Alerts Count": result.alert_count,
-                    "Packets Injected": result.packets_injected,
-                    "Duration (Minutes)": result.duration_minutes,
-                })
+                st.json(
+                    {
+                        "Scenario": result.scenario_name,
+                        "Detected": result.is_detected,
+                        "Alerts Count": result.alert_count,
+                        "Packets Injected": result.packets_injected,
+                        "Duration (Minutes)": result.duration_minutes,
+                    }
+                )
             else:
                 st.warning("Tracker DB unavailable.")
 
     # --- TAB 4: Exclusive-Use Side-Channels ---
     with tab_sidechannel:
         render_sidechannel_tab(conn=conn, event_queue=event_queue)
-

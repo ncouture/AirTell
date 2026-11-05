@@ -392,21 +392,28 @@ def test_cli_flags_and_env_var_bindings():
         default=os.getenv("DESKTOP_NOTIFY", "").strip().lower() in ("1", "true", "yes", "on"),
     )
 
-    args = parser.parse_args([
-        "--webhook-url", "https://cli.hook.local/alert",
-        "--webhook-secret", "cli_secret",
-        "--enable-desktop-notify",
-    ])
+    args = parser.parse_args(
+        [
+            "--webhook-url",
+            "https://cli.hook.local/alert",
+            "--webhook-secret",
+            "cli_secret",
+            "--enable-desktop-notify",
+        ]
+    )
     assert args.webhook_url == "https://cli.hook.local/alert"
     assert args.webhook_secret == "cli_secret"
     assert args.enable_desktop_notify is True
 
     # 2. Test environment variable fallbacks
-    with patch.dict(os.environ, {
-        "WEBHOOK_URL": "https://env.hook.local/alert",
-        "WEBHOOK_SECRET": "env_secret_123",
-        "DESKTOP_NOTIFY": "1",
-    }):
+    with patch.dict(
+        os.environ,
+        {
+            "WEBHOOK_URL": "https://env.hook.local/alert",
+            "WEBHOOK_SECRET": "env_secret_123",
+            "DESKTOP_NOTIFY": "1",
+        },
+    ):
         parser2 = argparse.ArgumentParser()
         parser2.add_argument("--webhook-url", default=os.getenv("WEBHOOK_URL", ""))
         parser2.add_argument("--webhook-secret", default=os.getenv("WEBHOOK_SECRET", ""))
@@ -679,5 +686,3 @@ def test_check_stalking_heuristics_async_dispatch_toggle(temp_tracker_db: BLETra
         assert mock_webhook.call_args[1]["async_dispatch"] is False
         mock_desktop.assert_called_once()
         assert mock_desktop.call_args[1]["async_dispatch"] is False
-
-

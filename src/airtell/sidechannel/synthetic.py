@@ -175,13 +175,7 @@ def build_ll_header(
     Returns:
         2-byte encoded header.
     """
-    b0 = (
-        (llid & 0x03)
-        | ((nesn & 0x01) << 2)
-        | ((sn & 0x01) << 3)
-        | ((md & 0x01) << 4)
-        | ((cp & 0x01) << 5)
-    )
+    b0 = (llid & 0x03) | ((nesn & 0x01) << 2) | ((sn & 0x01) << 3) | ((md & 0x01) << 4) | ((cp & 0x01) << 5)
     return bytes([b0, length & 0xFF])
 
 
@@ -392,12 +386,7 @@ def compute_csrk_mac(
     if not (0 <= counter <= 0xFFFFFFFF):
         raise ValueError(f"SignCounter must be 32-bit uint (0-0xFFFFFFFF), got {counter}")
 
-    msg = (
-        bytes([opcode & 0xFF])
-        + struct.pack("<H", handle)
-        + value
-        + struct.pack("<I", counter)
-    )
+    msg = bytes([opcode & 0xFF]) + struct.pack("<H", handle) + value + struct.pack("<I", counter)
     c = cmac.CMAC(algorithms.AES(csrk))
     c.update(msg)
     full_mac = c.finalize()
@@ -441,9 +430,7 @@ def build_att_signed_write(
             raise ValueError(f"Override MAC must be exactly 8 bytes, got {len(override_mac)}")
         mac_64 = override_mac
     else:
-        valid_mac = compute_csrk_mac(
-            csrk=csrk, opcode=opcode, handle=handle, value=value, counter=counter
-        )
+        valid_mac = compute_csrk_mac(csrk=csrk, opcode=opcode, handle=handle, value=value, counter=counter)
         if corrupt_mac:
             # Invert first byte to invalidate CMAC
             mac_64 = bytes([valid_mac[0] ^ 0xFF]) + valid_mac[1:]
@@ -476,11 +463,7 @@ def build_adv_direct_ind(
     adv_b = _coerce_mac_bytes(adv_a)
     target_b = _coerce_mac_bytes(target_a)
 
-    b0 = (
-        (ADV_PDU_ADV_DIRECT_IND & 0x0F)
-        | ((1 if tx_random else 0) << 6)
-        | ((1 if rx_random else 0) << 7)
-    )
+    b0 = (ADV_PDU_ADV_DIRECT_IND & 0x0F) | ((1 if tx_random else 0) << 6) | ((1 if rx_random else 0) << 7)
     hdr = bytes([b0, 12])
     return hdr + adv_b + target_b
 
@@ -514,11 +497,7 @@ def build_scan_req(
     scan_b = _coerce_mac_bytes(scan_a)
     adv_b = _coerce_mac_bytes(adv_a)
 
-    b0 = (
-        (ADV_PDU_SCAN_REQ & 0x0F)
-        | ((1 if tx_random else 0) << 6)
-        | ((1 if rx_random else 0) << 7)
-    )
+    b0 = (ADV_PDU_SCAN_REQ & 0x0F) | ((1 if tx_random else 0) << 6) | ((1 if rx_random else 0) << 7)
     hdr = bytes([b0, 12])
     return hdr + scan_b + adv_b
 
@@ -578,11 +557,7 @@ def build_connect_ind(
     )
 
     payload = init_b + adv_b + lldata
-    b0 = (
-        (ADV_PDU_CONNECT_IND & 0x0F)
-        | ((1 if tx_random else 0) << 6)
-        | ((1 if rx_random else 0) << 7)
-    )
+    b0 = (ADV_PDU_CONNECT_IND & 0x0F) | ((1 if tx_random else 0) << 6) | ((1 if rx_random else 0) << 7)
     hdr = bytes([b0, len(payload) & 0x3F])
     return hdr + payload
 
@@ -705,11 +680,9 @@ def generate_encryption_trace(
     t += 10_000
     rand_bytes = b"\x11\x22\x33\x44\x55\x66\x77\x88"
     ediv = 0x1234
-    skdm = b"\xAA\xBB\xCC\xDD\xEE\xFF\x00\x11"
+    skdm = b"\xaa\xbb\xcc\xdd\xee\xff\x00\x11"
     ivm = b"\x01\x02\x03\x04"
-    enc_req_pdu = build_ll_enc_req(
-        rand=rand_bytes, ediv=ediv, skdm=skdm, ivm=ivm, nesn=0, sn=0
-    )
+    enc_req_pdu = build_ll_enc_req(rand=rand_bytes, ediv=ediv, skdm=skdm, ivm=ivm, nesn=0, sn=0)
     events.append(
         SyntheticEvent(
             ts_usec=t,
@@ -802,9 +775,7 @@ def generate_encryption_trace(
 
         # Immediate link termination
         t += 5_000
-        term_pdu = build_ll_terminate_ind(
-            error_code=ERROR_REMOTE_USER_TERMINATED, nesn=1, sn=1
-        )
+        term_pdu = build_ll_terminate_ind(error_code=ERROR_REMOTE_USER_TERMINATED, nesn=1, sn=1)
         events.append(
             SyntheticEvent(
                 ts_usec=t,
@@ -993,9 +964,7 @@ def generate_bat_allowlist_trace(
         # Fast burst of ADV_DIRECT_IND (Core spec high duty cycle interval <= 3.75ms)
         direct_interval_usec = 3_750
         for _ in range(5):
-            direct_pdu = build_adv_direct_ind(
-                adv_a=periph_addr, target_a=target_rpa, tx_random=True, rx_random=True
-            )
+            direct_pdu = build_adv_direct_ind(adv_a=periph_addr, target_a=target_rpa, tx_random=True, rx_random=True)
             events.append(
                 SyntheticEvent(
                     ts_usec=t,
@@ -1116,9 +1085,7 @@ def generate_bat_allowlist_trace(
         # If allowlisted: silent drop (no response on channel).
         if not allowlist_enabled:
             t += 150  # T_IFS = 150 microseconds
-            scan_rsp_pdu = build_scan_rsp(
-                adv_a=periph_addr, scan_rsp_data=b"\x0a\x09TargetDev"
-            )
+            scan_rsp_pdu = build_scan_rsp(adv_a=periph_addr, scan_rsp_data=b"\x0a\x09TargetDev")
             events.append(
                 SyntheticEvent(
                     ts_usec=t,
@@ -1156,9 +1123,7 @@ def generate_bat_allowlist_trace(
 
         # 6. Peripheral replies with SCAN_RSP within T_IFS (150us)
         t += 150
-        scan_rsp_pdu = build_scan_rsp(
-            adv_a=periph_addr, scan_rsp_data=b"\x0a\x09TargetDev"
-        )
+        scan_rsp_pdu = build_scan_rsp(adv_a=periph_addr, scan_rsp_data=b"\x0a\x09TargetDev")
         events.append(
             SyntheticEvent(
                 ts_usec=t,

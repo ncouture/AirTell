@@ -220,7 +220,9 @@ class TestActiveProbingAndBurstCorrelationCombinations:
     def test_comb_active_probing_multiple_responders(self) -> None:
         correlator = StimulusResponseCorrelator(max_latency_usec=2_000_000)
         stim_mac = bytes.fromhex("c011222211c0")
-        correlator.register_stimulus(adv_a=stim_mac, beacon_type="iBeacon", burst_id=1, start_time_usec=1000, duration_usec=0)
+        correlator.register_stimulus(
+            adv_a=stim_mac, beacon_type="iBeacon", burst_id=1, start_time_usec=1000, duration_usec=0
+        )
 
         responders = [bytes.fromhex(f"1122334455{i:02x}") for i in range(1, 6)]
         matches = []
@@ -472,18 +474,20 @@ class TestPcapAndTelemetryPairedValidation:
         assert match is not None
 
         # Log event into telemetry
-        session.record_event({
-            "burst_id": match.stimulus_id,
-            "stimulus_mac": match.stimulus_adv_a,
-            "stimulus_type": "AltBeacon",
-            "response_pdu_type": match.response_pdu_type,
-            "responder_mac": match.responder_mac,
-            "responder_mac_type": match.responder_type,
-            "delta_ms": match.latency_ms,
-            "chan": match.channel,
-            "rssi": match.rssi,
-            "timestamp_usec": match.response_timestamp_usec,
-        })
+        session.record_event(
+            {
+                "burst_id": match.stimulus_id,
+                "stimulus_mac": match.stimulus_adv_a,
+                "stimulus_type": "AltBeacon",
+                "response_pdu_type": match.response_pdu_type,
+                "responder_mac": match.responder_mac,
+                "responder_mac_type": match.responder_type,
+                "delta_ms": match.latency_ms,
+                "chan": match.channel,
+                "rssi": match.rssi,
+                "timestamp_usec": match.response_timestamp_usec,
+            }
+        )
 
         out_csv = tmp_path / "events.csv"
         session.export_events_csv(out_csv)

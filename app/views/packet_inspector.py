@@ -52,13 +52,15 @@ def decode_ad_structures(payload_hex: str) -> list[dict[str, Any]]:
             # Malformed or truncated structure; capture remainder
             ad_type = raw_bytes[idx + 1] if idx + 1 < total_len else 0
             data_bytes = raw_bytes[idx + 2 :]
-            structures.append({
-                "length": length,
-                "ad_type_hex": f"0x{ad_type:02x}",
-                "ad_type_name": AD_TYPE_NAMES.get(ad_type, "Unknown Type (Truncated)"),
-                "data_hex": data_bytes.hex(),
-                "data_ascii": "",
-            })
+            structures.append(
+                {
+                    "length": length,
+                    "ad_type_hex": f"0x{ad_type:02x}",
+                    "ad_type_name": AD_TYPE_NAMES.get(ad_type, "Unknown Type (Truncated)"),
+                    "data_hex": data_bytes.hex(),
+                    "data_ascii": "",
+                }
+            )
             break
 
         ad_type = raw_bytes[idx + 1]
@@ -71,13 +73,15 @@ def decode_ad_structures(payload_hex: str) -> list[dict[str, Any]]:
         except Exception:
             ascii_repr = ""
 
-        structures.append({
-            "length": length,
-            "ad_type_hex": f"0x{ad_type:02x}",
-            "ad_type_name": AD_TYPE_NAMES.get(ad_type, f"User Defined (0x{ad_type:02x})"),
-            "data_hex": data_bytes.hex(),
-            "data_ascii": ascii_repr,
-        })
+        structures.append(
+            {
+                "length": length,
+                "ad_type_hex": f"0x{ad_type:02x}",
+                "ad_type_name": AD_TYPE_NAMES.get(ad_type, f"User Defined (0x{ad_type:02x})"),
+                "data_hex": data_bytes.hex(),
+                "data_ascii": ascii_repr,
+            }
+        )
         idx += 1 + length
 
     return structures
@@ -99,16 +103,18 @@ def render_packet_inspector(
     if event_queue is not None:
         items = event_queue.get_recent(max_items=500) if hasattr(event_queue, "get_recent") else []
         for idx, p in enumerate(items, start=1):
-            live_packets.append({
-                "id": f"LIVE-{idx:03d}",
-                "datetime_str": p.get("datetime_str", ""),
-                "channel": p.get("channel", 37),
-                "mac_address": p.get("mac_address", "Unknown"),
-                "rssi": p.get("rssi", -100),
-                "network_type": p.get("network_type", "Unknown"),
-                "ephemeral_key": p.get("ephemeral_key", ""),
-                "raw_payload": p.get("raw_payload", ""),
-            })
+            live_packets.append(
+                {
+                    "id": f"LIVE-{idx:03d}",
+                    "datetime_str": p.get("datetime_str", ""),
+                    "channel": p.get("channel", 37),
+                    "mac_address": p.get("mac_address", "Unknown"),
+                    "rssi": p.get("rssi", -100),
+                    "network_type": p.get("network_type", "Unknown"),
+                    "ephemeral_key": p.get("ephemeral_key", ""),
+                    "raw_payload": p.get("raw_payload", ""),
+                }
+            )
 
     # Filter row
     f_col1, f_col2, f_col3 = st.columns([2, 2, 1])
@@ -159,7 +165,6 @@ def render_packet_inspector(
         except Exception as e:
             st.error(f"Error executing packet query: {e}")
 
-
     # Filter live packets
     filtered_live = []
     for lp in live_packets:
@@ -186,7 +191,9 @@ def render_packet_inspector(
         df = df.sort_values(by="datetime_str", ascending=False).head(row_limit)
 
     if filtered_live:
-        st.caption(f"⚡ **Live Stream Active:** {len(filtered_live)} in-memory dissected packets available for inspection.")
+        st.caption(
+            f"⚡ **Live Stream Active:** {len(filtered_live)} in-memory dissected packets available for inspection."
+        )
 
     st.write(f"Showing **{len(df)}** packets:")
     st.dataframe(

@@ -271,7 +271,7 @@ def _encode_eddystone_url_content(url: str) -> bytes:
             f"{[s[0] for s in EDDYSTONE_URL_SCHEMES]}"
         )
 
-    rem_url = url[len(matched_prefix):]
+    rem_url = url[len(matched_prefix) :]
     encoded_body = bytearray()
     i = 0
     rem_len = len(rem_url)
@@ -337,9 +337,7 @@ def build_eddystone_url(
 
     packet = flags_ad + svc_list_ad + svc_data_ad
     if len(packet) > 31:
-        raise ValueError(
-            f"Encoded Eddystone-URL payload length {len(packet)} exceeds maximum allowable 31 bytes"
-        )
+        raise ValueError(f"Encoded Eddystone-URL payload length {len(packet)} exceeds maximum allowable 31 bytes")
     return packet
 
 
@@ -452,11 +450,7 @@ def build_gaen(
     flags_ad = build_flags(flags)
     svc_list_ad = bytes([0x03, AD_TYPE_COMPLETE_16BIT_UUIDS]) + struct.pack("<H", GAEN_SERVICE_UUID)
 
-    svc_data_content = (
-        struct.pack("<H", GAEN_SERVICE_UUID)
-        + rpi_bytes
-        + aem_bytes
-    )
+    svc_data_content = struct.pack("<H", GAEN_SERVICE_UUID) + rpi_bytes + aem_bytes
     svc_data_ad = bytes([len(svc_data_content) + 1, AD_TYPE_SERVICE_DATA_16BIT]) + svc_data_content
 
     packet = flags_ad + svc_list_ad + svc_data_ad

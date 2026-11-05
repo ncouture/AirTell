@@ -25,6 +25,7 @@ if str(SRC_DIR) not in sys.path:
 
 try:
     from sniffle.packet_decoder import DPacketMessage
+
     SNIFFLE_AVAILABLE = True
 except ImportError:
     SNIFFLE_AVAILABLE = False

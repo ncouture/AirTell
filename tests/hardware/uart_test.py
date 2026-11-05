@@ -37,10 +37,11 @@ def main():
             continue
         etime = time.time()
         if isinstance(msg, MarkerMessage) and msg.marker_data == marker_data:
-            print("success, len %s, latency %.1f ms" % (len(marker_data), (etime - stime)*1000))
+            print("success, len %s, latency %.1f ms" % (len(marker_data), (etime - stime) * 1000))
         else:
             print("FAILURE, invalid message")
         time.sleep(0.001 * random.randrange(20))
+
 
 if __name__ == "__main__":
     main()

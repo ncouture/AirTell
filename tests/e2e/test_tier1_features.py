@@ -968,7 +968,7 @@ class TestFeature18PcapDlt256Writer:
 
     def test_f18_pcap_writer_reader_roundtrip(self, tmp_path: Path) -> None:
         pcap_path = tmp_path / "roundtrip.pcap"
-        pdu = bytes([0x00, 0x06, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff])
+        pdu = bytes([0x00, 0x06, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF])
         with PcapBleWriter(pcap_path) as writer:
             writer.write_packet(ts_usec=2500000, aa=0x8E89BED6, chan=38, rssi=-55, packet=pdu)
 
@@ -1033,7 +1033,7 @@ class TestFeature19JsonCsvTelemetryAndCorrelation:
 
     def test_f19_telemetry_export_json_validity(self, tmp_path: Path) -> None:
         session = TelemetrySession(topology="Topology A")
-        pdu = bytes([0x02, 0x06, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff])
+        pdu = bytes([0x02, 0x06, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF])
         session.record_packet(dissect_advertising_pdu(pdu))
         out_json = tmp_path / "telemetry.json"
         session.export_json(out_json)
@@ -1045,7 +1045,7 @@ class TestFeature19JsonCsvTelemetryAndCorrelation:
 
     def test_f19_telemetry_export_csv_validity(self, tmp_path: Path) -> None:
         session = TelemetrySession(topology="Topology A")
-        pdu = bytes([0x02, 0x06, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff])
+        pdu = bytes([0x02, 0x06, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF])
         session.record_packet(dissect_advertising_pdu(pdu))
         out_csv = tmp_path / "report.csv"
         session.export_csv(out_csv)
@@ -1097,14 +1097,21 @@ class TestFeature20CliAndHardwareLoopbackVerification:
         pcap_file = tmp_path / "mock_sim.pcap"
         json_file = tmp_path / "mock_sim.json"
         csv_file = tmp_path / "mock_sim.csv"
-        ret = main([
-            "mock-simulate",
-            "--pcap", str(pcap_file),
-            "--json", str(json_file),
-            "--csv", str(csv_file),
-            "--duration-sec", "0.2",
-            "--interval-ms", "30",
-        ])
+        ret = main(
+            [
+                "mock-simulate",
+                "--pcap",
+                str(pcap_file),
+                "--json",
+                str(json_file),
+                "--csv",
+                str(csv_file),
+                "--duration-sec",
+                "0.2",
+                "--interval-ms",
+                "30",
+            ]
+        )
         assert ret == 0
         assert pcap_file.exists()
         assert json_file.exists()
@@ -1112,13 +1119,18 @@ class TestFeature20CliAndHardwareLoopbackVerification:
 
     def test_f20_cli_verify_hardware_mock_execution(self, tmp_path: Path) -> None:
         pcap_file = tmp_path / "hw_verify.pcap"
-        ret = main([
-            "verify-hardware",
-            "--mock",
-            "--pcap", str(pcap_file),
-            "--burst-duration-sec", "0.05",
-            "--interval-ms", "25",
-        ])
+        ret = main(
+            [
+                "verify-hardware",
+                "--mock",
+                "--pcap",
+                str(pcap_file),
+                "--burst-duration-sec",
+                "0.05",
+                "--interval-ms",
+                "25",
+            ]
+        )
         assert ret == 0
         assert pcap_file.exists()
 
