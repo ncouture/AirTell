@@ -103,23 +103,32 @@ def create_synthetic_adv_packet(pdu_type: str, mac_bytes: bytes, data: bytes = b
 
     pdu_id, cls_type = pdu_map.get(pdu_type, (0, AdvIndMessage))
 
-    body = mac_bytes + data
+    if pdu_type == "ADV_EXT_IND":
+        body = bytes([7, 1]) + mac_bytes + data
+    else:
+        body = mac_bytes + data
     header = bytes([pdu_id, len(body)])
     raw_payload = header + body
 
     class MockPacketMessage:
         def __init__(self, payload: bytes):
             self.payload = payload
-            self.body = payload[2:]
+            self.body = payload
             self.rssi = -60
             self.channel = 37
+            self.chan = 37
+            self.ts = 0.0
+            self.ts_epoch = 0.0
+            self.aa = 0x8E89BED6
+            self.phy = 0
+            self.data_dir = 0
+            self.crc_err = False
+            self.event = 0
+            self.crc_rev = 0
 
     pkt = MockPacketMessage(raw_payload)
     if cls_type is not Any:
-        try:
-            return cls_type(pkt)
-        except Exception:
-            pass
+        return cls_type(pkt)
 
     class MockDecodedMsg:
         def __init__(self, adva_bytes: bytes):

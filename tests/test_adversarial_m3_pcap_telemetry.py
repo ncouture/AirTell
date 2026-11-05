@@ -18,6 +18,7 @@ from __future__ import annotations
 import csv
 import json
 import shutil
+import struct
 import subprocess
 import threading
 import time
@@ -181,7 +182,7 @@ class TestPcapConcurrencyStress:
                         packet=pdu,
                         crc_err=(i % 25 == 0),
                     )
-                except Exception as exc:
+                except (OSError, struct.error, ValueError) as exc:
                     errors.append(exc)
 
         threads = [threading.Thread(target=worker, args=(t,)) for t in range(num_threads)]
@@ -337,7 +338,7 @@ class TestTelemetryHighConcurrencyAndDiskRace:
             while not stop_event.is_set():
                 try:
                     session.export_json(json_path)
-                except Exception as exc:
+                except (OSError, TypeError, ValueError) as exc:
                     errors.append(("json_export", exc))
                 time.sleep(0.001)
 
@@ -345,7 +346,7 @@ class TestTelemetryHighConcurrencyAndDiskRace:
             while not stop_event.is_set():
                 try:
                     session.export_devices_csv(csv_devices_path)
-                except Exception as exc:
+                except (OSError, csv.Error) as exc:
                     errors.append(("csv_devices_export", exc))
                 time.sleep(0.001)
 
@@ -353,7 +354,7 @@ class TestTelemetryHighConcurrencyAndDiskRace:
             while not stop_event.is_set():
                 try:
                     session.export_events_csv(csv_events_path)
-                except Exception as exc:
+                except (OSError, csv.Error) as exc:
                     errors.append(("csv_events_export", exc))
                 time.sleep(0.001)
 
@@ -363,28 +364,31 @@ class TestTelemetryHighConcurrencyAndDiskRace:
                     try:
                         with open(json_path, "r", encoding="utf-8") as f:
                             data = json.load(f)
-                            assert "metadata" in data
-                            assert "devices" in data
-                    except Exception as exc:
+                    except (json.JSONDecodeError, UnicodeDecodeError, OSError) as exc:
                         errors.append(("json_read_corruption", exc))
+                    else:
+                        assert "metadata" in data
+                        assert "devices" in data
                 if csv_devices_path.exists():
                     try:
                         with open(csv_devices_path, "r", encoding="utf-8") as f:
                             reader = csv.reader(f)
                             hdr = next(reader, None)
-                            if hdr:
-                                assert hdr[0] == "mac_address"
-                    except Exception as exc:
+                    except (csv.Error, OSError) as exc:
                         errors.append(("csv_devices_read_corruption", exc))
+                    else:
+                        if hdr:
+                            assert hdr[0] == "mac_address"
                 if csv_events_path.exists():
                     try:
                         with open(csv_events_path, "r", encoding="utf-8") as f:
                             reader = csv.reader(f)
                             hdr = next(reader, None)
-                            if hdr:
-                                assert hdr[0] == "burst_id"
-                    except Exception as exc:
+                    except (csv.Error, OSError) as exc:
                         errors.append(("csv_events_read_corruption", exc))
+                    else:
+                        if hdr:
+                            assert hdr[0] == "burst_id"
                 time.sleep(0.0005)
 
         threads: list[threading.Thread] = []

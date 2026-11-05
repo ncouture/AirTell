@@ -607,7 +607,12 @@ class PcapBleReader:
         self._iface_count: int = 0
         self._iface_linktype: dict[int, int] = {}
         self._iface_ts_factor: dict[int, float] = {}
-        self._read_global_header()
+        try:
+            self._read_global_header()
+        except Exception:
+            if self._owns_stream:
+                self.input.close()
+            raise
 
     def __enter__(self) -> PcapBleReader:
         return self

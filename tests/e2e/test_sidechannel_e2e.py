@@ -1535,10 +1535,10 @@ class TestTier5AdversarialStressSubprocess:
         # Runner must process or discard invalid frames without raising unexpected exceptions
         try:
             report = analyze_pcap(bytes(base_pcap))
+        except (ValueError, EOFError, struct.error):
+            pass
+        else:
             assert isinstance(report, SideChannelSuiteReport)
-        except Exception as exc:
-            # Only standard parsing / frame discard exceptions permitted
-            assert isinstance(exc, (ValueError, EOFError))
 
     def test_high_packet_volume_stress_performance(self) -> None:
         """2000 synthetic packets processed through full analysis suite in under 2.0 seconds."""

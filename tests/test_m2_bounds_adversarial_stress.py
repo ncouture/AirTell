@@ -144,10 +144,8 @@ class TestDevNameClampingAdversarialStress:
         with patch("sys.argv", ["advertiser.py", "-s", "/dev/null", "-n", name_str]):
             with patch("airtell.scripts.advertiser.SniffleHW", return_value=mock_hw):
                 with patch("sys.stderr", new_callable=io.StringIO) as mock_stderr:
-                    try:
+                    with pytest.raises(KeyboardInterrupt):
                         advertiser.main()
-                    except KeyboardInterrupt:
-                        pass
 
                     mock_hw.cmd_advertise.assert_called_once()
                     _, scan_rsp = mock_hw.cmd_advertise.call_args[0]
@@ -176,10 +174,8 @@ class TestDevNameClampingAdversarialStress:
         with patch("sys.argv", ["advertiser.py", "-s", "/dev/null", "-n", crab_name]):
             with patch("airtell.scripts.advertiser.SniffleHW", return_value=mock_hw):
                 with patch("sys.stderr", new_callable=io.StringIO) as mock_stderr:
-                    try:
+                    with pytest.raises(KeyboardInterrupt):
                         advertiser.main()
-                    except KeyboardInterrupt:
-                        pass
 
                     _, scan_rsp = mock_hw.cmd_advertise.call_args[0]
                     assert len(scan_rsp) <= 31
@@ -193,10 +189,8 @@ class TestDevNameClampingAdversarialStress:
 
         with patch("sys.argv", ["advertiser.py", "-s", "/dev/null"]):
             with patch("airtell.scripts.advertiser.SniffleHW", return_value=mock_hw):
-                try:
+                with pytest.raises(KeyboardInterrupt):
                     advertiser.main()
-                except KeyboardInterrupt:
-                    pass
 
                 _, scan_rsp = mock_hw.cmd_advertise.call_args[0]
                 assert scan_rsp[2:] == b"NCC Goat"

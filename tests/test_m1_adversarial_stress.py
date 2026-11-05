@@ -33,8 +33,8 @@ from airtell.telemetry.storage import DuckDBBackend, SQLiteBackend
 def get_process_open_fds() -> set[int]:
     """Retrieve currently open file descriptor numbers for this process."""
     try:
-        return {int(fd) for fd in os.listdir(f"/proc/{os.getpid()}/fd")}
-    except Exception:
+        return {int(fd) for fd in os.listdir(f"/proc/{os.getpid()}/fd") if fd.isdigit()}
+    except OSError:
         return set()
 
 
@@ -53,8 +53,9 @@ def test_sqlite_multithreaded_stress_fd_leak_check(tmp_path: Path) -> None:
     def test_conn_active(c: sqlite3.Connection) -> bool:
         try:
             cur = c.execute("SELECT 1")
-            return cur.fetchone()[0] == 1
-        except Exception:
+            row = cur.fetchone()
+            return row is not None and row[0] == 1
+        except sqlite3.Error:
             return False
 
     # Barrier for threads to wait after operations until backend.close() is called
@@ -96,7 +97,7 @@ def test_sqlite_multithreaded_stress_fd_leak_check(tmp_path: Path) -> None:
                 # "Cannot operate on a closed database."
                 closed_check_results[thread_idx] = "closed database" in str(e).lower()
 
-        except Exception as exc:
+        except (sqlite3.Error, threading.BrokenBarrierError, OSError) as exc:
             errors.append(exc)
 
     thread_conns.clear()
@@ -129,9 +130,9 @@ def test_sqlite_multithreaded_stress_fd_leak_check(tmp_path: Path) -> None:
     for fd in fds_after:
         try:
             link = os.readlink(f"/proc/{os.getpid()}/fd/{fd}")
-            assert str(db_file) not in link, f"Leaked file descriptor {fd} pointing to {link}"
         except OSError:
-            pass
+            continue
+        assert str(db_file) not in link, f"Leaked file descriptor {fd} pointing to {link}"
 
 
 def test_sqlite_close_from_background_thread(tmp_path: Path) -> None:
@@ -192,9 +193,9 @@ def test_sqlite_50_concurrent_threads_stress_and_fd_closure(tmp_path: Path) -> N
                     target = os.readlink(os.path.join(fd_dir, fname))
                     if str(db_file) in target:
                         open_fds.append((int(fname), target))
-                except OSError:
+                except (OSError, ValueError):
                     pass
-        except Exception:
+        except OSError:
             pass
         return open_fds
 
@@ -231,10 +232,10 @@ def test_sqlite_50_concurrent_threads_stress_and_fd_closure(tmp_path: Path) -> N
             # Attempt query on the thread's connection handle
             try:
                 conn.execute("SELECT 1")
-            except Exception as exc:
+            except sqlite3.ProgrammingError as exc:
                 post_close_errors[t_idx] = exc
 
-        except Exception as exc:
+        except (sqlite3.Error, threading.BrokenBarrierError, OSError) as exc:
             worker_errors.append((t_idx, exc))
 
     threads = [threading.Thread(target=worker, args=(i,), name=f"worker-{i}") for i in range(num_threads)]
@@ -325,7 +326,7 @@ def test_sqlite_concurrent_close_idempotency_stress(tmp_path: Path) -> None:
         try:
             closer_barrier.wait(timeout=10.0)
             backend.close()
-        except Exception as exc:
+        except (sqlite3.Error, threading.BrokenBarrierError) as exc:
             closer_errors.append(exc)
 
     closers = [threading.Thread(target=closer) for _ in range(num_closers)]
@@ -590,9 +591,4 @@ def test_sniffle_pcap_reader_random_fuzzing_no_assertion_error() -> None:
             reader.read_packet()
         except (ValueError, EOFError):
             # Expected exceptions on malformed packet input
-            pass
-        except AssertionError as exc:
-            pytest.fail(f"Trial {trial}: Reader raised AssertionError instead of clean exception: {exc}")
-        except Exception:
-            # Other exceptions may occur if deep decoders fail, but never AssertionError
             pass
