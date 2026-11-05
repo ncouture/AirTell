@@ -94,7 +94,7 @@ class TestLinkLayerControlPduBuilders:
         rand = b"\x11\x22\x33\x44\x55\x66\x77\x88"
         ediv = 0xABCD
         skdm = b"\x01\x02\x03\x04\x05\x06\x07\x08"
-        ivm = b"\xAA\xBB\xCC\xDD"
+        ivm = b"\xaa\xbb\xcc\xdd"
 
         pdu = build_ll_enc_req(rand=rand, ediv=ediv, skdm=skdm, ivm=ivm, nesn=0, sn=0)
         assert len(pdu) == 25  # 2B header + 1B opcode + 22B payload
@@ -131,7 +131,7 @@ class TestLinkLayerControlPduBuilders:
     def test_build_ll_enc_rsp_fields(self) -> None:
         """LL_ENC_RSP PDU contains 12B payload: SKDs 8B, IVs 4B."""
         skds = b"\x99\x88\x77\x66\x55\x44\x33\x22"
-        ivs = b"\xDE\xAD\xBE\xEF"
+        ivs = b"\xde\xad\xbe\xef"
 
         pdu = build_ll_enc_rsp(skds=skds, ivs=ivs, nesn=1, sn=0)
         assert len(pdu) == 15  # 2B header + 1B opcode + 12B payload
@@ -227,7 +227,7 @@ class TestLinkLayerControlPduBuilders:
         assert pdu[0] == 0x03
         assert pdu[1] == 12
         assert pdu[2] == 0x00  # Opcode 0x00
-        assert pdu[3] == 2     # WinSize
+        assert pdu[3] == 2  # WinSize
         win_offset, interval, latency, timeout, instant = struct.unpack("<HHHHH", pdu[4:14])
         assert win_offset == 4
         assert interval == 32
@@ -322,9 +322,7 @@ class TestCsrkSignedWriteBuilders:
         assert extracted_counter == counter
         extracted_mac = pdu[sig_offset + 4 : sig_offset + 12]
 
-        expected_mac = compute_csrk_mac(
-            TEST_CSRK, 0xD2, 0x002A, val, counter
-        )
+        expected_mac = compute_csrk_mac(TEST_CSRK, 0xD2, 0x002A, val, counter)
         assert extracted_mac == expected_mac
 
     def test_build_att_signed_write_corrupted_mac(self) -> None:
@@ -349,10 +347,8 @@ class TestCsrkSignedWriteBuilders:
         assert sc == 0xFFFFFFFF
 
         # Override MAC
-        override = b"\xAA\xBB\xCC\xDD\xEE\xFF\x00\x11"
-        pdu_override = build_att_signed_write(
-            TEST_CSRK, 0x0001, b"", counter=1, override_mac=override
-        )
+        override = b"\xaa\xbb\xcc\xdd\xee\xff\x00\x11"
+        pdu_override = build_att_signed_write(TEST_CSRK, 0x0001, b"", counter=1, override_mac=override)
         assert pdu_override[-8:] == override
 
         # Invalid CSRK length
@@ -420,7 +416,7 @@ class TestAdvertisingPduBuilders:
             hop=7,
         )
         assert len(pdu) == 2 + 34  # 36 bytes
-        assert pdu[0] == 0xC5      # PDU Type 5 | TxAdd | RxAdd
+        assert pdu[0] == 0xC5  # PDU Type 5 | TxAdd | RxAdd
         assert pdu[1] == 34
         assert pdu[2:8] == str_to_mac(init_a)
         assert pdu[8:14] == str_to_mac(adv_a)
@@ -557,7 +553,7 @@ class TestHighLevelPcapGenerators:
             csrk=TEST_CSRK,
             corrupt_mac_indices=[2],
             handle=0x0015,
-            value=b"\xCA\xFE",
+            value=b"\xca\xfe",
         )
         reader = PcapBleReader(io.BytesIO(pcap_data))
         packets = list(reader)
@@ -586,9 +582,7 @@ class TestHighLevelPcapGenerators:
             assert sc == expected_sc
 
             mac = pkt.body[sc_offset + 4 : sc_offset + 12]
-            expected_valid_mac = compute_csrk_mac(
-                TEST_CSRK, 0xD2, 0x0015, b"\xCA\xFE", expected_sc
-            )
+            expected_valid_mac = compute_csrk_mac(TEST_CSRK, 0xD2, 0x0015, b"\xca\xfe", expected_sc)
             if idx == 2:
                 # Corrupted MAC
                 assert mac != expected_valid_mac
@@ -713,7 +707,6 @@ class TestHighLevelPcapGenerators:
         assert pkts[0].aa == BLE_ADV_AA
         assert pkts[1].ble_chan == 1
         assert pkts[1].pdu_type == 3  # Peripheral -> Central
-
 
 
 # =============================================================================

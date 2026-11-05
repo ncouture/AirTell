@@ -33,10 +33,7 @@ def test_link_tomography_grid_precomputation():
     assert tomo.weights.shape == (4, 30, 30)
 
     # Reconstruct heatmap with disturbance on link (R1, T1)
-    link_activations = {
-        ("R1", "T1"): 10.0,
-        ("R2", "T2"): 0.0
-    }
+    link_activations = {("R1", "T1"): 10.0, ("R2", "T2"): 0.0}
     heatmap = tomo.reconstruct_heatmap(link_activations)
     assert heatmap.shape == (30, 30)
     assert heatmap.max() > 0.0

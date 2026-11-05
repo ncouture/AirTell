@@ -64,11 +64,7 @@ class DeviceTelemetrySummary:
         if rssi > self.rssi_max:
             self.rssi_max = rssi
 
-        ts = (
-            unwrapped_ts
-            if unwrapped_ts is not None
-            else getattr(frame, "timestamp_usec", 0)
-        )
+        ts = unwrapped_ts if unwrapped_ts is not None else getattr(frame, "timestamp_usec", 0)
         if self.first_seen_usec is None or ts < self.first_seen_usec:
             self.first_seen_usec = ts
         if self.last_seen_usec is None or ts > self.last_seen_usec:
@@ -152,9 +148,7 @@ class DeviceTelemetrySummary:
         last_iso = _ts_to_iso(self.last_seen_usec, base_epoch)
         duration_s = 0.0
         if self.first_seen_usec is not None and self.last_seen_usec is not None:
-            duration_s = round(
-                (self.last_seen_usec - self.first_seen_usec) / 1_000_000.0, 3
-            )
+            duration_s = round((self.last_seen_usec - self.first_seen_usec) / 1_000_000.0, 3)
 
         return {
             "mac_address": self.mac_address,
@@ -225,10 +219,7 @@ class TelemetrySession:
         with self._lock:
             self.total_packets += 1
             raw_ts = getattr(frame, "timestamp_usec", 0)
-            if (
-                self._last_raw_usec is not None
-                and raw_ts < (self._last_raw_usec - (1 << 31))
-            ):
+            if self._last_raw_usec is not None and raw_ts < (self._last_raw_usec - (1 << 31)):
                 self._rollover_count += 1
             self._last_raw_usec = raw_ts
             unwrapped_usec = raw_ts + (self._rollover_count * (1 << 32))
@@ -239,9 +230,7 @@ class TelemetrySession:
                 self.end_timestamp_usec = unwrapped_usec
 
             chan = getattr(frame, "channel", getattr(frame, "chan", 37))
-            self.channel_packet_counts[chan] = (
-                self.channel_packet_counts.get(chan, 0) + 1
-            )
+            self.channel_packet_counts[chan] = self.channel_packet_counts.get(chan, 0) + 1
 
             # Ingest primary advertiser address
             adv_a = getattr(frame, "adv_a", None)
@@ -337,13 +326,9 @@ class TelemetrySession:
         """Compile complete structured dictionary of the session state."""
         with self._lock:
             duration_s = 0.0
-            if (
-                self.start_timestamp_usec is not None
-                and self.end_timestamp_usec is not None
-            ):
+            if self.start_timestamp_usec is not None and self.end_timestamp_usec is not None:
                 duration_s = round(
-                    (self.end_timestamp_usec - self.start_timestamp_usec)
-                    / 1_000_000.0,
+                    (self.end_timestamp_usec - self.start_timestamp_usec) / 1_000_000.0,
                     3,
                 )
 
@@ -360,10 +345,7 @@ class TelemetrySession:
                 "channel_packet_counts": dict(self.channel_packet_counts),
             }
 
-            devs = [
-                dev.to_dict(self.base_epoch)
-                for dev in sorted(self.devices.values(), key=lambda d: d.mac_address)
-            ]
+            devs = [dev.to_dict(self.base_epoch) for dev in sorted(self.devices.values(), key=lambda d: d.mac_address)]
             evts = [e.to_dict() for e in self.stimulus_response_events]
 
             return {
@@ -382,9 +364,7 @@ class TelemetrySession:
         content = self.to_json(indent=indent)
         target = Path(path).resolve()
         target.parent.mkdir(parents=True, exist_ok=True)
-        tmp = target.with_name(
-            f".{target.name}.tmp.{os.getpid()}_{uuid.uuid4().hex[:8]}"
-        )
+        tmp = target.with_name(f".{target.name}.tmp.{os.getpid()}_{uuid.uuid4().hex[:8]}")
         try:
             with open(tmp, "w", encoding="utf-8") as f:
                 f.write(content)
@@ -417,9 +397,7 @@ class TelemetrySession:
         ]
         target = Path(path).resolve()
         target.parent.mkdir(parents=True, exist_ok=True)
-        tmp = target.with_name(
-            f".{target.name}.tmp.{os.getpid()}_{uuid.uuid4().hex[:8]}"
-        )
+        tmp = target.with_name(f".{target.name}.tmp.{os.getpid()}_{uuid.uuid4().hex[:8]}")
         try:
             with open(tmp, "w", newline="", encoding="utf-8") as f:
                 writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -454,9 +432,7 @@ class TelemetrySession:
         ]
         target = Path(path).resolve()
         target.parent.mkdir(parents=True, exist_ok=True)
-        tmp = target.with_name(
-            f".{target.name}.tmp.{os.getpid()}_{uuid.uuid4().hex[:8]}"
-        )
+        tmp = target.with_name(f".{target.name}.tmp.{os.getpid()}_{uuid.uuid4().hex[:8]}")
         try:
             with open(tmp, "w", newline="", encoding="utf-8") as f:
                 writer = csv.DictWriter(f, fieldnames=fieldnames)

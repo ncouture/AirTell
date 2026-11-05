@@ -21,25 +21,27 @@ class TestTsharkBleJsonParser:
     def test_parse_ek_document_line(self) -> None:
         """Parse standard Elasticsearch line-delimited doc line with BLE fields."""
         parser = TsharkBleJsonParser(default_channel=37)
-        ek_doc = json.dumps({
-            "timestamp": "1790988227568",
-            "layers": {
-                "frame": {
-                    "frame_frame_time_epoch": "1790988227.568183000",
-                    "frame_frame_time": "2026-10-03T00:43:47.568183000Z",
+        ek_doc = json.dumps(
+            {
+                "timestamp": "1790988227568",
+                "layers": {
+                    "frame": {
+                        "frame_frame_time_epoch": "1790988227.568183000",
+                        "frame_frame_time": "2026-10-03T00:43:47.568183000Z",
+                    },
+                    "btle": {
+                        "btle_btle_advertising_address": "ec:6f:03:c6:17:6e",
+                        "btle_btle_advertising_header_pdu_type": "0x00",
+                        "btcommon_btcommon_eir_ad_entry_company_id": "0x8802",
+                        "btcommon_btcommon_eir_ad_entry_data": "ec:00:0a:01:00",
+                    },
+                    "btle_rf": {
+                        "btle_rf_btle_rf_channel": "37",
+                        "btle_rf_btle_rf_signal_dbm": "-59",
+                    },
                 },
-                "btle": {
-                    "btle_btle_advertising_address": "ec:6f:03:c6:17:6e",
-                    "btle_btle_advertising_header_pdu_type": "0x00",
-                    "btcommon_btcommon_eir_ad_entry_company_id": "0x8802",
-                    "btcommon_btcommon_eir_ad_entry_data": "ec:00:0a:01:00",
-                },
-                "btle_rf": {
-                    "btle_rf_btle_rf_channel": "37",
-                    "btle_rf_btle_rf_signal_dbm": "-59",
-                },
-            },
-        })
+            }
+        )
 
         obs = parser.parse_line(ek_doc)
         assert obs is not None
@@ -359,4 +361,3 @@ class TestTsharkBleJsonParser:
         assert obs["rssi"] == -65
         assert parser._brace_depth == 0
         assert len(parser._json_buffer) == 0
-

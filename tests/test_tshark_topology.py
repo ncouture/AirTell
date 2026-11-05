@@ -47,9 +47,7 @@ class TestPortAvailabilityGuard:
 
     @patch("os.path.exists", return_value=True)
     @patch("os.open")
-    def test_port_busy_when_ebusy_raised(
-        self, mock_open: MagicMock, mock_exists: MagicMock
-    ) -> None:
+    def test_port_busy_when_ebusy_raised(self, mock_open: MagicMock, mock_exists: MagicMock) -> None:
         """Port should report busy if OS returns EBUSY on open."""
         mock_open.side_effect = OSError(errno.EBUSY, "Device or resource busy")
         with patch("airtell.extcap.topology.get_process_holding_port", return_value=None):
@@ -86,7 +84,10 @@ class TestPortAvailabilityGuard:
         with (
             patch("os.path.isdir", return_value=True),
             patch("os.listdir", side_effect=lambda p: ["9999"] if p == "/proc" else []),
-            patch("builtins.open", mock_open(read_data=b"python3\x00scripts/sniff_receiver.py\x00--port\x00/dev/ttyUSB1\x00")),
+            patch(
+                "builtins.open",
+                mock_open(read_data=b"python3\x00scripts/sniff_receiver.py\x00--port\x00/dev/ttyUSB1\x00"),
+            ),
         ):
             result = get_process_holding_port("/dev/ttyUSB1")
             assert result is not None
@@ -115,7 +116,6 @@ class TestPortAvailabilityGuard:
         ):
             result = get_process_holding_port("/dev/ttyUSB0")
             assert result is None
-
 
 
 class TestTsharkTopologyManager:
@@ -164,22 +164,26 @@ class TestTsharkTopologyManager:
         assert len(manager.runners) == 2
 
         # Simulate packet lines on runner 1 (Ch 37) and runner 2 (Ch 38)
-        pkt1 = json.dumps({
-            "timestamp": "1790000010.000",
-            "layers": {
-                "frame": {"frame_frame_time_epoch": "1790000010.000"},
-                "btle": {"btle_btle_advertising_address": "11:11:11:11:11:11"},
-                "btle_rf": {"btle_rf_btle_rf_channel": "37", "btle_rf_btle_rf_signal_dbm": "-60"},
-            },
-        })
-        pkt2 = json.dumps({
-            "timestamp": "1790000011.000",
-            "layers": {
-                "frame": {"frame_frame_time_epoch": "1790000011.000"},
-                "btle": {"btle_btle_advertising_address": "22:22:22:22:22:22"},
-                "btle_rf": {"btle_rf_btle_rf_channel": "38", "btle_rf_btle_rf_signal_dbm": "-65"},
-            },
-        })
+        pkt1 = json.dumps(
+            {
+                "timestamp": "1790000010.000",
+                "layers": {
+                    "frame": {"frame_frame_time_epoch": "1790000010.000"},
+                    "btle": {"btle_btle_advertising_address": "11:11:11:11:11:11"},
+                    "btle_rf": {"btle_rf_btle_rf_channel": "37", "btle_rf_btle_rf_signal_dbm": "-60"},
+                },
+            }
+        )
+        pkt2 = json.dumps(
+            {
+                "timestamp": "1790000011.000",
+                "layers": {
+                    "frame": {"frame_frame_time_epoch": "1790000011.000"},
+                    "btle": {"btle_btle_advertising_address": "22:22:22:22:22:22"},
+                    "btle_rf": {"btle_rf_btle_rf_channel": "38", "btle_rf_btle_rf_signal_dbm": "-65"},
+                },
+            }
+        )
 
         manager.dispatch_line(port="/dev/ttyUSB0", line=pkt1)
         manager.dispatch_line(port="/dev/ttyUSB1", line=pkt2)
@@ -213,14 +217,16 @@ class TestTsharkTopologyManager:
         assert status["topology"] == "Topology B"
         assert len(manager.runners) == 1
 
-        pkt = json.dumps({
-            "timestamp": "1790000020.000",
-            "layers": {
-                "frame": {"frame_frame_time_epoch": "1790000020.000"},
-                "btle": {"btle_btle_advertising_address": "33:33:33:33:33:33"},
-                "btle_rf": {"btle_rf_btle_rf_channel": "39", "btle_rf_btle_rf_signal_dbm": "-50"},
-            },
-        })
+        pkt = json.dumps(
+            {
+                "timestamp": "1790000020.000",
+                "layers": {
+                    "frame": {"frame_frame_time_epoch": "1790000020.000"},
+                    "btle": {"btle_btle_advertising_address": "33:33:33:33:33:33"},
+                    "btle_rf": {"btle_rf_btle_rf_channel": "39", "btle_rf_btle_rf_signal_dbm": "-50"},
+                },
+            }
+        )
         manager.dispatch_line(port="/dev/ttyUSB0", line=pkt)
 
         assert queue.size() == 1

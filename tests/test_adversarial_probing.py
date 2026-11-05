@@ -64,14 +64,12 @@ class TestScanReqAdversarial:
         ("scan_rnd", "adv_rnd", "expected_hdr0"),
         [
             (False, False, 0x03),  # TxAdd=0, RxAdd=0
-            (True, False, 0x43),   # TxAdd=1, RxAdd=0
-            (False, True, 0x83),   # TxAdd=0, RxAdd=1
-            (True, True, 0xC3),    # TxAdd=1, RxAdd=1
+            (True, False, 0x43),  # TxAdd=1, RxAdd=0
+            (False, True, 0x83),  # TxAdd=0, RxAdd=1
+            (True, True, 0xC3),  # TxAdd=1, RxAdd=1
         ],
     )
-    def test_scan_req_all_address_type_combinations(
-        self, scan_rnd: bool, adv_rnd: bool, expected_hdr0: int
-    ) -> None:
+    def test_scan_req_all_address_type_combinations(self, scan_rnd: bool, adv_rnd: bool, expected_hdr0: int) -> None:
         scan_a = "11:22:33:44:55:66"
         adv_a = "AA:BB:CC:DD:EE:FF"
 
@@ -128,10 +126,10 @@ class TestScanReqAdversarial:
     @pytest.mark.parametrize(
         "invalid_mac",
         [
-            b"\x00" * 5,          # 5 bytes
-            b"\x00" * 7,          # 7 bytes
-            b"",                  # 0 bytes
-            "11:22:33:44:55",     # 5 bytes hex string
+            b"\x00" * 5,  # 5 bytes
+            b"\x00" * 7,  # 7 bytes
+            b"",  # 0 bytes
+            "11:22:33:44:55",  # 5 bytes hex string
             "11:22:33:44:55:66:77",  # 7 bytes hex string
             "ZZ:ZZ:ZZ:ZZ:ZZ:ZZ",  # non-hex chars
             "not-a-mac",
@@ -371,7 +369,7 @@ class TestBurstCycleHelperAdversarial:
         # Edge Case 5: Dynamic addition of profiles mid-cycle
         p3 = BurstProfile(name="p3", adv_data=b"\x03")
         _ = helper.next_profile()  # returns p1, pointer is at 1 (p2)
-        helper.add_profile(p3)      # total 3 profiles
+        helper.add_profile(p3)  # total 3 profiles
         assert helper.next_profile().name == "p2"  # returns p2, pointer is at 2 (p3)
         assert helper.next_profile().name == "p3"  # returns p3, pointer wraps to 0 (p1)
         assert helper.next_profile().name == "p1"  # wraps cleanly

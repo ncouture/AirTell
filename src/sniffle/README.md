@@ -75,21 +75,21 @@ index b2cf5bf59..389d1a7c3 100644
 @@ -18,14 +18,14 @@
  # will build using each non-empty *_ARMCOMPILER cgtool.
  #
- 
+
 -XDC_INSTALL_DIR        ?= /home/username/ti/xdctools_3_62_01_15_core
 -SYSCONFIG_TOOL         ?= /home/username/ti/ccs1270/ccs/utils/sysconfig_1.21.1/sysconfig_cli.sh
 +XDC_INSTALL_DIR        ?= $(HOME)/ti/xdctools_3_62_01_15_core
 +SYSCONFIG_TOOL         ?= $(HOME)/ti/sysconfig_1.21.1/sysconfig_cli.sh
- 
+
 -CMAKE                  ?= /home/username/cmake-3.21.3/bin/cmake
 +CMAKE                  ?= cmake
  PYTHON                 ?= python3
- 
+
  TICLANG_ARMCOMPILER    ?= /home/username/ti/ccs1270/ccs/tools/compiler/ti-cgt-armllvm_3.2.2.LTS-0
 -GCC_ARMCOMPILER        ?= /home/username/arm-none-eabi-gcc/12.3.Rel1-0
 +GCC_ARMCOMPILER        ?= $(HOME)/arm_tools/arm-gnu-toolchain-14.3.rel1-x86_64-arm-none-eabi
  IAR_ARMCOMPILER        ?= /home/username/iar9.50.2
- 
+
  # Uncomment this to enable the TFM build
 ```
 
@@ -105,11 +105,11 @@ index 187cfd744..4cbf0d384 100644
 @@ -236,6 +236,7 @@ lab$1:
  @ user code has set the PRIMASK and not cleared it, or when single
  @ stepping with interrupts disabled.
- 
+
 +.type ti_sysbios_family_arm_m3_Hwi_interruptsAreDisabledButShouldNotBe, %function
  ti_sysbios_family_arm_m3_Hwi_interruptsAreDisabledButShouldNotBe:
          b   ti_sysbios_family_arm_m3_Hwi_interruptsAreDisabledButShouldNotBe
- 
+
 diff --git a/kernel/tirtos7/packages/ti/sysbios/family/arm/v8m/Hwi_asm_gcc.s b/kernel/tirtos7/packages/ti/sysbios/family/arm/v8m/Hwi_asm_gcc.s
 index 717f49c9a..1c83ed725 100644
 --- a/kernel/tirtos7/packages/ti/sysbios/family/arm/v8m/Hwi_asm_gcc.s
@@ -117,7 +117,7 @@ index 717f49c9a..1c83ed725 100644
 @@ -226,6 +226,7 @@ lab$1:
  @ user code has set the PRIMASK and not cleared it, or when single
  @ stepping with interrupts disabled.
- 
+
 +.type ti_sysbios_family_arm_v8m_Hwi_interruptsAreDisabledButShouldNotBe, %function
  ti_sysbios_family_arm_v8m_Hwi_interruptsAreDisabledButShouldNotBe:
          b   ti_sysbios_family_arm_v8m_Hwi_interruptsAreDisabledButShouldNotBe

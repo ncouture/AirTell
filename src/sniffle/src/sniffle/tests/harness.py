@@ -100,9 +100,9 @@ def create_synthetic_adv_packet(pdu_type: str, mac_bytes: bytes, data: bytes = b
         "ADV_SCAN_IND": (6, AdvScanIndMessage),
         "ADV_EXT_IND": (7, AdvExtIndMessage),
     }
-    
+
     pdu_id, cls_type = pdu_map.get(pdu_type, (0, AdvIndMessage))
-    
+
     body = mac_bytes + data
     header = bytes([pdu_id, len(body)])
     raw_payload = header + body

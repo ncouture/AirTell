@@ -107,8 +107,8 @@ Every review report must follow this structure:
 ```markdown
 # 📡 AirTell Technical Code Review
 
-**Review Model:** Gemini 3.8 Flash (Thinking = High)  
-**Target Scope:** `[Branch / Diff Scope]`  
+**Review Model:** Gemini 3.8 Flash (Thinking = High)
+**Target Scope:** `[Branch / Diff Scope]`
 **Review Verdict:** `[APPROVE | REQUEST_CHANGES | COMMENT]`
 
 ---

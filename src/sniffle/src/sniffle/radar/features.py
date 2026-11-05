@@ -77,4 +77,3 @@ class FeatureExtractor:
             pdr=pdr,
             activity_score=activity_score
         )
-

@@ -166,8 +166,8 @@ class TestMultiSenderRpaRotationClusters:
         Device B is at SC=12 (to Peripheral B).
         Device A rotates to RPA_A2 and sends SC=11 (which continues A's sequence from 10).
         """
-        csrkA = b"\xAA" * 16
-        csrkB = b"\xBB" * 16
+        csrkA = b"\xaa" * 16
+        csrkB = b"\xbb" * 16
         analyzer = CsrkCounterAnalyzer()
 
         rpa_a1 = "C0:0A:00:00:00:01"
@@ -324,9 +324,7 @@ class TestInterleavedLegitimateAndSpoofedPackets:
         analyzer.process_packet(_make_signed_write_record(csrk, 1, 10_000, 0x66666666))
 
         # Attacker transmits packet with corrupted MAC and counter=2
-        findings = analyzer.process_packet(
-            _make_signed_write_record(csrk, 2, 20_000, 0x66666666, corrupt_mac=True)
-        )
+        findings = analyzer.process_packet(_make_signed_write_record(csrk, 2, 20_000, 0x66666666, corrupt_mac=True))
 
         # Emits ONLY VERIFICATION_FAILED
         verdicts = [f.verdict for f in findings]
@@ -403,9 +401,7 @@ class TestBoundaryCounterRollover:
         analyzer.process_packet(_make_connect_ind_record(dev_f, periph_f, 0x99999999, 1_000))
 
         for sc in [0xFFFFFFFC, 0xFFFFFFFD, 0xFFFFFFFE, 0xFFFFFFFF]:
-            findings = analyzer.process_packet(
-                _make_signed_write_record(csrk, sc, 10_000 + (sc & 0xFF), 0x99999999)
-            )
+            findings = analyzer.process_packet(_make_signed_write_record(csrk, sc, 10_000 + (sc & 0xFF), 0x99999999))
             assert findings[0].verdict == Verdict.SEQUENTIAL_MONOTONIC.value
 
         report = analyzer.finalize()

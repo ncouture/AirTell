@@ -149,7 +149,6 @@ def generate_synthetic_database(
         payload = "020106" if net == "Unknown" else "020106124c000215"
         rows.append((pkt_time, dt_str, mac, rssi, net, key, chan, payload))
 
-
     conn.executemany(
         """
         INSERT INTO observations (timestamp, datetime_str, mac_address, rssi, network_type, ephemeral_key, channel, raw_payload)
@@ -183,7 +182,9 @@ def benchmark_db_module(tmp_path_factory: pytest.TempPathFactory) -> tuple[str, 
 def scalable_benchmark_factory(tmp_path: Path):
     """Factory fixture generating scalable synthetic datasets for arbitrary packet scales (10k, 100k, 1M, 5M)."""
 
-    def _create(packet_count: int = 50000, filename: str = "scalable_bench.db", num_stalkers: int = 5) -> tuple[str, dict[str, Any]]:
+    def _create(
+        packet_count: int = 50000, filename: str = "scalable_bench.db", num_stalkers: int = 5
+    ) -> tuple[str, dict[str, Any]]:
         db_file = str(tmp_path / filename)
         meta = generate_synthetic_database(db_file, packet_count=packet_count, num_stalkers=num_stalkers)
         return db_file, meta
@@ -229,7 +230,8 @@ def test_benchmark_sliding_window_heuristics(benchmark_db_module: tuple[str, dic
 
     for s_alert in sqlite_alerts:
         d_match = next(
-            d for d in duckdb_alerts
+            d
+            for d in duckdb_alerts
             if d["tracker_id"] == s_alert["tracker_id"] and d["network_type"] == s_alert["network_type"]
         )
         assert d_match["network_type"] == s_alert["network_type"]
@@ -237,7 +239,6 @@ def test_benchmark_sliding_window_heuristics(benchmark_db_module: tuple[str, dic
         assert d_match["max_rssi"] == s_alert["max_rssi"]
         assert abs(d_match["first_seen"] - s_alert["first_seen"]) < 0.001
         assert abs(d_match["last_seen"] - s_alert["last_seen"]) < 0.001
-
 
     # 4. Assert execution performance
     assert duckdb_duration < 0.5  # Sub-500ms on synthetic dataset
@@ -386,7 +387,6 @@ def test_benchmark_scalable_dataset_summary(tmp_path: Path) -> None:
     assert len(s_freqs) == len(d_freqs)
     assert s_chans == d_chans
 
-
     # Verify DuckDB sub-second total execution across all 3 analytical queries
     assert d_time < 1.0
 
@@ -423,4 +423,3 @@ def test_benchmark_scalable_large_scale_fixture(scalable_benchmark_factory: Any)
 
     sqlite_be.close()
     duckdb_be.close()
-

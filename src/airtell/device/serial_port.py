@@ -336,4 +336,3 @@ def get_sniffle_devices_status(
     if ports is None:
         ports = ["/dev/ttyUSB0", "/dev/ttyUSB1"]
     return [get_device_status(p) for p in ports]
-

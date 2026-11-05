@@ -102,19 +102,21 @@ def render_alert_feed(
             count = len(pkts)
             # Trigger live threat if high proximity or sustained persistence
             if max_rssi > -55 or count >= 5:
-                live_threats.append({
-                    "id": -idx,
-                    "datetime_str": last_dt,
-                    "timestamp": last_seen,
-                    "identifier": ident,
-                    "network_type": net_type,
-                    "observation_count": count,
-                    "first_seen": first_seen,
-                    "last_seen": last_seen,
-                    "max_rssi": max_rssi,
-                    "alert_message": f"Real-time threat detected on live stream: {max_rssi} dBm peak signal across {count} observation(s).",
-                    "is_live": True,
-                })
+                live_threats.append(
+                    {
+                        "id": -idx,
+                        "datetime_str": last_dt,
+                        "timestamp": last_seen,
+                        "identifier": ident,
+                        "network_type": net_type,
+                        "observation_count": count,
+                        "first_seen": first_seen,
+                        "last_seen": last_seen,
+                        "max_rssi": max_rssi,
+                        "alert_message": f"Real-time threat detected on live stream: {max_rssi} dBm peak signal across {count} observation(s).",
+                        "is_live": True,
+                    }
+                )
 
     alerts_list: list[dict[str, Any]] = list(live_threats)
     db_loaded = False
@@ -146,7 +148,6 @@ def render_alert_feed(
         except Exception as e:
             st.error(f"Error loading alerts from database: {e}")
 
-
     if not alerts_list:
         st.success("No active anti-stalking threats logged in the current operational session.")
         return
@@ -157,7 +158,9 @@ def render_alert_feed(
     exp_col1, exp_col2 = st.columns([3, 1])
     with exp_col1:
         if live_threats:
-            st.caption(f"⚡ **Live Threat Monitor:** {len(live_threats)} active real-time threat(s) flagged from live radio stream.")
+            st.caption(
+                f"⚡ **Live Threat Monitor:** {len(live_threats)} active real-time threat(s) flagged from live radio stream."
+            )
     with exp_col2:
         csv_data = alerts_df.to_csv(index=False)
         st.download_button(
@@ -187,14 +190,14 @@ def render_alert_feed(
                       ● {cat.label}{badge_suffix}
                     </span>
                     <span style="font-family: monospace; font-size: 0.75rem; color: #8E919A;">
-                      {row['datetime_str']}
+                      {row["datetime_str"]}
                     </span>
                   </div>
                   <div style="margin-top: 0.4rem; font-size: 0.95rem; font-weight: 600; color: #E1E2E8;">
                     {net_type} Beacon: <code style="color: #A8C7FA;">{identifier}</code>
                   </div>
                   <div style="font-size: 0.82rem; color: #C4C7D0; margin-top: 0.2rem;">
-                    Observations: <b>{row['observation_count']}</b> | Max Signal: <b>{row['max_rssi']} dBm</b>
+                    Observations: <b>{row["observation_count"]}</b> | Max Signal: <b>{row["max_rssi"]} dBm</b>
                   </div>
                   <div style="font-size: 0.8rem; color: #8E919A; margin-top: 0.3rem;">
                     {cat.description}

@@ -61,11 +61,7 @@ class TestRfc4493IndependentVectorsAndSubkeyFidelity:
         assert c2.finalize() == bytes.fromhex("070a16b46b4d4144f79bdd9dd04a287c")
 
         # Example 3: len = 40
-        m3 = bytes.fromhex(
-            "6bc1bee22e409f96e93d7e117393172a"
-            "ae2d8a571e03ac9c9eb76fac45af8e51"
-            "30c81c46a35ce411"
-        )
+        m3 = bytes.fromhex("6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411")
         c3 = cmac.CMAC(algorithms.AES(self.RFC_KEY))
         c3.update(m3)
         assert c3.finalize() == bytes.fromhex("dfa66747de9ae63030ca32611497c827")
@@ -96,11 +92,7 @@ class TestRfc4493IndependentVectorsAndSubkeyFidelity:
 
         # Map Example 3 (len = 40):
         # 1B opcode + 2B handle (LE) + 33B value + 4B counter (LE) = 40B
-        m3 = bytes.fromhex(
-            "6bc1bee22e409f96e93d7e117393172a"
-            "ae2d8a571e03ac9c9eb76fac45af8e51"
-            "30c81c46a35ce411"
-        )
+        m3 = bytes.fromhex("6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411")
         op3 = m3[0]
         h3 = struct.unpack("<H", m3[1:3])[0]
         val3 = m3[3:36]
@@ -186,7 +178,7 @@ class TestRfc4493IndependentVectorsAndSubkeyFidelity:
 
         avg_diff = sum(diffs) / len(diffs)
         assert 24.0 <= avg_diff <= 40.0  # Centered around 32 bits
-        assert min(diffs) >= 12          # Significant diffusion on every bit
+        assert min(diffs) >= 12  # Significant diffusion on every bit
 
     def test_truncation_fidelity_most_significant_64_bits(self) -> None:
         """Verifies compute_csrk_mac extracts precisely octets 0..7 of the full 16-byte CMAC."""
@@ -228,10 +220,10 @@ class TestCsrkCounterTrajectoriesStress:
     def test_replay_counter_trajectories(self) -> None:
         """Stress tests immediate replay, delayed replay, and repetitive replay bursts."""
         replay_patterns = [
-            [10, 10, 11],                 # Immediate consecutive replay
-            [1, 2, 3, 1, 4],             # Delayed replay of prior counter
-            [50, 50, 50, 50, 50],        # Stalled replay burst
-            [0, 0, 0],                   # Zero-counter replay
+            [10, 10, 11],  # Immediate consecutive replay
+            [1, 2, 3, 1, 4],  # Delayed replay of prior counter
+            [50, 50, 50, 50, 50],  # Stalled replay burst
+            [0, 0, 0],  # Zero-counter replay
         ]
         for pattern in replay_patterns:
             pcap = generate_csrk_trace(pattern, csrk=self.KEY)
@@ -248,9 +240,9 @@ class TestCsrkCounterTrajectoriesStress:
     def test_counter_rollback_and_drops(self) -> None:
         """Stress tests counter drop / decreasing sequence trajectories."""
         drop_patterns = [
-            [100, 99, 98, 97],           # Inverted decrement
-            [5000, 10],                  # Large step backwards
-            [0xFFFFFFFF, 0],             # Rollover boundary drop
+            [100, 99, 98, 97],  # Inverted decrement
+            [5000, 10],  # Large step backwards
+            [0xFFFFFFFF, 0],  # Rollover boundary drop
         ]
         for pattern in drop_patterns:
             pcap = generate_csrk_trace(pattern, csrk=self.KEY)
@@ -258,10 +250,7 @@ class TestCsrkCounterTrajectoriesStress:
             pkts = list(reader)
             reader.close()
             assert len(pkts) == len(pattern) + 1
-            extracted = [
-                struct.unpack("<I", pkts[i + 1].body[10:14])[0]
-                for i in range(len(pattern))
-            ]
+            extracted = [struct.unpack("<I", pkts[i + 1].body[10:14])[0] for i in range(len(pattern))]
             assert extracted == pattern
 
     def test_non_sequential_jumps_and_zigzags(self) -> None:
@@ -277,10 +266,7 @@ class TestCsrkCounterTrajectoriesStress:
             pkts = list(reader)
             reader.close()
             assert len(pkts) == len(pattern) + 1
-            extracted = [
-                struct.unpack("<I", pkts[i + 1].body[10:14])[0]
-                for i in range(len(pattern))
-            ]
+            extracted = [struct.unpack("<I", pkts[i + 1].body[10:14])[0] for i in range(len(pattern))]
             assert extracted == pattern
 
     def test_single_bit_mac_corruption_stress(self) -> None:
@@ -550,7 +536,10 @@ class TestEmpiricalBoundaryAndDissectionStress:
     def test_tshark_stress_dissection_all_scenarios(self, tmp_path: Path) -> None:
         """Dissects traces across all scenarios with tshark, asserting zero malformed packets."""
         traces = [
-            ("reconnection_timing", generate_bat_allowlist_trace(mode="reconnection_timing", conn_params=(24, 0, 100, 5))),
+            (
+                "reconnection_timing",
+                generate_bat_allowlist_trace(mode="reconnection_timing", conn_params=(24, 0, 100, 5)),
+            ),
             ("directed_burst", generate_bat_allowlist_trace(mode="directed")),
             ("csrk_replays", generate_csrk_trace([10, 10, 11, 12, 10], csrk=b"\x01" * 16)),
             ("csrk_drops", generate_csrk_trace([1000, 50, 10], csrk=b"\x01" * 16)),

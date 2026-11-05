@@ -91,16 +91,18 @@ class TestTopologyACli:
         ["ibeacon", "altbeacon", "eddystone-uid", "eddystone-url", "eddystone-tlm", "gaen"],
     )
     def test_topology_a_all_burst_types(self, burst_type: str) -> None:
-        rc = main([
-            "topology-a",
-            "--mock",
-            "--burst-type",
-            burst_type,
-            "--duration-sec",
-            "0.1",
-            "--interval-ms",
-            "50",
-        ])
+        rc = main(
+            [
+                "topology-a",
+                "--mock",
+                "--burst-type",
+                burst_type,
+                "--duration-sec",
+                "0.1",
+                "--interval-ms",
+                "50",
+            ]
+        )
         assert rc == 0
 
     def test_topology_a_with_artifacts_and_correlation(self, tmp_path: Path) -> None:
@@ -108,25 +110,27 @@ class TestTopologyACli:
         json_file = tmp_path / "topo_a.json"
         csv_file = tmp_path / "topo_a.csv"
 
-        rc = main([
-            "topology-a",
-            "--mock",
-            "--burst-type",
-            "ibeacon",
-            "--chan",
-            "37",
-            "--duration-sec",
-            "0.2",
-            "--interval-ms",
-            "50",
-            "--pcap",
-            str(pcap_file),
-            "--json",
-            str(json_file),
-            "--csv",
-            str(csv_file),
-            "--correlate",
-        ])
+        rc = main(
+            [
+                "topology-a",
+                "--mock",
+                "--burst-type",
+                "ibeacon",
+                "--chan",
+                "37",
+                "--duration-sec",
+                "0.2",
+                "--interval-ms",
+                "50",
+                "--pcap",
+                str(pcap_file),
+                "--json",
+                str(json_file),
+                "--csv",
+                str(csv_file),
+                "--correlate",
+            ]
+        )
         assert rc == 0
 
         # 1. Verify PCAP
@@ -171,22 +175,24 @@ class TestTopologyBCli:
         json_file = tmp_path / "topo_b.json"
         csv_file = tmp_path / "topo_b.csv"
 
-        rc = main([
-            "topology-b",
-            "--mock",
-            "--chan1",
-            "37",
-            "--chan2",
-            "38",
-            "--duration-sec",
-            "0.25",
-            "--pcap",
-            str(pcap_file),
-            "--json",
-            str(json_file),
-            "--csv",
-            str(csv_file),
-        ])
+        rc = main(
+            [
+                "topology-b",
+                "--mock",
+                "--chan1",
+                "37",
+                "--chan2",
+                "38",
+                "--duration-sec",
+                "0.25",
+                "--pcap",
+                str(pcap_file),
+                "--json",
+                str(json_file),
+                "--csv",
+                str(csv_file),
+            ]
+        )
         assert rc == 0
 
         # Verify PCAP output
@@ -228,18 +234,20 @@ class TestTopologyBCli:
     def test_topology_b_mock_pcap_tshark_clean_dissection(self, tmp_path: Path) -> None:
         """Verify topology-b --mock PCAP parses cleanly without [Malformed Packet: BT Common]."""
         pcap_file = tmp_path / "topo_b_clean.pcap"
-        rc = main([
-            "topology-b",
-            "--mock",
-            "--chan1",
-            "37",
-            "--chan2",
-            "38",
-            "--duration-sec",
-            "0.2",
-            "--pcap",
-            str(pcap_file),
-        ])
+        rc = main(
+            [
+                "topology-b",
+                "--mock",
+                "--chan1",
+                "37",
+                "--chan2",
+                "38",
+                "--duration-sec",
+                "0.2",
+                "--pcap",
+                str(pcap_file),
+            ]
+        )
         assert rc == 0
         assert pcap_file.exists()
 
@@ -275,19 +283,21 @@ class TestMockSimulateCli:
         json_path = tmp_path / "simulation.json"
         csv_path = tmp_path / "simulation.csv"
 
-        rc = main([
-            "mock-simulate",
-            "--duration-sec",
-            "0.5",
-            "--interval-ms",
-            "50",
-            "--pcap",
-            str(pcap_path),
-            "--json",
-            str(json_path),
-            "--csv",
-            str(csv_path),
-        ])
+        rc = main(
+            [
+                "mock-simulate",
+                "--duration-sec",
+                "0.5",
+                "--interval-ms",
+                "50",
+                "--pcap",
+                str(pcap_path),
+                "--json",
+                str(json_path),
+                "--csv",
+                str(csv_path),
+            ]
+        )
         assert rc == 0
 
         # Verify PCAP
@@ -352,22 +362,24 @@ class TestVerifyHardwareCli:
         json_path = tmp_path / "verify_hw.json"
         csv_path = tmp_path / "verify_hw.csv"
 
-        rc = main([
-            "verify-hardware",
-            "--mock",
-            "--chan",
-            "37",
-            "--burst-duration-sec",
-            "0.2",
-            "--interval-ms",
-            "50",
-            "--pcap",
-            str(pcap_path),
-            "--json",
-            str(json_path),
-            "--csv",
-            str(csv_path),
-        ])
+        rc = main(
+            [
+                "verify-hardware",
+                "--mock",
+                "--chan",
+                "37",
+                "--burst-duration-sec",
+                "0.2",
+                "--interval-ms",
+                "50",
+                "--pcap",
+                str(pcap_path),
+                "--json",
+                str(json_path),
+                "--csv",
+                str(csv_path),
+            ]
+        )
         assert rc == 0
 
         # Verify PCAP
@@ -439,35 +451,49 @@ class TestCliErrorHandling:
 
     def test_topology_a_inaccessible_serial_port(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Assert topology-a with inaccessible ports exits with code 1 without unhandled traceback."""
-        rc = main([
-            "topology-a",
-            "--dev1", "/dev/ttyNONEXISTENT1",
-            "--dev2", "/dev/ttyNONEXISTENT2",
-            "--duration-sec", "0.1",
-        ])
+        rc = main(
+            [
+                "topology-a",
+                "--dev1",
+                "/dev/ttyNONEXISTENT1",
+                "--dev2",
+                "/dev/ttyNONEXISTENT2",
+                "--duration-sec",
+                "0.1",
+            ]
+        )
         assert rc == 1
         captured = capsys.readouterr()
         assert "ERROR:" in captured.err
 
     def test_topology_b_inaccessible_serial_port(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Assert topology-b with inaccessible ports exits with code 1 without unhandled traceback."""
-        rc = main([
-            "topology-b",
-            "--dev1", "/dev/ttyNONEXISTENT1",
-            "--dev2", "/dev/ttyNONEXISTENT2",
-            "--duration-sec", "0.1",
-        ])
+        rc = main(
+            [
+                "topology-b",
+                "--dev1",
+                "/dev/ttyNONEXISTENT1",
+                "--dev2",
+                "/dev/ttyNONEXISTENT2",
+                "--duration-sec",
+                "0.1",
+            ]
+        )
         assert rc == 1
         captured = capsys.readouterr()
         assert "ERROR:" in captured.err
 
     def test_verify_hardware_inaccessible_serial_port(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Assert verify-hardware with inaccessible ports exits with code 1 without unhandled traceback."""
-        rc = main([
-            "verify-hardware",
-            "--dev1", "/dev/ttyNONEXISTENT1",
-            "--dev2", "/dev/ttyNONEXISTENT2",
-        ])
+        rc = main(
+            [
+                "verify-hardware",
+                "--dev1",
+                "/dev/ttyNONEXISTENT1",
+                "--dev2",
+                "/dev/ttyNONEXISTENT2",
+            ]
+        )
         assert rc == 1
         captured = capsys.readouterr()
         assert "ERROR:" in captured.err
@@ -520,18 +546,20 @@ class TestCliLifecycleAndSigint:
 
         monkeypatch.setattr(TopologyAOrchestrator, "read_packet", mock_read)
 
-        rc = main([
-            "topology-a",
-            "--mock",
-            "--duration-sec",
-            "10.0",
-            "--interval-ms",
-            "50",
-            "--pcap",
-            str(pcap_path),
-            "--json",
-            str(json_path),
-        ])
+        rc = main(
+            [
+                "topology-a",
+                "--mock",
+                "--duration-sec",
+                "10.0",
+                "--interval-ms",
+                "50",
+                "--pcap",
+                str(pcap_path),
+                "--json",
+                str(json_path),
+            ]
+        )
         assert rc == 0
 
         # Assert PCAP was cleanly flushed and closed with valid header
@@ -562,16 +590,18 @@ class TestCliLifecycleAndSigint:
 
         monkeypatch.setattr(TopologyBOrchestrator, "read_merged_packet", mock_read)
 
-        rc = main([
-            "topology-b",
-            "--mock",
-            "--duration-sec",
-            "10.0",
-            "--pcap",
-            str(pcap_path),
-            "--json",
-            str(json_path),
-        ])
+        rc = main(
+            [
+                "topology-b",
+                "--mock",
+                "--duration-sec",
+                "10.0",
+                "--pcap",
+                str(pcap_path),
+                "--json",
+                str(json_path),
+            ]
+        )
         assert rc == 0
 
         # Assert PCAP was cleanly flushed and closed with valid header

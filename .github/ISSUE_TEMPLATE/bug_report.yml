@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to report an issue! 
+        Thanks for taking the time to report an issue!
         *For general RF questions, hardware showcase, or research discussions, please visit [AirTell Discussions](https://github.com/ncouture/AirTell/discussions).*
   - type: dropdown
     id: environment

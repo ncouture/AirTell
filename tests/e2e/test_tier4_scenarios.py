@@ -134,7 +134,7 @@ class TestPoPETsScenario1RetailTrackingStimulation:
                 duration_usec=50_000,
             )
             altbeacon_payload = build_altbeacon(
-                beacon_id=b"\xAA" * 20,
+                beacon_id=b"\xaa" * 20,
                 ref_rssi=-24,
             )
             altbeacon_pdu = _make_adv_pdu(stim2_mac, altbeacon_payload)
@@ -158,18 +158,20 @@ class TestPoPETsScenario1RetailTrackingStimulation:
 
                 match = correlator.process_frame(frame)
                 if match:
-                    session.record_event({
-                        "burst_id": match.stimulus_id,
-                        "stimulus_mac": match.stimulus_adv_a,
-                        "stimulus_type": "iBeacon" if match.stimulus_id == "1" else "AltBeacon",
-                        "response_pdu_type": match.response_pdu_type,
-                        "responder_mac": match.responder_mac,
-                        "responder_mac_type": match.responder_type,
-                        "delta_ms": match.latency_ms,
-                        "chan": match.channel,
-                        "rssi": match.rssi,
-                        "timestamp_usec": match.response_timestamp_usec,
-                    })
+                    session.record_event(
+                        {
+                            "burst_id": match.stimulus_id,
+                            "stimulus_mac": match.stimulus_adv_a,
+                            "stimulus_type": "iBeacon" if match.stimulus_id == "1" else "AltBeacon",
+                            "response_pdu_type": match.response_pdu_type,
+                            "responder_mac": match.responder_mac,
+                            "responder_mac_type": match.responder_type,
+                            "delta_ms": match.latency_ms,
+                            "chan": match.channel,
+                            "rssi": match.rssi,
+                            "timestamp_usec": match.response_timestamp_usec,
+                        }
+                    )
 
         # 3. Export Telemetry
         session.export_json(telemetry_json)
@@ -257,9 +259,7 @@ class TestPoPETsScenario2ContactTracingPrivacyEvaluation:
                 gaen_payload = build_gaen(rpi=rpi, aem=aem)
                 gaen_pdu = _make_adv_pdu(rpa, gaen_payload)
 
-                frame_gaen = dissect_advertising_pdu(
-                    gaen_pdu, chan=37, rssi=-65, ts_usec=burst_time + 1000
-                )
+                frame_gaen = dissect_advertising_pdu(gaen_pdu, chan=37, rssi=-65, ts_usec=burst_time + 1000)
                 assert frame_gaen.beacon_type == "GAEN"
                 assert isinstance(frame_gaen.beacon_info, GaenInfo)
                 assert frame_gaen.beacon_info.rpi == rpi
@@ -270,9 +270,7 @@ class TestPoPETsScenario2ContactTracingPrivacyEvaluation:
                 # Auditor / Observer stimulates target, eliciting a SCAN_REQ from listener
                 listener_mac = bytes.fromhex("223344556677")
                 scan_req_pdu = build_scan_req(scan_a=listener_mac, adv_a=rpa)
-                frame_req = dissect_advertising_pdu(
-                    scan_req_pdu, chan=37, rssi=-60, ts_usec=burst_time + 8_500
-                )
+                frame_req = dissect_advertising_pdu(scan_req_pdu, chan=37, rssi=-60, ts_usec=burst_time + 8_500)
                 writer.write_dissected_frame(frame_req)
                 session.record_packet(frame_req)
 
@@ -282,18 +280,20 @@ class TestPoPETsScenario2ContactTracingPrivacyEvaluation:
                 assert match.responder_mac == "22:33:44:55:66:77"
                 assert match.latency_ms == pytest.approx(8.5, abs=0.01)
 
-                session.record_event({
-                    "burst_id": match.stimulus_id,
-                    "stimulus_mac": match.stimulus_adv_a,
-                    "stimulus_type": "GAEN",
-                    "response_pdu_type": match.response_pdu_type,
-                    "responder_mac": match.responder_mac,
-                    "responder_mac_type": match.responder_type,
-                    "delta_ms": match.latency_ms,
-                    "chan": match.channel,
-                    "rssi": match.rssi,
-                    "timestamp_usec": match.response_timestamp_usec,
-                })
+                session.record_event(
+                    {
+                        "burst_id": match.stimulus_id,
+                        "stimulus_mac": match.stimulus_adv_a,
+                        "stimulus_type": "GAEN",
+                        "response_pdu_type": match.response_pdu_type,
+                        "responder_mac": match.responder_mac,
+                        "responder_mac_type": match.responder_type,
+                        "delta_ms": match.latency_ms,
+                        "chan": match.channel,
+                        "rssi": match.rssi,
+                        "timestamp_usec": match.response_timestamp_usec,
+                    }
+                )
 
         # Verify correlator tracked all 3 bursts across RPA rotations
         summary = correlator.get_summary()
@@ -351,9 +351,7 @@ class TestPoPETsScenario3ActiveElicitationDeviceNames:
             bus.deliver_raw_packet(scan_req_pdu, chan=37, rssi=-50)
 
             # 3. Target responds with SCAN_RSP containing Complete Local Name
-            scan_rsp_pdu = build_scan_rsp(
-                adv_a=target_mac, local_name="PoPETs-Tracker-X9"
-            )
+            scan_rsp_pdu = build_scan_rsp(adv_a=target_mac, local_name="PoPETs-Tracker-X9")
             bus.deliver_raw_packet(scan_rsp_pdu, chan=37, rssi=-63)
 
             # Sniffer captures all 3 packets
@@ -363,9 +361,7 @@ class TestPoPETsScenario3ActiveElicitationDeviceNames:
         # Dissect and export to PCAP and Telemetry
         with PcapBleWriter(pcap_path) as writer:
             for pkt in raw_pkts:
-                frame = dissect_advertising_pdu(
-                    pkt.body, chan=pkt.chan, rssi=pkt.rssi, ts_usec=pkt.ts
-                )
+                frame = dissect_advertising_pdu(pkt.body, chan=pkt.chan, rssi=pkt.rssi, ts_usec=pkt.ts)
                 writer.write_dissected_frame(frame)
                 session.record_packet(frame)
 
@@ -509,7 +505,7 @@ class TestPoPETsScenario5FullPipelineHardwareLoopbackSimulation:
 
         # 3. Eddystone-UID
         mac3 = generate_palindromic_mac("nrpa", seed=b"seed_mac_3")
-        pay3 = build_eddystone_uid(b"\xAA" * 10, b"\xBB" * 6)
+        pay3 = build_eddystone_uid(b"\xaa" * 10, b"\xbb" * 6)
         beacon_pdus.append((_make_adv_pdu(mac3, pay3), mac3, "Eddystone-UID", 39))
 
         # 4. Eddystone-URL
@@ -524,7 +520,7 @@ class TestPoPETsScenario5FullPipelineHardwareLoopbackSimulation:
 
         # 6. GAEN (Exposure Notification)
         mac6 = generate_palindromic_mac("rpa", seed=b"seed_mac_6")
-        pay6 = build_gaen(b"\xEE" * 16, b"\x01\x02\x03\x04")
+        pay6 = build_gaen(b"\xee" * 16, b"\x01\x02\x03\x04")
         beacon_pdus.append((_make_adv_pdu(mac6, pay6), mac6, "GAEN", 39))
 
         with TopologyBOrchestrator.create_mock(bus=bus, chan1=37, chan2=38) as topo_b:
@@ -574,18 +570,20 @@ class TestPoPETsScenario5FullPipelineHardwareLoopbackSimulation:
 
                 match = correlator.process_frame(frame)
                 if match:
-                    session.record_event({
-                        "burst_id": match.stimulus_id,
-                        "stimulus_mac": match.stimulus_adv_a,
-                        "stimulus_type": "iBeacon",
-                        "response_pdu_type": match.response_pdu_type,
-                        "responder_mac": match.responder_mac,
-                        "responder_mac_type": match.responder_type,
-                        "delta_ms": match.latency_ms,
-                        "chan": match.channel,
-                        "rssi": match.rssi,
-                        "timestamp_usec": match.response_timestamp_usec,
-                    })
+                    session.record_event(
+                        {
+                            "burst_id": match.stimulus_id,
+                            "stimulus_mac": match.stimulus_adv_a,
+                            "stimulus_type": "iBeacon",
+                            "response_pdu_type": match.response_pdu_type,
+                            "responder_mac": match.responder_mac,
+                            "responder_mac_type": match.responder_type,
+                            "delta_ms": match.latency_ms,
+                            "chan": match.channel,
+                            "rssi": match.rssi,
+                            "timestamp_usec": match.response_timestamp_usec,
+                        }
+                    )
 
         session.export_json(telemetry_json)
         session.export_devices_csv(devices_csv)

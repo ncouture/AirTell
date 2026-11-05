@@ -7,7 +7,7 @@ This document contains the community onboarding announcement and maintainer tips
 ## Maintainer Operational Tips
 
 ```markdown
-<!-- 
+<!--
   =============================================================================
   AIRTELL DISCUSSIONS // MAINTAINER INTEL & OPERATIONAL PROTOCOL 📡⚡
   =============================================================================
@@ -18,20 +18,20 @@ This document contains the community onboarding announcement and maintainer tips
   Signal to the communities where the real practitioners lurk:
   - Post across Infosec Mastodon/Bluesky, X, DEF CON Discord / Wireless Village channels,
     r/ReverseEngineering, r/SDR, and wireless privacy research circles (e.g., IEEE S&P, USENIX Sec).
-  - Angle the callout: "We're treating BLE privacy as an RF side-channel and timing problem, 
+  - Angle the callout: "We're treating BLE privacy as an RF side-channel and timing problem,
     not just MAC-rotation theatre. Come dissect the digital body language with us in Discussions."
 
   🔗 TIP 2: SEGREGATE YOUR CHANNELS (Declutter Link-Layer Issues vs. Strategic Talk)
-  - Keep GitHub Issues laser-focused: reproducible firmware race conditions, CC2652 UART buffer 
+  - Keep GitHub Issues laser-focused: reproducible firmware race conditions, CC2652 UART buffer
     underruns, parser panic traces, and concrete CI/testbed bugs.
-  - Route open-ended signal analysis, adversarial methodology, rig showcases, and privacy threat 
+  - Route open-ended signal analysis, adversarial methodology, rig showcases, and privacy threat
     models straight to Discussions.
   - Handled via `.github/ISSUE_TEMPLATE/config.yml` (blank issues disabled, contact links pointing here).
 
   ➡️ TIP 3: TRIAGE & CONVERT (Keep the Wire Clean)
-  - Don't close inquisitive issues with cold rejections. Re-route them: convert issues labeled 
+  - Don't close inquisitive issues with cold rejections. Re-route them: convert issues labeled
     "question", "research", or "hardware-rig" into Discussions with one click.
-  - Celebrate the hackers who build custom mock harnesses, solder custom SMA leads to CC2652 dongles, 
+  - Celebrate the hackers who build custom mock harnesses, solder custom SMA leads to CC2652 dongles,
     or surface novel RF timing correlations. Pin their threads as Category Highlights.
 -->
 ```
@@ -53,11 +53,11 @@ This document contains the community onboarding announcement and maintainer tips
 
 Modern mobile operating systems tell the world that Bluetooth Low Energy privacy is solved by randomized MAC addresses. **Anyone who has looked at raw IQ samples or microsecond-level link-layer timing knows better.**
 
-Across advertising intervals, deterministic scan request bursts, and proprietary payload anomalies, every device broadcasts an unmistakable **digital body language**. 
+Across advertising intervals, deterministic scan request bursts, and proprietary payload anomalies, every device broadcasts an unmistakable **digital body language**.
 
 **AirTell** was built to banish the single-dongle blind spots of legacy sniffers. By orchestrating synchronized multi-dongle CC2652 radios (via [NCC Group's Sniffle](https://github.com/nccgroup/Sniffle)) and in-memory virtual radio buses, we pair active stimuli with passive observers to expose, measure, and audit BLE tracking surfaces and protocol-level privacy leakage.
 
-GitHub Issues are reserved for kernel panics, firmware lockups, UART framing desyncs, and code bugs. 
+GitHub Issues are reserved for kernel panics, firmware lockups, UART framing desyncs, and code bugs.
 
 **Discussions is where the craft lives.** This is our open RF salon—where exploit developers, RF hackers, reverse engineers, red-team operators, blue-team architects, and privacy governance leaders converge to push the boundary of link-layer analysis.
 
@@ -97,7 +97,7 @@ GitHub Issues are reserved for kernel panics, firmware lockups, UART framing des
 ## 📜 Rules of the Airwaves
 
 1. **Craft Above Ego:** Whether you just bought your first $10 CC2652 stick or you’ve spent 30 years doing SIGINT and defensive signal analysis, respect the curiosity. We teach, we mentor, we build.
-2. **Responsible Disclosure & Ethics:** We operate under legitimate defensive, research, and authorized red-teaming mandates. Do not post operational target data, unsanitized surveillance captures containing sensitive personal identifiers, or actionable zero-day exploit payloads targeting critical infrastructure. 
+2. **Responsible Disclosure & Ethics:** We operate under legitimate defensive, research, and authorized red-teaming mandates. Do not post operational target data, unsanitized surveillance captures containing sensitive personal identifiers, or actionable zero-day exploit payloads targeting critical infrastructure.
 3. **Signal over Noise:** Back your theories with captures, logic, logs, or physics. Speculation is welcome, but reproducible telemetry is gold.
 
 ---

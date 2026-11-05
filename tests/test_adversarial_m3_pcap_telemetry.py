@@ -184,9 +184,7 @@ class TestPcapConcurrencyStress:
                 except Exception as exc:
                     errors.append(exc)
 
-        threads = [
-            threading.Thread(target=worker, args=(t,)) for t in range(num_threads)
-        ]
+        threads = [threading.Thread(target=worker, args=(t,)) for t in range(num_threads)]
         for t in threads:
             t.start()
         for t in threads:
@@ -260,16 +258,16 @@ class TestPcapMicrosecondRollover:
         base_epoch = 1775000000.0
 
         t_elapsed_seconds = [
-            0,      # 0m
-            600,    # 10m
-            1200,   # 20m
-            2400,   # 40m
-            3600,   # 60m (1 hr)
-            4200,   # 70m
-            4800,   # 80m (after 1st 32-bit rollover at 4294.96s)
-            6000,   # 100m
-            7200,   # 120m (2 hr)
-            9000,   # 150m (after 2nd 32-bit rollover at 8589.93s)
+            0,  # 0m
+            600,  # 10m
+            1200,  # 20m
+            2400,  # 40m
+            3600,  # 60m (1 hr)
+            4200,  # 70m
+            4800,  # 80m (after 1st 32-bit rollover at 4294.96s)
+            6000,  # 100m
+            7200,  # 120m (2 hr)
+            9000,  # 150m (after 2nd 32-bit rollover at 8589.93s)
             10800,  # 180m (3 hr)
         ]
 
@@ -323,14 +321,16 @@ class TestTelemetryHighConcurrencyAndDiskRace:
                 )
                 session.record_packet(f)
                 if seq % 10 == 0:
-                    session.record_event({
-                        "burst_id": seq,
-                        "stimulus_mac": "C0:11:22:22:11:C0",
-                        "stimulus_type": "iBeacon",
-                        "response_pdu_type": "SCAN_REQ",
-                        "responder_mac": f"40:AA:BB:CC:DD:{(tid % 16):02X}",
-                        "delta_ms": 15.0 + (seq % 50),
-                    })
+                    session.record_event(
+                        {
+                            "burst_id": seq,
+                            "stimulus_mac": "C0:11:22:22:11:C0",
+                            "stimulus_type": "iBeacon",
+                            "response_pdu_type": "SCAN_REQ",
+                            "responder_mac": f"40:AA:BB:CC:DD:{(tid % 16):02X}",
+                            "delta_ms": 15.0 + (seq % 50),
+                        }
+                    )
                 time.sleep(0.0001)
 
         def json_export_worker() -> None:
@@ -431,9 +431,7 @@ class TestTelemetryMultiHourRollover:
 
         # At 1200s (20 min):
         iso_1200 = _ts_to_iso(1_200_000_000, base_epoch)
-        assert iso_1200.startswith("2026-"), (
-            f"_ts_to_iso converted 20-minute timestamp to 1970! Produced: {iso_1200}"
-        )
+        assert iso_1200.startswith("2026-"), f"_ts_to_iso converted 20-minute timestamp to 1970! Produced: {iso_1200}"
 
     def test_telemetry_session_statistics_across_32bit_rollover(self) -> None:
         """CHALLENGE: TelemetrySession must maintain valid session statistics across 32-bit rollover.
@@ -449,23 +447,44 @@ class TestTelemetryMultiHourRollover:
 
         # Packet 1 at 10 minutes (600s)
         f1 = DissectedBleFrame(
-            pdu_type="ADV_IND", pdu_type_id=0, tx_add=0, rx_add=0, length=10,
-            adv_a="11:22:33:44:55:66", channel=37, rssi=-60, timestamp_usec=600_000_000,
+            pdu_type="ADV_IND",
+            pdu_type_id=0,
+            tx_add=0,
+            rx_add=0,
+            length=10,
+            adv_a="11:22:33:44:55:66",
+            channel=37,
+            rssi=-60,
+            timestamp_usec=600_000_000,
         )
         session.record_packet(f1)
 
         # Packet 2 at 70 minutes (4200s)
         f2 = DissectedBleFrame(
-            pdu_type="ADV_IND", pdu_type_id=0, tx_add=0, rx_add=0, length=10,
-            adv_a="11:22:33:44:55:66", channel=37, rssi=-60, timestamp_usec=4_200_000_000,
+            pdu_type="ADV_IND",
+            pdu_type_id=0,
+            tx_add=0,
+            rx_add=0,
+            length=10,
+            adv_a="11:22:33:44:55:66",
+            channel=37,
+            rssi=-60,
+            timestamp_usec=4_200_000_000,
         )
         session.record_packet(f2)
 
         # Packet 3 at 80 minutes (4800s): wraps past 2^32 (4_294_967_296) -> 505_032_704 usec
         raw_hw_ts_80m = 4_800_000_000 % (1 << 32)  # 505_032_704
         f3 = DissectedBleFrame(
-            pdu_type="ADV_IND", pdu_type_id=0, tx_add=0, rx_add=0, length=10,
-            adv_a="11:22:33:44:55:66", channel=37, rssi=-60, timestamp_usec=raw_hw_ts_80m,
+            pdu_type="ADV_IND",
+            pdu_type_id=0,
+            tx_add=0,
+            rx_add=0,
+            length=10,
+            adv_a="11:22:33:44:55:66",
+            channel=37,
+            rssi=-60,
+            timestamp_usec=raw_hw_ts_80m,
         )
         session.record_packet(f3)
 

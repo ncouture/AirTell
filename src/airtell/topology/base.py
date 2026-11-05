@@ -53,4 +53,3 @@ class BaseTopology(abc.ABC):
         exc_tb: types.TracebackType | None,
     ) -> None:
         self.stop()
-

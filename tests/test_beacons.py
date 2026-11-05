@@ -40,6 +40,7 @@ try:
     )
     from sniffle.advdata.decoder import decode_adv_data
     from sniffle.advdata.msd_apple import AppleMSDRecord
+
     SNIFFLE_AVAILABLE = True
 except ImportError:
     SNIFFLE_AVAILABLE = False
@@ -48,6 +49,7 @@ except ImportError:
 # ============================================================================
 # Section 1: Ground-Truth Test Vectors (explorer_survey_2/handoff.md §4.1)
 # ============================================================================
+
 
 class TestGroundTruthVectors:
     """Verifies that each beacon builder matches the ground-truth vectors bit-for-bit."""
@@ -159,6 +161,7 @@ class TestGroundTruthVectors:
 # Section 2: Reference Sniffle AD Decoder Interoperability
 # ============================================================================
 
+
 @pytest.mark.skipif(not SNIFFLE_AVAILABLE, reason="Reference Sniffle library not installed")
 class TestSniffleDecoderInteroperability:
     """Verifies that generated frames parse correctly with reference Sniffle decoder."""
@@ -228,6 +231,7 @@ class TestSniffleDecoderInteroperability:
 # Section 3: Boundary Conditions & Parameter Variations
 # ============================================================================
 
+
 class TestBeaconBoundariesAndVariations:
     """Tests extreme parameters, type conversions, and boundary checks."""
 
@@ -260,8 +264,8 @@ class TestBeaconBoundariesAndVariations:
 
         p_max = build_ibeacon(UUID(int=1), major=0xFFFF, minor=0xFFFF, tx_power=127)
         assert len(p_max) == 30
-        assert p_max[25:27] == b"\xFF\xFF"
-        assert p_max[27:29] == b"\xFF\xFF"
+        assert p_max[25:27] == b"\xff\xff"
+        assert p_max[27:29] == b"\xff\xff"
         assert p_max[29] == 0x7F  # 127 in int8
 
     def test_ibeacon_invalid_inputs(self):
@@ -437,6 +441,7 @@ class TestBeaconBoundariesAndVariations:
 # ============================================================================
 # Section 4: BurstCycleHelper & Timing Models
 # ============================================================================
+
 
 class TestBurstCycleHelper:
     """Tests stimulation engine timing calculations and profile rotation."""

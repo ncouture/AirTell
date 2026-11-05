@@ -130,12 +130,17 @@ def test_cli_deanonymize_json_and_csv_export(tmp_path: Path, capsys: pytest.Capt
     json_path = tmp_path / "artifacts" / "deanonymize_report.json"
     csv_path = tmp_path / "artifacts" / "trajectories.csv"
 
-    rc = main([
-        "deanonymize",
-        "--pcap", str(pcap_path),
-        "--json", str(json_path),
-        "--csv", str(csv_path),
-    ])
+    rc = main(
+        [
+            "deanonymize",
+            "--pcap",
+            str(pcap_path),
+            "--json",
+            str(json_path),
+            "--csv",
+            str(csv_path),
+        ]
+    )
     assert rc == 0
     capsys.readouterr()
 
@@ -247,15 +252,22 @@ def test_cli_deanonymize_invalid_thresholds(capsys: pytest.CaptureFixture[str]) 
 
 def test_cli_rogue_inject_mock_burst_parameters(capsys: pytest.CaptureFixture[str]) -> None:
     """Verify rogue beacon injection with custom burst count, interval-ms, jitter-ms, and channels."""
-    rc = main([
-        "rogue-inject",
-        "--mock",
-        "--count", "8",
-        "--interval-ms", "150",
-        "--jitter-ms", "10",
-        "--channels", "37,38,39",
-        "--network", "Google Find Hub",
-    ])
+    rc = main(
+        [
+            "rogue-inject",
+            "--mock",
+            "--count",
+            "8",
+            "--interval-ms",
+            "150",
+            "--jitter-ms",
+            "10",
+            "--channels",
+            "37,38,39",
+            "--network",
+            "Google Find Hub",
+        ]
+    )
     assert rc == 0
     captured = capsys.readouterr()
     assert "Injected 8 rogue beacon packets for network 'Google Find Hub'." in captured.out
@@ -272,14 +284,20 @@ def test_cli_rogue_inject_mock_burst_parameters(capsys: pytest.CaptureFixture[st
 )
 def test_cli_rogue_inject_network_profiles(network_type: str, capsys: pytest.CaptureFixture[str]) -> None:
     """Verify synthetic frame generation across all four supported tracking networks."""
-    rc = main([
-        "rogue-inject",
-        "--mock",
-        "--count", "2",
-        "--network", network_type,
-        "--key", "0102030405060708090a0b0c0d0e0f10",
-        "--mac", "40:AA:BB:CC:DD:EE",
-    ])
+    rc = main(
+        [
+            "rogue-inject",
+            "--mock",
+            "--count",
+            "2",
+            "--network",
+            network_type,
+            "--key",
+            "0102030405060708090a0b0c0d0e0f10",
+            "--mac",
+            "40:AA:BB:CC:DD:EE",
+        ]
+    )
     assert rc == 0
     captured = capsys.readouterr()
     assert f"Injected 2 rogue beacon packets for network '{network_type}'." in captured.out
@@ -317,13 +335,19 @@ def test_cli_rogue_inject_invalid_parameters(capsys: pytest.CaptureFixture[str])
 
 def test_cli_rogue_inject_live_mock_serial(capsys: pytest.CaptureFixture[str]) -> None:
     """Verify live injection pipeline execution against mock serial interface."""
-    rc = main([
-        "rogue-inject",
-        "--port", "mock://sniffle",
-        "--count", "2",
-        "--interval-ms", "25",
-        "--network", "Apple Find My",
-    ])
+    rc = main(
+        [
+            "rogue-inject",
+            "--port",
+            "mock://sniffle",
+            "--count",
+            "2",
+            "--interval-ms",
+            "25",
+            "--network",
+            "Apple Find My",
+        ]
+    )
     assert rc == 0
     captured = capsys.readouterr()
     assert "Injected 2 rogue beacon packets for network 'Apple Find My'." in captured.out
@@ -331,17 +355,23 @@ def test_cli_rogue_inject_live_mock_serial(capsys: pytest.CaptureFixture[str]) -
 
 def test_cli_rogue_inject_failed_port_connection(capsys: pytest.CaptureFixture[str]) -> None:
     """Verify clean exit code 1 and error reporting when serial port cannot be opened."""
-    rc = main([
-        "rogue-inject",
-        "--port", "/dev/nonexistent_dongle_9999",
-        "--count", "1",
-    ])
+    rc = main(
+        [
+            "rogue-inject",
+            "--port",
+            "/dev/nonexistent_dongle_9999",
+            "--count",
+            "1",
+        ]
+    )
     assert rc == 1
     captured = capsys.readouterr()
     assert "ERROR: Failed to connect to Sniffle dongle on /dev/nonexistent_dongle_9999" in captured.err
 
 
-def test_cli_rogue_inject_controller_hardware_dispatch(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_rogue_inject_controller_hardware_dispatch(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     """Verify SniffleDeviceController methods are called with exact advertising parameters."""
     mock_controller = MagicMock()
     mock_controller.open = MagicMock()
@@ -352,16 +382,25 @@ def test_cli_rogue_inject_controller_hardware_dispatch(monkeypatch: pytest.Monke
     # Monkeypatch SniffleDeviceController class in cli module
     monkeypatch.setattr("airtell.cli.SniffleDeviceController", lambda port, mock: mock_controller)
 
-    rc = main([
-        "rogue-inject",
-        "--port", "/dev/ttyUSB0",
-        "--count", "3",
-        "--interval-ms", "50",
-        "--jitter-ms", "5",
-        "--channels", "37,38,39",
-        "--mac", "40:11:22:33:44:55",
-        "--network", "Tile",
-    ])
+    rc = main(
+        [
+            "rogue-inject",
+            "--port",
+            "/dev/ttyUSB0",
+            "--count",
+            "3",
+            "--interval-ms",
+            "50",
+            "--jitter-ms",
+            "5",
+            "--channels",
+            "37,38,39",
+            "--mac",
+            "40:11:22:33:44:55",
+            "--network",
+            "Tile",
+        ]
+    )
 
     assert rc == 0
     captured = capsys.readouterr()
@@ -397,7 +436,9 @@ def test_cli_deanonymize_scan_req_pdu_ignored(tmp_path: Path, capsys: pytest.Cap
     assert "No static identifier leakage detected." in captured.out
 
 
-def test_cli_deanonymize_empty_adv_payload_no_false_positive(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_deanonymize_empty_adv_payload_no_false_positive(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     """Verify that frames with 0-byte advertising payloads do not trigger false network detection on MAC bytes."""
     pcap_path = tmp_path / "empty_payload.pcap"
     writer = PcapBleWriter(output=pcap_path)
@@ -476,7 +517,9 @@ def test_cli_deanonymize_padded_frame_length(tmp_path: Path, capsys: pytest.Capt
     assert "Packets Processed: 1 total packets (1 valid advertising frames)" in captured.out
 
 
-def test_cli_rogue_inject_public_mac_dispatch(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_rogue_inject_public_mac_dispatch(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     """Verify that specifying a Public MAC causes SniffleDeviceController to configure is_random=False."""
     mock_controller = MagicMock()
     mock_controller.open = MagicMock()
@@ -486,20 +529,28 @@ def test_cli_rogue_inject_public_mac_dispatch(monkeypatch: pytest.MonkeyPatch, c
 
     monkeypatch.setattr("airtell.cli.SniffleDeviceController", lambda port, mock: mock_controller)
 
-    rc = main([
-        "rogue-inject",
-        "--port", "/dev/ttyUSB0",
-        "--count", "1",
-        "--mac", "AA:BB:CC:11:22:33",  # Public MAC
-        "--network", "Apple Find My",
-    ])
+    rc = main(
+        [
+            "rogue-inject",
+            "--port",
+            "/dev/ttyUSB0",
+            "--count",
+            "1",
+            "--mac",
+            "AA:BB:CC:11:22:33",  # Public MAC
+            "--network",
+            "Apple Find My",
+        ]
+    )
 
     assert rc == 0
     capsys.readouterr()
     mock_controller.set_mac_address.assert_called_with("AA:BB:CC:11:22:33", is_random=False)
 
 
-def test_cli_rogue_inject_timing_jitter_honored(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_rogue_inject_timing_jitter_honored(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     """Verify that inter-packet sleep deltas reflect jitter parameter."""
     mock_controller = MagicMock()
     monkeypatch.setattr("airtell.cli.SniffleDeviceController", lambda port, mock: mock_controller)
@@ -507,14 +558,21 @@ def test_cli_rogue_inject_timing_jitter_honored(monkeypatch: pytest.MonkeyPatch,
     sleep_calls: list[float] = []
     monkeypatch.setattr("time.sleep", lambda s: sleep_calls.append(s))
 
-    rc = main([
-        "rogue-inject",
-        "--port", "/dev/ttyUSB0",
-        "--count", "4",
-        "--interval-ms", "100",
-        "--jitter-ms", "30",
-        "--network", "Apple Find My",
-    ])
+    rc = main(
+        [
+            "rogue-inject",
+            "--port",
+            "/dev/ttyUSB0",
+            "--count",
+            "4",
+            "--interval-ms",
+            "100",
+            "--jitter-ms",
+            "30",
+            "--network",
+            "Apple Find My",
+        ]
+    )
 
     assert rc == 0
     capsys.readouterr()

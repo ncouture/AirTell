@@ -145,7 +145,7 @@ def test_mahalanobis_dynamic_topology_change():
 def test_process_matrix_snapshot():
     engine = RobustAnomalyEngine(history_len=20)
     keys = ["R1_AA:BB:CC:11:22:33_37", "R2_AA:BB:CC:11:22:33_38"]
-    
+
     for _ in range(10):
         engine.process_matrix_snapshot(keys, np.array([-60.0, -60.0]), np.array([1.0, 1.0]))
 

@@ -239,17 +239,13 @@ def dissect_ll_control_pdu(ctr_data: bytes) -> LlControlFrame | None:
             if len(payload_bytes) >= 2:
                 payload = {
                     "reject_opcode": payload_bytes[0],
-                    "reject_opcode_name": LL_CONTROL_OPCODE_NAMES.get(
-                        payload_bytes[0], f"0x{payload_bytes[0]:02X}"
-                    ),
+                    "reject_opcode_name": LL_CONTROL_OPCODE_NAMES.get(payload_bytes[0], f"0x{payload_bytes[0]:02X}"),
                     "error_code": payload_bytes[1],
                 }
             elif len(payload_bytes) == 1:
                 payload = {
                     "reject_opcode": payload_bytes[0],
-                    "reject_opcode_name": LL_CONTROL_OPCODE_NAMES.get(
-                        payload_bytes[0], f"0x{payload_bytes[0]:02X}"
-                    ),
+                    "reject_opcode_name": LL_CONTROL_OPCODE_NAMES.get(payload_bytes[0], f"0x{payload_bytes[0]:02X}"),
                     "error": "truncated_reject_ext_ind",
                 }
             else:
@@ -264,9 +260,7 @@ def dissect_ll_control_pdu(ctr_data: bytes) -> LlControlFrame | None:
         elif opcode == OPCODE_LL_CONNECTION_UPDATE_IND:
             if len(payload_bytes) >= 11:
                 win_size = payload_bytes[0]
-                win_offset, interval, latency, timeout, instant = struct.unpack(
-                    "<HHHHH", payload_bytes[1:11]
-                )
+                win_offset, interval, latency, timeout, instant = struct.unpack("<HHHHH", payload_bytes[1:11])
                 payload = {
                     "win_size": win_size,
                     "win_offset": win_offset,
@@ -371,9 +365,7 @@ def dissect_att_pdu(
     return None, None
 
 
-def dissect_data_channel_pdu(
-    raw_bytes: bytes, csrk: bytes | None = None
-) -> DissectedDataPdu | None:
+def dissect_data_channel_pdu(raw_bytes: bytes, csrk: bytes | None = None) -> DissectedDataPdu | None:
     """Dissect Link-Layer Data Channel PDU (Bluetooth Core Spec Vol 6 Part B §2.4).
 
     Args:

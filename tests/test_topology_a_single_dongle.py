@@ -301,19 +301,21 @@ class TestCliTopologyASingleDongle:
         json_file = tmp_path / "cli_single.json"
         csv_file = tmp_path / "cli_single.csv"
 
-        rc = main([
-            "topology-a",
-            "--mock",
-            "--single-dongle",
-            "--duration-sec",
-            "0.5",
-            "--pcap",
-            str(pcap_file),
-            "--json",
-            str(json_file),
-            "--csv",
-            str(csv_file),
-        ])
+        rc = main(
+            [
+                "topology-a",
+                "--mock",
+                "--single-dongle",
+                "--duration-sec",
+                "0.5",
+                "--pcap",
+                str(pcap_file),
+                "--json",
+                str(json_file),
+                "--csv",
+                str(csv_file),
+            ]
+        )
         assert rc == 0
         assert pcap_file.exists()
         assert json_file.exists()
@@ -324,17 +326,22 @@ class TestCliTopologyASingleDongle:
 
     def test_cli_topology_a_dev2_without_dev1_mock(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         """CLI with --dev2 provided without --dev1 triggers single-dongle passive mode."""
-        rc = main([
-            "topology-a",
-            "--mock",
-            "--dev2",
-            "/dev/ttyUSB1",
-            "--duration-sec",
-            "0.3",
-        ])
+        rc = main(
+            [
+                "topology-a",
+                "--mock",
+                "--dev2",
+                "/dev/ttyUSB1",
+                "--duration-sec",
+                "0.3",
+            ]
+        )
         assert rc == 0
         captured = capsys.readouterr()
-        assert "Single-dongle passive capture mode active" in captured.out or "Single-dongle passive capture mode active" in captured.err
+        assert (
+            "Single-dongle passive capture mode active" in captured.out
+            or "Single-dongle passive capture mode active" in captured.err
+        )
 
     def test_cli_topology_a_single_dongle_hardware_autodiscovery(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """CLI with auto-discovery finding 1 port operates in single-dongle passive mode."""
@@ -353,11 +360,13 @@ class TestCliTopologyASingleDongle:
             lambda port, mock: mock_controller,
         )
 
-        rc = main([
-            "topology-a",
-            "--duration-sec",
-            "0.2",
-        ])
+        rc = main(
+            [
+                "topology-a",
+                "--duration-sec",
+                "0.2",
+            ]
+        )
         assert rc == 0
 
     def test_cli_single_dongle_flag_with_two_ports_available(
@@ -382,17 +391,22 @@ class TestCliTopologyASingleDongle:
 
         monkeypatch.setattr("airtell.topology.topology_a.SniffleDeviceController", mock_init)
 
-        rc = main([
-            "topology-a",
-            "--single-dongle",
-            "--duration-sec",
-            "0.1",
-        ])
+        rc = main(
+            [
+                "topology-a",
+                "--single-dongle",
+                "--duration-sec",
+                "0.1",
+            ]
+        )
         assert rc == 0
         assert len(created_controllers) == 1
         assert created_controllers[0] == "/dev/ttyUSB0"
         captured = capsys.readouterr()
-        assert "Single-dongle passive capture mode active" in captured.out or "Single-dongle passive capture mode active" in captured.err
+        assert (
+            "Single-dongle passive capture mode active" in captured.out
+            or "Single-dongle passive capture mode active" in captured.err
+        )
 
     def test_cli_dev1_with_two_ports_available_operates_dual_device(
         self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
@@ -416,13 +430,15 @@ class TestCliTopologyASingleDongle:
 
         monkeypatch.setattr("airtell.topology.topology_a.SniffleDeviceController", mock_init)
 
-        rc = main([
-            "topology-a",
-            "--dev1",
-            "/dev/ttyUSB0",
-            "--duration-sec",
-            "0.1",
-        ])
+        rc = main(
+            [
+                "topology-a",
+                "--dev1",
+                "/dev/ttyUSB0",
+                "--duration-sec",
+                "0.1",
+            ]
+        )
         assert rc == 0
         assert len(created_controllers) == 2
         assert created_controllers == ["/dev/ttyUSB0", "/dev/ttyUSB1"]
@@ -431,27 +447,34 @@ class TestCliTopologyASingleDongle:
 
     def test_cli_identical_dev1_and_dev2_rejected(self, capsys: pytest.CaptureFixture[str]) -> None:
         """CLI with identical --dev1 and --dev2 returns error code 1 and error message."""
-        rc = main([
-            "topology-a",
-            "--dev1",
-            "/dev/ttyUSB0",
-            "--dev2",
-            "/dev/ttyUSB0",
-        ])
+        rc = main(
+            [
+                "topology-a",
+                "--dev1",
+                "/dev/ttyUSB0",
+                "--dev2",
+                "/dev/ttyUSB0",
+            ]
+        )
         assert rc == 1
         captured = capsys.readouterr()
         assert "Conflicting port allocation" in captured.err or "Conflicting port allocation" in captured.out
 
     def test_cli_single_dongle_with_correlate_prints_notice(self, capsys: pytest.CaptureFixture[str]) -> None:
         """CLI with --single-dongle and --correlate logs that correlation is disabled."""
-        rc = main([
-            "topology-a",
-            "--mock",
-            "--single-dongle",
-            "--correlate",
-            "--duration-sec",
-            "0.1",
-        ])
+        rc = main(
+            [
+                "topology-a",
+                "--mock",
+                "--single-dongle",
+                "--correlate",
+                "--duration-sec",
+                "0.1",
+            ]
+        )
         assert rc == 0
         captured = capsys.readouterr()
-        assert "Correlation disabled in single-dongle passive mode" in captured.out or "Correlation disabled in single-dongle passive mode" in captured.err
+        assert (
+            "Correlation disabled in single-dongle passive mode" in captured.out
+            or "Correlation disabled in single-dongle passive mode" in captured.err
+        )

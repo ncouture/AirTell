@@ -305,9 +305,7 @@ class DissectedBleFrame:
         self.channel = val
 
 
-def classify_address(
-    mac: bytes | str, is_random: bool | None = None
-) -> BleAddressType:
+def classify_address(mac: bytes | str, is_random: bool | None = None) -> BleAddressType:
     """Classify a 6-byte MAC address into Public, Random Static, NRPA, or RPA.
 
     Logic:
@@ -374,18 +372,12 @@ def parse_ad_structures(
             )
             t = ad_data[i + 1] if (i + 1 < len(ad_data)) else 0
             v = ad_data[i + 2 :] if (i + 2 <= len(ad_data)) else b""
-            records.append(
-                AdStructure(length=length, ad_type=t, value=v, is_malformed=True)
-            )
+            records.append(AdStructure(length=length, ad_type=t, value=v, is_malformed=True))
             break
 
         ad_type = ad_data[i + 1]
         value = ad_data[i + 2 : i + 1 + length]
-        records.append(
-            AdStructure(
-                length=length, ad_type=ad_type, value=value, is_malformed=False
-            )
-        )
+        records.append(AdStructure(length=length, ad_type=ad_type, value=value, is_malformed=False))
         i += 1 + length
 
     return records, is_malformed, err_msg
@@ -411,18 +403,12 @@ def decode_apple_msd(
     beacon_info: BeaconInfo | None = None
 
     # Check for Apple iBeacon: sub-type 0x02, length 0x15 (21 bytes)
-    if (
-        len(mfg_data) >= 23
-        and mfg_data[0] == 0x02
-        and mfg_data[1] == 0x15
-    ):
+    if len(mfg_data) >= 23 and mfg_data[0] == 0x02 and mfg_data[1] == 0x15:
         try:
             uuid = UUID(bytes=mfg_data[2:18])
             major, minor = struct.unpack(">HH", mfg_data[18:22])  # Big-Endian per Apple spec!
             tx_power = struct.unpack("<b", mfg_data[22:23])[0]
-            beacon_info = IBeaconInfo(
-                uuid=uuid, major=major, minor=minor, tx_power=tx_power
-            )
+            beacon_info = IBeaconInfo(uuid=uuid, major=major, minor=minor, tx_power=tx_power)
         except Exception:
             pass
 
@@ -474,9 +460,7 @@ def decode_apple_msd(
     return messages, beacon_info
 
 
-def decode_altbeacon_msd(
-    company_id: int, mfg_data: bytes
-) -> AltBeaconInfo | None:
+def decode_altbeacon_msd(company_id: int, mfg_data: bytes) -> AltBeaconInfo | None:
     """Parses Radius Networks AltBeacon specification payload."""
     if len(mfg_data) >= 24:
         beacon_code = struct.unpack(">H", mfg_data[:2])[0]
@@ -546,9 +530,7 @@ def decode_eddystone_service_data(data: bytes) -> BeaconInfo | None:
         tx_power = struct.unpack("<b", data[1:2])[0]
         namespace = data[2:12]  # 10 bytes
         instance = data[12:18]  # 6 bytes
-        return EddystoneUidInfo(
-            namespace=namespace, instance=instance, tx_power=tx_power
-        )
+        return EddystoneUidInfo(namespace=namespace, instance=instance, tx_power=tx_power)
 
     # Eddystone-URL (0x10)
     if frame_type == 0x10 and len(data) >= 3:
@@ -609,14 +591,10 @@ def decode_gaen_service_data(data: bytes) -> GaenInfo | None:
     return None
 
 
-def dissect_advertising_pdu(
-    raw_pdu: bytes, chan: int = 37, rssi: int = -60, ts_usec: int = 0
-) -> DissectedBleFrame:
+def dissect_advertising_pdu(raw_pdu: bytes, chan: int = 37, rssi: int = -60, ts_usec: int = 0) -> DissectedBleFrame:
     """Top-level entrypoint parsing a raw BLE Link Layer advertising channel PDU."""
     if len(raw_pdu) < 2:
-        raise ValueError(
-            f"Raw PDU must be at least 2 bytes (header + length), got {len(raw_pdu)}"
-        )
+        raise ValueError(f"Raw PDU must be at least 2 bytes (header + length), got {len(raw_pdu)}")
 
     hdr0 = raw_pdu[0]
     hdr1 = raw_pdu[1]
@@ -633,10 +611,7 @@ def dissect_advertising_pdu(
 
     if len(raw_pdu) < 2 + length:
         is_malformed = True
-        error_details = (
-            f"Truncated PDU payload: header specifies {length} bytes, "
-            f"only {len(raw_pdu) - 2} bytes present"
-        )
+        error_details = f"Truncated PDU payload: header specifies {length} bytes, only {len(raw_pdu) - 2} bytes present"
         raw_payload = raw_pdu[2:]
     else:
         raw_payload = raw_pdu[2 : 2 + length]
@@ -719,9 +694,7 @@ def dissect_advertising_pdu(
                     aa_conn = struct.unpack("<I", lldata[0:4])[0]
                     crc_init = lldata[4] | (lldata[5] << 8) | (lldata[6] << 16)
                     win_size = lldata[7]
-                    win_offset, interval, latency, timeout = struct.unpack(
-                        "<HHHH", lldata[8:16]
-                    )
+                    win_offset, interval, latency, timeout = struct.unpack("<HHHH", lldata[8:16])
                     chm = lldata[16:21]
                     hop = lldata[21] & 0x1F
                     sca = (lldata[21] >> 5) & 0x07
@@ -783,9 +756,7 @@ def dissect_advertising_pdu(
         ad_structures = parsed_ads
         if ad_malformed:
             is_malformed = True
-            error_details = (
-                (error_details + "; " + ad_err) if error_details else ad_err
-            )
+            error_details = (error_details + "; " + ad_err) if error_details else ad_err
 
         for ad in ad_structures:
             t = ad.ad_type

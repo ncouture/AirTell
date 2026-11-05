@@ -75,6 +75,6 @@ def test_pwa_html_injection_helper() -> None:
 
     html = get_pwa_meta_tags()
     assert 'rel="manifest"' in html
-    assert 'manifest.json' in html
-    assert 'serviceWorker.register' in html
-    assert '#0F141C' in html
+    assert "manifest.json" in html
+    assert "serviceWorker.register" in html
+    assert "#0F141C" in html
