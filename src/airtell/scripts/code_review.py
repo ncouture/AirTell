@@ -6,8 +6,9 @@ testbed changes using Gemini 4 Argon with high thinking, grounded in the
 AirTell Research NotebookLM Workspace (https://notebook.google.com/notebook/26cd837a-4d66-4ab1-94c7-128105718ad6)
 and the domain-specific review skill (.github/skills/code-review/SKILL.md).
 
-Enforces codeowner authorization policy: PRs must be authored by a repository
-codeowner, and the review must be explicitly requested by a repository codeowner.
+Enforces codeowner authorization policy: automated code reviews must be
+requested or triggered by a repository codeowner. Codeowners can trigger reviews
+on PRs authored by any contributor.
 """
 
 from __future__ import annotations
@@ -100,7 +101,7 @@ def verify_codeowner_authorization(
     requester: str | None,
     pr_author: str | None,
 ) -> tuple[bool, str]:
-    """Verify that both the PR author and review requester are repository codeowners."""
+    """Verify that the review requester is a designated repository codeowner."""
     codeowners_path = project_root / ".github" / "CODEOWNERS"
     if not codeowners_path.exists():
         codeowners_path = project_root / "CODEOWNERS"
@@ -120,19 +121,19 @@ def verify_codeowner_authorization(
     if not clean_requester:
         return False, "Authorization error: Review requester must be specified when enforcing codeowner execution."
 
-    if clean_author not in codeowners:
-        return False, (
-            f"PR author '@{pr_author.strip().lstrip('@').strip()}' is not a repository codeowner. "
-            f"AirTell code review execution is restricted to PRs created by codeowners: {sorted(codeowners)}"
-        )
-
     if clean_requester not in codeowners:
         return False, (
             f"Review requester '@{requester.strip().lstrip('@').strip()}' is not a repository codeowner. "
             f"AirTell code review execution must be requested by a codeowner: {sorted(codeowners)}"
         )
 
-    return True, f"Authorized: PR author '@{clean_author}' and requester '@{clean_requester}' are verified codeowners."
+    if clean_author in codeowners:
+        return True, f"Authorized: PR author '@{clean_author}' and requester '@{clean_requester}' are verified codeowners."
+
+    return (
+        True,
+        f"Authorized: Review requested by codeowner '@{clean_requester}' for PR author '@{clean_author}'.",
+    )
 
 
 def load_notebooklm_context(context_path: Path | None) -> str:
@@ -321,7 +322,7 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--enforce-codeowners",
         action="store_true",
-        help="Enforce that PR author and requester are designated repository codeowners",
+        help="Enforce that the review is requested or triggered by a designated repository codeowner",
     )
     parser.add_argument(
         "--verify-codeowners-only",
@@ -367,8 +368,7 @@ def main() -> None:
                 comment = (
                     f"> ⚠️ **AirTell Code Review Policy Violation**\n"
                     f">\n"
-                    f"> Automated code reviews are strictly enforced for PRs created by repository codeowners "
-                    f"and must be requested by a codeowner.\n"
+                    f"> Automated code reviews must be requested or triggered by a repository codeowner.\n"
                     f">\n"
                     f"> **Detail**: {reason}"
                 )

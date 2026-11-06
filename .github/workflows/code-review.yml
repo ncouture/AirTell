@@ -41,19 +41,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'pull_request' && (
-        github.event.action == 'review_requested' ||
-        github.event.action == 'ready_for_review' ||
-        (github.event.action == 'labeled' && contains(fromJson('["code-review", "ai-review", "review"]'), github.event.label.name))
-      )) ||
-      (github.event_name == 'issue_comment' &&
-        github.event.issue.pull_request != null && (
-          contains(github.event.comment.body, '/gemini-code-review') ||
-          contains(github.event.comment.body, '@gemini review') ||
-          contains(github.event.comment.body, '/code-review') ||
-          contains(github.event.comment.body, '/ai-review') ||
-          contains(github.event.comment.body, '/review')
+      (github.actor == 'ncouture' || github.triggering_actor == 'ncouture') && (
+        github.event_name == 'workflow_dispatch' ||
+        (github.event_name == 'pull_request' && (
+          github.event.action == 'review_requested' ||
+          github.event.action == 'ready_for_review' ||
+          (github.event.action == 'labeled' && contains(fromJson('["code-review", "ai-review", "review"]'), github.event.label.name))
+        )) ||
+        (github.event_name == 'issue_comment' &&
+          github.event.issue.pull_request != null && (
+            contains(github.event.comment.body, '/gemini-code-review') ||
+            contains(github.event.comment.body, '@gemini review') ||
+            contains(github.event.comment.body, '/code-review') ||
+            contains(github.event.comment.body, '/ai-review') ||
+            contains(github.event.comment.body, '/review')
+          )
         )
       )
     permissions:
