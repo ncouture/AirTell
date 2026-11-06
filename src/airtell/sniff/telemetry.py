@@ -10,12 +10,112 @@ import csv
 import datetime
 import json
 import os
+import sys
 import threading
 import time
 import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
+
+_spectramesh_module = None
+_OUIDB_INSTANCES: dict[str, Any] = {}
+_OUIDB_LOCK = threading.Lock()
+
+
+def _get_ouidb_module() -> Any:
+    global _spectramesh_module
+    if _spectramesh_module is not None:
+        return _spectramesh_module
+    repo_root = Path(__file__).resolve().parents[3]
+    pkg_dir = repo_root / "spectramesh_ouidb"
+    if pkg_dir.is_dir() and str(pkg_dir) not in sys.path:
+        sys.path.insert(0, str(pkg_dir))
+    if "spectramesh_ouidb" in sys.modules:
+        mod = sys.modules["spectramesh_ouidb"]
+        if "site-packages" in str(getattr(mod, "__file__", "")):
+            del sys.modules["spectramesh_ouidb"]
+    import spectramesh_ouidb
+
+    _spectramesh_module = spectramesh_ouidb
+    return _spectramesh_module
+
+
+def get_default_ouidb_path() -> Path:
+    """Return default path to spectramesh_ouidb/oui_db.bin."""
+    if "OUIDB_PATH" in os.environ:
+        p = Path(os.environ["OUIDB_PATH"])
+        if p.exists():
+            return p.resolve()
+    repo_root = Path(__file__).resolve().parents[3]
+    candidate = repo_root / "spectramesh_ouidb" / "oui_db.bin"
+    if candidate.exists():
+        return candidate.resolve()
+    cwd_candidate = Path("spectramesh_ouidb/oui_db.bin").resolve()
+    if cwd_candidate.exists():
+        return cwd_candidate
+    return candidate
+
+
+def get_ouidb(path: str | Path | None = None) -> Any:
+    """Get or initialize a thread-safe cached OuiDb instance."""
+    resolved_path = Path(path).resolve() if path else get_default_ouidb_path()
+    path_key = str(resolved_path)
+    with _OUIDB_LOCK:
+        if path_key not in _OUIDB_INSTANCES:
+            mod = _get_ouidb_module()
+            _OUIDB_INSTANCES[path_key] = mod.OuiDb(str(resolved_path))
+        return _OUIDB_INSTANCES[path_key]
+
+
+def canonical_mac(mac: str) -> str:
+    """Convert BLE wire little-endian MAC string to canonical IEEE 802 big-endian MAC string."""
+    parts = mac.strip().split(":")
+    if len(parts) == 6:
+        return ":".join(reversed(parts)).upper()
+    return mac.strip().upper()
+
+
+def resolve_device_oui(
+    mac: str,
+    ouidb_path: str | Path | None = None,
+    ouidb: Any = None,
+) -> Any:
+    """Resolve device OUI using Spectra Mesh OUI database.
+
+    Evaluates canonical big-endian MAC (":".join(reversed(mac.split(":"))))
+    before fallback to wire direct order.
+
+    Returns:
+        LookupResult object with .vendor, .device_type, .prefix_str, .prefix_bits,
+        .table, .is_surveillance, or None if no match.
+    """
+    if not mac or not str(mac).strip():
+        return None
+    db = ouidb if ouidb is not None else get_ouidb(ouidb_path)
+    norm_mac = str(mac).strip().upper()
+    canon_mac = canonical_mac(norm_mac)
+
+    try:
+        res_canon = db.lookup(canon_mac)
+    except (ValueError, TypeError):
+        res_canon = None
+
+    try:
+        res_wire = db.lookup(norm_mac)
+    except (ValueError, TypeError):
+        res_wire = None
+
+    if (
+        res_wire
+        and getattr(res_wire, "is_surveillance", False)
+        and not (res_canon and getattr(res_canon, "is_surveillance", False))
+    ):
+        return res_wire
+
+    if res_canon is not None:
+        return res_canon
+    return res_wire
 
 
 def _ts_to_iso(usec: int | None, base_epoch: float) -> str:
@@ -47,12 +147,29 @@ class DeviceTelemetrySummary:
     service_uuids: set[str] = field(default_factory=set)
     beacon_types: set[str] = field(default_factory=set)
     channels_seen: set[int] = field(default_factory=set)
+    vendor: str | None = None
+    device_class: str | None = None
+    oui_prefix: str | None = None
+    is_surveillance: bool = False
 
     @property
     def rssi_avg(self) -> float:
         if self.packet_count == 0:
             return 0.0
         return round(self.rssi_sum / self.packet_count, 2)
+
+    def enrich_from_ouidb(
+        self,
+        ouidb_path: str | Path | None = None,
+        ouidb: Any = None,
+    ) -> None:
+        """Enrich this device summary with Spectra Mesh OUI classification."""
+        res = resolve_device_oui(self.mac_address, ouidb_path=ouidb_path, ouidb=ouidb)
+        if res is not None:
+            self.vendor = res.vendor
+            self.device_class = res.device_type
+            self.oui_prefix = res.prefix_str
+            self.is_surveillance = bool(getattr(res, "is_surveillance", False))
 
     def update(self, frame: Any, unwrapped_ts: int | None = None) -> None:
         """Update telemetry stats with an incoming dissected frame."""
@@ -141,6 +258,10 @@ class DeviceTelemetrySummary:
             "service_uuids": sorted(list(self.service_uuids)),
             "beacon_types": sorted(list(self.beacon_types)),
             "channels_seen": sorted(list(self.channels_seen)),
+            "vendor": self.vendor,
+            "device_class": self.device_class,
+            "oui_prefix": self.oui_prefix,
+            "is_surveillance": self.is_surveillance,
         }
 
     def to_csv_row(self, base_epoch: float = 0.0) -> dict[str, Any]:
@@ -164,6 +285,10 @@ class DeviceTelemetrySummary:
             "service_uuids": ";".join(sorted(list(self.service_uuids))),
             "beacon_types": ";".join(sorted(list(self.beacon_types))),
             "channels": ";".join(str(c) for c in sorted(list(self.channels_seen))),
+            "vendor": self.vendor or "",
+            "device_class": self.device_class or "",
+            "oui_prefix": self.oui_prefix or "",
+            "is_surveillance": self.is_surveillance,
         }
 
 
@@ -198,10 +323,14 @@ class TelemetrySession:
         session_id: str | None = None,
         base_epoch: float | None = None,
         topology: str | None = None,
+        ouidb_path: str | Path | None = None,
+        auto_enrich: bool = False,
     ) -> None:
         self.session_id: str = session_id or str(uuid.uuid4())
         self.base_epoch: float = base_epoch if base_epoch is not None else time.time()
         self.topology: str | None = topology
+        self.ouidb_path: str | Path | None = ouidb_path
+        self.auto_enrich: bool = auto_enrich
         self._lock: threading.RLock = threading.RLock()
 
         self._rollover_count: int = 0
@@ -213,6 +342,18 @@ class TelemetrySession:
         self.channel_packet_counts: dict[int, int] = {37: 0, 38: 0, 39: 0}
         self.devices: dict[str, DeviceTelemetrySummary] = {}
         self.stimulus_response_events: list[StimulusResponseEvent] = []
+
+    def enrich_devices(
+        self,
+        ouidb_path: str | Path | None = None,
+        ouidb: Any = None,
+    ) -> None:
+        """Enrich all tracked devices with Spectra Mesh OUI database classification."""
+        target_path = ouidb_path or self.ouidb_path
+        target_db = ouidb if ouidb is not None else get_ouidb(target_path)
+        with self._lock:
+            for dev in self.devices.values():
+                dev.enrich_from_ouidb(ouidb=target_db)
 
     def record_packet(self, frame: Any) -> None:
         """Ingest a dissected BLE frame into the session telemetry."""
@@ -237,10 +378,13 @@ class TelemetrySession:
             norm_adv = str(adv_a).upper() if adv_a else None
             if norm_adv:
                 if norm_adv not in self.devices:
-                    self.devices[norm_adv] = DeviceTelemetrySummary(
+                    dev = DeviceTelemetrySummary(
                         mac_address=norm_adv,
                         address_type=getattr(frame, "adv_a_type", "unknown") or "unknown",
                     )
+                    if self.auto_enrich:
+                        dev.enrich_from_ouidb(ouidb_path=self.ouidb_path)
+                    self.devices[norm_adv] = dev
                 self.devices[norm_adv].update(frame, unwrapped_ts=unwrapped_usec)
 
             # Ingest scanner address if SCAN_REQ
@@ -248,10 +392,13 @@ class TelemetrySession:
             norm_scan = str(scan_a).upper() if scan_a else None
             if norm_scan:
                 if norm_scan not in self.devices:
-                    self.devices[norm_scan] = DeviceTelemetrySummary(
+                    dev = DeviceTelemetrySummary(
                         mac_address=norm_scan,
                         address_type=getattr(frame, "scan_a_type", "unknown") or "unknown",
                     )
+                    if self.auto_enrich:
+                        dev.enrich_from_ouidb(ouidb_path=self.ouidb_path)
+                    self.devices[norm_scan] = dev
                 dev = self.devices[norm_scan]
                 scan_type = getattr(frame, "scan_a_type", None)
                 if scan_type and dev.address_type in ("unknown", None, ""):
@@ -275,10 +422,13 @@ class TelemetrySession:
             norm_init = str(init_a).upper() if init_a else None
             if norm_init:
                 if norm_init not in self.devices:
-                    self.devices[norm_init] = DeviceTelemetrySummary(
+                    dev = DeviceTelemetrySummary(
                         mac_address=norm_init,
                         address_type=getattr(frame, "init_a_type", "unknown") or "unknown",
                     )
+                    if self.auto_enrich:
+                        dev.enrich_from_ouidb(ouidb_path=self.ouidb_path)
+                    self.devices[norm_init] = dev
                 dev = self.devices[norm_init]
                 init_type = getattr(frame, "init_a_type", None)
                 if init_type and dev.address_type in ("unknown", None, ""):
@@ -394,6 +544,10 @@ class TelemetrySession:
             "service_uuids",
             "beacon_types",
             "channels",
+            "vendor",
+            "device_class",
+            "oui_prefix",
+            "is_surveillance",
         ]
         target = Path(path).resolve()
         target.parent.mkdir(parents=True, exist_ok=True)

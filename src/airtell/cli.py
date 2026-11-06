@@ -1204,9 +1204,94 @@ def handle_sidechannel(args: argparse.Namespace) -> int:
     return 1 if report.has_detections else 0
 
 
+def handle_pcap_timeline(args: argparse.Namespace) -> int:
+    """Execute chronological BLE PCAP MAC timeline extraction with Spectra Mesh OUI classification."""
+    pcap_path = getattr(args, "pcap", None) or "app/data/merged.pcap"
+    pcap_file = Path(pcap_path)
+    if not pcap_file.exists() or not pcap_file.is_file():
+        logger.error("PCAP file not found: %s", pcap_path)
+        print(f"ERROR: PCAP file not found: {pcap_path}", file=sys.stderr)
+        return 2
+
+    ouidb_path = getattr(args, "ouidb", None)
+    if ouidb_path:
+        ouidb_file = Path(ouidb_path)
+        if not ouidb_file.exists() or not ouidb_file.is_file():
+            logger.error("Spectra Mesh OUI database file not found: %s", ouidb_path)
+            print(f"ERROR: OUI database not found: {ouidb_path}", file=sys.stderr)
+            return 2
+
+    limit = getattr(args, "limit", None)
+    if limit is not None and limit < 0:
+        logger.error("limit must be non-negative (got %s)", limit)
+        print(f"ERROR: limit must be non-negative: {limit}", file=sys.stderr)
+        return 2
+
+    max_packets = getattr(args, "max_packets", None)
+    if max_packets is not None and max_packets < 0:
+        logger.error("max-packets must be non-negative (got %s)", max_packets)
+        print(f"ERROR: max-packets must be non-negative: {max_packets}", file=sys.stderr)
+        return 2
+
+    max_entries = getattr(args, "max_entries", None)
+    if max_entries is not None and max_entries < 0:
+        logger.error("max-entries must be non-negative (got %s)", max_entries)
+        print(f"ERROR: max-entries must be non-negative: {max_entries}", file=sys.stderr)
+        return 2
+
+    try:
+        from airtell.sniff.timeline import PcapTimelineReportGenerator
+
+        generator = PcapTimelineReportGenerator(pcap_path=pcap_file, ouidb_path=ouidb_path)
+        report = generator.generate(
+            surveillance_only=getattr(args, "surveillance_only", False),
+            category=getattr(args, "category", None),
+            limit=getattr(args, "limit", None),
+            max_packets=getattr(args, "max_packets", None),
+            max_entries=getattr(args, "max_entries", None),
+        )
+
+        output_path = getattr(args, "output", None)
+        if output_path:
+            out_file = Path(output_path)
+            if getattr(args, "json", False) or out_file.suffix.lower() == ".json":
+                report.export_json(out_file)
+            elif getattr(args, "csv", False) or out_file.suffix.lower() == ".csv":
+                report.export_csv(out_file)
+            elif getattr(args, "markdown", False) or out_file.suffix.lower() in (".md", ".markdown"):
+                report.export_markdown(out_file)
+            else:
+                report.export_text(out_file)
+            print(f"Timeline report saved to: {output_path}")
+
+        if getattr(args, "json", False):
+            print(report.to_json())
+        elif getattr(args, "csv", False):
+            print(report.to_csv(), end="")
+        elif getattr(args, "markdown", False):
+            print(report.to_markdown())
+        elif not output_path or getattr(args, "summary", False):
+            print(report.to_text())
+
+        return 0
+    except Exception as exc:
+        logger.exception("Failed to generate PCAP timeline: %s", exc)
+        print(f"ERROR: Failed to generate PCAP timeline: {exc}", file=sys.stderr)
+        return 1
+
+
+class SafeArgumentParser(argparse.ArgumentParser):
+    """ArgumentParser that does not sys.exit on status 0 (e.g. --help in tests)."""
+
+    def exit(self, status: int = 0, message: str | None = None) -> None:
+        if status == 0:
+            return
+        super().exit(status, message)
+
+
 def create_parser(prog: str = "airtell") -> argparse.ArgumentParser:
     """Create and configure the top-level argument parser and subparsers."""
-    parser = argparse.ArgumentParser(
+    parser = SafeArgumentParser(
         prog=prog,
         description="AirTell: Dual-Device Bluetooth Low Energy Sniffle Testbed Framework (PoPETs 2025-0103)",
     )
@@ -1401,6 +1486,90 @@ def create_parser(prog: str = "airtell") -> argparse.ArgumentParser:
         "--limit", "--max-packets", dest="limit", type=int, default=None, help="Maximum number of packets to process"
     )
 
+    # 9. PCAP MAC Timeline
+    p_timeline = subparsers.add_parser(
+        "pcap-timeline",
+        aliases=["timeline"],
+        help="Generate chronological MAC timeline from BLE PCAP matching Spectra Mesh OUI database",
+    )
+    p_timeline.add_argument(
+        "-i",
+        "--pcap",
+        "--input",
+        dest="pcap",
+        type=str,
+        default="app/data/merged.pcap",
+        help="Input BLE PCAP file (default: app/data/merged.pcap)",
+    )
+    p_timeline.add_argument(
+        "--ouidb",
+        type=str,
+        default=None,
+        help="Path to Spectra Mesh oui_db.bin (default: auto-detected)",
+    )
+    p_timeline.add_argument(
+        "--surveillance-only",
+        action="store_true",
+        help="Filter timeline to surveillance device classes only (camera, drone, alpr, bodycam)",
+    )
+    p_timeline.add_argument(
+        "--category",
+        type=str,
+        default=None,
+        help="Filter by specific device category (e.g. camera, drone, alpr, bodycam)",
+    )
+    p_timeline.add_argument(
+        "--limit",
+        dest="limit",
+        type=int,
+        default=None,
+        help="Limit number of packets to process or entries to return",
+    )
+    p_timeline.add_argument(
+        "--max-packets",
+        dest="max_packets",
+        type=int,
+        default=None,
+        help="Maximum number of packets to process from capture",
+    )
+    p_timeline.add_argument(
+        "--max-entries",
+        dest="max_entries",
+        type=int,
+        default=None,
+        help="Maximum number of timeline entries to output",
+    )
+    p_timeline.add_argument(
+        "--json",
+        action="store_true",
+        help="Output report in JSON format to stdout",
+    )
+    p_timeline.add_argument(
+        "--csv",
+        action="store_true",
+        help="Output report in CSV format to stdout",
+    )
+    p_timeline.add_argument(
+        "--markdown",
+        "--md",
+        dest="markdown",
+        action="store_true",
+        help="Output report in Markdown format to stdout",
+    )
+    p_timeline.add_argument(
+        "-o",
+        "--output",
+        dest="output",
+        type=str,
+        default=None,
+        help="File path to save output report (JSON, CSV, Markdown, or text)",
+    )
+    p_timeline.add_argument(
+        "--summary",
+        action="store_true",
+        help="Include human-readable summary text",
+    )
+
     return parser
 
 
@@ -1414,6 +1583,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         argv = sys.argv[1:]
 
     parser = create_parser(prog=prog)
+
+    if "-h" in argv or "--help" in argv:
+        parser.parse_args(argv)
+        return 0
 
     try:
         args = parser.parse_args(argv)
@@ -1447,6 +1620,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return handle_rogue_inject(args)
     elif cmd in ("sidechannel", "side-channel", "analyze-sidechannel"):
         return handle_sidechannel(args)
+    elif cmd in ("pcap-timeline", "timeline"):
+        return handle_pcap_timeline(args)
     else:
         logger.error("Unknown command: %s", cmd)
         parser.print_help(sys.stderr)

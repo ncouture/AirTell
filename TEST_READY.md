@@ -1,107 +1,122 @@
-# TEST_READY: Full End-to-End Validation Suite (Milestone 5)
+# TEST_READY: Spectra Mesh OUI DB Integration & PCAP MAC Timeline Report Suite
 
 ## 1. Single Execution Command
 
-The complete test suite across all tiers (Unit, Integration, and End-to-End Tiers 1–5) can be executed with a single command with warnings treated as errors:
+The complete End-to-End validation suite (Tiers 1–4) for the Spectra Mesh OUI database integration and PCAP MAC timeline generator can be executed with a single command:
 
 ```bash
-pytest -v -W error tests/
+pytest -v -W error tests/test_e2e_ouidb_timeline.py
 ```
 
-To run style and lint compliance across source and test trees:
+To run style, lint, and formatting compliance across the test suite:
 
 ```bash
-ruff check src tests
+ruff check tests/test_e2e_ouidb_timeline.py
+```
+
+To run the complete repository test suite including all previous milestone unit and integration suites:
+
+```bash
+pytest -v tests/
 ```
 
 ---
 
 ## 2. Test Architecture & Tier Breakdown
 
-The validation suite is partitioned into five distinct End-to-End tiers in addition to existing unit/integration tests, providing exhaustive verification from isolated protocol primitives up through full adversarial loopback simulations.
+The validation suite is partitioned into four distinct End-to-End tiers in `tests/test_e2e_ouidb_timeline.py` in addition to engine unit tests in `spectramesh_ouidb/`:
 
-| Tier | Suite File | Test Count | Description |
+| Tier | Suite Class | Test Count | Description |
 |:---|:---|:---:|:---|
-| **Base / Unit** | `tests/test_*.py`, `tests/radar/`, `tests/benchmarks/` | 1,014+ | Core unit, integration, CLI, radar tomography, storage benchmarks, and mock hardware tests |
-| **Tier 1** | `tests/e2e/test_tier1_features.py` | 100 | **Features in Isolation**: 20 features $\times$ 5 dedicated tests each |
-| **Tier 2** | `tests/e2e/test_tier2_boundaries.py` | 100 | **Boundary & Edge Conditions**: 20 features $\times$ 5 extreme boundary tests each |
-| **Tier 3** | `tests/e2e/test_tier3_combinations.py` | 25 | **Cross-Feature Combinations**: Multi-vendor broadcasts, paired PCAP/telemetry, dual-channel interactions |
-| **Tier 4** | `tests/e2e/test_tier4_scenarios.py` | 5 | **Realistic PoPETs 2025-0103 Scenarios**: Complete real-world application simulations |
-| **Tier 5** | `tests/e2e/test_tier5_adversarial.py` | 23 | **White-Box Adversarial Hardening**: Malformed packets, framing jitter, concurrency stress, rapid teardown, buffer overflow |
-| **Total** | | **1,267+** | **100% Passing, 0 Failed, 0 Warnings (1,331+ total collected across 65 modules)** |
+| **Tier 1** | `TestTier1FeatureCoverage` | 33 | **Features in Isolation**: F1 (OUI engine & endianness), F2 (device classification), F3 (PDU ingestion), F4 (OUI filtering & chrono order), F5 (metadata enrichment), F6 (report formats & CLI). |
+| **Tier 2** | `TestTier2BoundaryAndCornerCases` | 25 | **Boundary & Corner Cases**: B1 (empty/truncated PCAPs), B2 (pure RPA zero-match captures), B3 (LPM collisions /36 > /28 > /24), B4 (broadcast/multicast/malformed MACs), B5 (extreme timestamps & out-of-order packets). |
+| **Tier 3** | `TestTier3CrossFeatureCombinations` | 7 | **Cross-Feature Combinations**: Multi-role devices (`AdvA` + `ScanA`), category and surveillance filtering combined with multi-format serialization, mixed prefix lengths, and telemetry congruence. |
+| **Tier 4** | `TestTier4RealWorldApplicationScenarios` | 7 | **Real-World Application Scenarios**: Execution against `app/data/merged.pcap` asserting ground-truth detection of Flock Safety, DJI drones, Skydio drones, Wyze cameras, Ring scanners, and Hikvision cameras. |
+| **Engine Unit** | `test_spectramesh_ouidb.py` | 61 | **C Extension & Mmap Primitives**: Binary SOUI header parsing, string pool offsets, binary search, memory-mapped safety, and multi-threading. |
+| **Total** | | **133** | **Total Verification Tests for Spectra Mesh & Timeline Track** |
 
 ---
 
-## 3. 20-Feature Coverage Checklist
+## 3. Feature Coverage Checklist
 
-Every feature defined in the test architecture specification (and tracked in `conductor/tech-stack.md`) is covered across both Tier 1 (Isolation) and Tier 2 (Boundaries):
+Every feature defined in `ORIGINAL_REQUEST.md` (R1–R4) and `PROJECT.md` is covered across Tier 1, Tier 2, and Tier 3:
 
-- [x] **F01**: Base64 Framing & Word Count Calculation (`test_f01_*`)
-- [x] **F02**: Host-to-Dongle Command Serialization (`test_f02_*`)
-- [x] **F03**: Dongle-to-Host Response Deserialization (`test_f03_*`)
-- [x] **F04**: PacketMessage Binary Unpacking (`test_f04_*`)
-- [x] **F05**: Apple iBeacon Synthesis (`test_f05_*`)
-- [x] **F06**: AltBeacon Synthesis (`test_f06_*`)
-- [x] **F07**: Google Eddystone-UID Synthesis (`test_f07_*`)
-- [x] **F08**: Google Eddystone-URL Synthesis (`test_f08_*`)
-- [x] **F09**: Google Eddystone-TLM Synthesis (`test_f09_*`)
-- [x] **F10**: GAEN (Exposure Notification) Synthesis (`test_f10_*`)
-- [x] **F11**: Palindromic MAC Generation & Validation (`test_f11_*`)
-- [x] **F12**: Active Probing (SCAN_REQ / SCAN_RSP) (`test_f12_*`)
-- [x] **F13**: PDU Dissection & AD Parsing (`test_f13_*`)
-- [x] **F14**: Deep Beacon Extraction (`test_f14_*`)
-- [x] **F15**: Stimulus-Response Correlation (`test_f15_*`)
-- [x] **F16**: DLT 256 PCAP Serialization (`test_f16_*`)
-- [x] **F17**: PCAP Deserialization (`test_f17_*`)
-- [x] **F18**: Topology A Orchestration (`test_f18_*`)
-- [x] **F19**: Topology B Dual-Channel Merging (`test_f19_*`)
-- [x] **F20**: CLI Subcommands & Argument Parsing (`test_f20_*`)
+- [x] **F1: Spectra Mesh OUI Lookups & Endianness Adapter**
+  - `test_f01_mal_24bit_prefix_lookup`: 24-bit MA-L prefix matching (`E4:38:83` -> Flock Safety).
+  - `test_f01_mam_28bit_prefix_lookup`: 28-bit MA-M prefix matching (`00:55:DA:B0/28` -> Interaxon Inc).
+  - `test_f01_mas_36bit_prefix_lookup`: 36-bit MA-S prefix matching (`00:50:C2:0D:80/36` -> Charlotte's Web).
+  - `test_f01_unknown_mac_returns_none`: Unassigned/random addresses return None.
+  - `test_f01_wire_vs_canonical_endianness_resolution`: Radio Link Layer Little-Endian byte reversal to Big-Endian IEEE OUI.
+  - `test_f01_wire_direct_fallback`: Fallback to wire direct evaluation when canonical reversed misses.
+
+- [x] **F2: Device Class Resolution Across Categories**
+  - `test_f02_device_class_camera`: Wyze Labs and Hikvision resolve to `"camera"` (`flags=1`, `is_surveillance=True`).
+  - `test_f02_device_class_alpr`: Flock Safety resolves to `"alpr"` (`flags=2`, `is_surveillance=True`).
+  - `test_f02_device_class_drone`: DJI and Skydio resolve to `"drone"` (`flags=3`, `is_surveillance=True`).
+  - `test_f02_device_class_bodycam`: Axon Enterprise resolves to `"bodycam"` (`flags=6`, `is_surveillance=True`).
+  - `test_f02_device_class_none_consumer`: Apple, Google, Espressif resolve to `"none"` (`flags=0`, `is_surveillance=False`).
+  - `test_f02_airtell_telemetry_enrichment`: Telemetry summary enrichment with vendor, device_class, oui_prefix, and is_surveillance.
+
+- [x] **F3: PCAP Ingestion with Advertising PDU Types**
+  - `test_f03_pcap_ingest_adv_ind`: `ADV_IND` (0x0) extracting `AdvA` role.
+  - `test_f03_pcap_ingest_scan_req`: `SCAN_REQ` (0x3) extracting `ScanA` (scanner) and `AdvA` (advertiser).
+  - `test_f03_pcap_ingest_scan_rsp`: `SCAN_RSP` (0x4) extracting `AdvA`.
+  - `test_f03_pcap_ingest_adv_direct_ind`: `ADV_DIRECT_IND` (0x1) extracting `AdvA` and `TargetA`.
+  - `test_f03_pcap_ingest_connect_ind`: `CONNECT_IND` (0x5) extracting `InitA` and `AdvA`.
+
+- [x] **F4: OUI Filtering & Chronological Ordering**
+  - `test_f04_oui_filtering_excludes_random_addresses`: Non-OUI random private addresses excluded.
+  - `test_f04_oui_filtering_retains_database_matches`: Verified database matches retained.
+  - `test_f04_strict_chronological_ordering`: Ascending sort by earliest `first_seen`.
+  - `test_f04_first_seen_and_last_seen_tracking`: Accurate earliest observation and latest observation tracking.
+  - `test_f04_packet_count_increment`: Exact packet count tallying across multiple occurrences.
+
+- [x] **F5: Timeline Metadata Enrichment Validation**
+  - `test_f05_timestamp_metadata_iso8601`: Valid ISO 8601 UTC timestamp formatting.
+  - `test_f05_packet_metadata_types_and_roles`: Accurate aggregation of observed PDU types and device roles.
+  - `test_f05_database_prefix_and_table_metadata`: Accurate vendor name, prefix string, prefix bits (24, 28, 36), and table ("MA-L", "MA-M", "MA-S").
+  - `test_f05_device_category_and_flags`: Category string and integer flags correspondence.
+  - `test_f05_is_surveillance_flag_integrity`: Boolean `is_surveillance` strictly equivalent to `flags != 0`.
+
+- [x] **F6: Timeline Report Serialization Formats & CLI**
+  - `test_f06_report_to_dict`: Dictionary serialization with complete summary and entries.
+  - `test_f06_report_to_json`: Valid JSON serialization parsable by standard parsers.
+  - `test_f06_report_to_csv`: Valid CSV with standard column headers.
+  - `test_f06_report_to_markdown`: Formatted Markdown table.
+  - `test_f06_report_to_text`: Formatted human-readable plain text output.
+  - `test_f06_cli_pcap_timeline_subcommand`: CLI parser registration of `pcap-timeline` and `timeline`.
 
 ---
 
-## 4. PoPETs 2025-0103 Application Scenario Mappings
+## 4. Real-World Ground Truth Surveillance Assertions (`app/data/merged.pcap`)
 
-The realistic scenarios from the research paper ("Stimulating BLE Privacy Failures: Active Probing and Side-Channel Elicitation in Commercial Trackers and Exposure Notification Systems") are implemented in `tests/e2e/test_tier4_scenarios.py`:
+The Tier 4 test suite validates the detection of known ground truth surveillance devices in `app/data/merged.pcap`:
 
-| Scenario                                           | Objective                                                                                                                                                        | Test Function                                             | Verified Artifacts                                                                         |
-|:---------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------|:----------------------------------------------------------|:-------------------------------------------------------------------------------------------|
-| **Scenario 1: Retail Tracking Stimulation**        | Simulates commercial retail trackers emitting iBeacon and AltBeacon bursts with palindromic MACs to probe observer responsiveness.                               | `test_scenario1_retail_tracking_stimulation_complete`     | Correlated latencies, PCAP file, JSON summary, devices CSV, events CSV                     |
-| **Scenario 2: Contact Tracing Privacy**            | Simulates GAEN (0xFD6F) service with periodic Resolvable Private Address (RPA) rotation, testing burst identification across rotation epochs.                    | `test_scenario2_contact_tracing_privacy_complete`         | 3 RPA epochs tracked, RPI/AEM dissected, stimulus-response matches, Wireshark PCAP         |
-| **Scenario 3: Active Elicitation of Device Names** | Simulates Topology A active scanning where an active probe (SCAN_REQ) elicits a SCAN_RSP containing a Complete Local Name.                                       | `test_scenario3_active_elicitation_device_names_complete` | Full PDU trio (ADV_IND, SCAN_REQ, SCAN_RSP), device profile tagging in telemetry & PCAP    |
-| **Scenario 4: Dual-Channel Anti-Blindness**        | Simulates target advertisement hopping across channels 37 and 38, demonstrating single-channel blindness (50% loss) vs. Topology B lossless interleaved capture. | `test_scenario4_dual_channel_anti_blindness_complete`     | Monotonic timestamp sorting, alternating channel verification, per-channel packet counters |
-| **Scenario 5: Full Pipeline Hardware Loopback**    | Complete offline replay of the 5-stage verification sequence (dongle config, 6 beacon formats, active scanning, correlation, dual-topology export).              | `test_scenario5_full_pipeline_hardware_loopback_complete` | All 6 beacon types dissected, merged dual-channel capture, DLT 256 PCAP, JSON & dual CSVs  |
+| Target Device | MAC Address | Expected Vendor | Expected Category | Verified Roles | Test Function |
+|:---|:---|:---|:---:|:---:|:---|
+| **Flock Safety ALPR** | `E4:38:83:D7:A5:B3` | Flock Safety | `alpr` | AdvA | `test_s02_merged_pcap_flock_safety_alpr` |
+| **DJI Drones** | `0C:9A:E6:37:F6:2D`<br>`4C:43:F6:30:A4:18`<br>`88:29:85:3C:61:0D` | Sz Dji Technology Co.,Ltd | `drone` | AdvA | `test_s03_merged_pcap_dji_drones` |
+| **Skydio Drones** | `68:9A:87:20:6B:FF`<br>`68:9A:87:ED:21:EF`<br>`68:9A:87:72:0A:C3`<br>`68:9A:87:38:2D:88`<br>`68:9A:87:31:88:CD`<br>`68:9A:87:B5:DA:09` | Skydio, Inc. | `drone` | ScanA | `test_s04_merged_pcap_skydio_drone_scanners` |
+| **Wyze Cameras** | `D0:3F:27:B0:07:6E`<br>`80:48:2C:53:47:33`<br>`2C:AA:8E:44:02:A1` | Wyze Labs Inc | `camera` | AdvA | `test_s05_merged_pcap_camera_devices` |
+| **Ring Scanners** | `74:EC:B2:97:05:FD`<br>`74:EC:B2:EB:79:68`<br>`74:EC:B2:04:04:34` | Ring LLC | `camera` | ScanA | `test_s05_merged_pcap_camera_devices` |
+| **Hikvision Camera** | `44:A6:42:A5:DE:34` | Hangzhou Hikvision Digital Tech | `camera` | AdvA | `test_s05_merged_pcap_camera_devices` |
 
 ---
 
-## 5. Adversarial Hardening Summary
+## 5. Boundary, Corner & Adversarial Hardening Summary
 
-The white-box adversarial hardening suite in `tests/e2e/test_tier5_adversarial.py` exercises component resilience under degraded, hostile, and edge-case inputs:
-
-1. **Packet Corruption**:
-   - Truncated hardware headers (1–9 bytes) systematically rejected with descriptive `ValueError`.
-   - Oversized declared lengths (AD structure $>254$ bytes, PDU payload $>255$ bytes) flagged as `is_malformed = True` with non-empty `error_details` without crashing.
-   - CRC failures (valid=0, corrupted parity bits) preserved in Link Layer flags and libpcap PHDR flags (`crc_err = True`).
-2. **Framing Jitter**:
-   - Base64 frames split across arbitrary UART chunk boundaries correctly reassembled by `MockSerialInterface.readline()`.
-   - Missing, empty, or corrupt Base64 lines cleanly rejected with `ValueError`.
-   - Interleaved raw binary noise lines safely ignored by the controller reader loop while successfully parsing subsequent valid frames.
-3. **Multi-Threaded Concurrency**:
-   - 10 concurrent threads streaming 50 packets each (500 total) into `PcapBleWriter` without record corruption or dropped packets.
-   - Simultaneous 4-thread writer / 4-thread reader stress on `TelemetrySession` with zero race conditions or iteration mutation errors.
-   - 50 rapid thread spawn/join tasks registering, transmitting, and unregistering on `VirtualRadioBus` without deadlock.
-4. **Rapid Teardown & Truncation**:
-   - Abrupt `SniffleDeviceController.close()` during active radio streaming cleanly terminates background reader threads without hung resources.
-   - Half-written PCAP files abruptly truncated mid-packet are safely iterated by `PcapBleReader`, yielding all complete frames prior to truncation without crashing.
-   - Short PCAP files ($<24$ bytes) raise descriptive `ValueError` upon header validation while properly releasing file descriptors.
-5. **Buffer Overflow & Burst Recovery**:
-   - Ingestion and draining of 1,000-packet bursts via batch operations (`read_packets_batch`) without queue overflow or memory exhaustion.
-   - Synchronization marker flushing (`mark_and_flush`) reliably purges stale accumulated backlog prior to synchronization tokens.
+Tier 2 exercises component resilience under edge-case conditions:
+1. **Empty & Truncated PCAPs**: 0-byte captures, headers truncated mid-way, and short payloads are handled safely with descriptive `ValueError` or empty reports without unhandled exceptions.
+2. **Zero-Match & Pure RPA Captures**: Captures with only rotating private addresses (RPAs) or unallocated prefixes produce clean empty reports across all export formats (JSON `[]`, CSV with headers, Markdown table).
+3. **Longest Prefix Match (LPM) Collisions**: Synthetic colliding tables verify that 36-bit MA-S overrides 28-bit MA-M, which in turn overrides 24-bit MA-L. Adjacent nibbles in byte 3 (/28) and byte 4 (/36) are strictly distinguished.
+4. **Special MAC Addresses**: Multicast (`01:00:5E:...`), broadcast (`FF:FF:FF:FF:FF:FF`), all-zero (`00:00:00:00:00:00`), mixed-case, and hyphenated addresses normalize properly.
+5. **Extreme Timestamps**: Epoch zero (1970-01-01), year 2038+ timestamps, microsecond-resolution intervals, and out-of-order PCAP packets are ordered strictly chronologically by earliest observation.
 
 ---
 
 ## 6. Integrity Statement
 
-In accordance with the project integrity mandate:
+In accordance with project integrity mandates:
 - **Zero Mock Shortcuts**: All test assertions evaluate real data transformations, protocol parsing, and bit-level fields. No test results or verification strings are hardcoded in application logic.
 - **Genuine Protocol Decoding**: Link Layer PDUs, AD structures, pseudo-headers, CRC polynomials, and beacon payloads maintain real state and execute genuine bit-level packing and unpacking.
-- **No Dummy Facades**: Wire framing, telemetry aggregation, PCAP streaming, and multi-channel synchronization operate using real multi-threaded queues, file I/O, and mathematical address symmetry checks.
+- **Authoritative Expected Outputs**: Expected values are derived directly from the binary database `spectramesh_ouidb/oui_db.bin` and the verified ground truth of `app/data/merged.pcap`.
