@@ -1,0 +1,65 @@
+name: "Release Please"
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: release-please-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    name: "Automate Semantic Release & Changelog"
+    runs-on: ubuntu-latest
+    if: github.actor == 'ncouture' || github.triggering_actor == 'ncouture'
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v4
+
+      - name: "Authorize Codeowner Execution"
+        env:
+          ACTOR: ${{ github.triggering_actor || github.actor }}
+        run: |
+          set -euo pipefail
+          python3 -c "
+          import os
+          from pathlib import Path
+          import sys
+
+          codeowners_file = Path('.github/CODEOWNERS')
+          if not codeowners_file.exists():
+              sys.exit('Error: .github/CODEOWNERS not found')
+
+          owners = set()
+          for line in codeowners_file.read_text(encoding='utf-8').splitlines():
+              line = line.strip()
+              if not line or line.startswith('#'):
+                  continue
+              for token in line.split()[1:]:
+                  if token.startswith('#'):
+                      break
+                  if token.startswith('@'):
+                      username = token.lstrip('@').split('/')[-1].strip().lower()
+                      if username:
+                          owners.add(username)
+
+          actor = os.environ.get('ACTOR', '').strip().lower()
+          if not actor or actor not in owners:
+              sys.exit(f'Unauthorized actor @{actor} not recognized in CODEOWNERS: {sorted(owners)}')
+
+          print(f'Authorized codeowner execution: @{actor}')
+          "
+
+      - name: "Run Release Please Action"
+        id: release
+        uses: google-github-actions/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

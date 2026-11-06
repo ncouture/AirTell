@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -367,4 +368,160 @@ def test_code_review_workflow_configuration(tmp_path: Path):
             text=True,
         ).stdout
         assert "+v3" in diff
+
+
+def test_release_please_config_and_manifest():
+    """Verify release-please-config.json and .release-please-manifest.json valid JSON and config."""
+    repo_root = Path(__file__).resolve().parent.parent
+    config_file = repo_root / "release-please-config.json"
+    manifest_file = repo_root / ".release-please-manifest.json"
+
+    assert config_file.exists(), "release-please-config.json must exist in repository root"
+    assert manifest_file.exists(), ".release-please-manifest.json must exist in repository root"
+
+    config_data = json.loads(config_file.read_text(encoding="utf-8"))
+    manifest_data = json.loads(manifest_file.read_text(encoding="utf-8"))
+
+    # Validate package configuration
+    assert "packages" in config_data, "release-please-config.json must contain 'packages'"
+    assert "." in config_data["packages"], "packages must configure root '.'"
+    pkg_config = config_data["packages"]["."]
+
+    assert pkg_config.get("package-name") == "airtell"
+    assert pkg_config.get("release-type") == "python"
+    assert pkg_config.get("changelog-path") == "CHANGELOG.md"
+    assert pkg_config.get("bump-minor-pre-major") is True
+    assert pkg_config.get("bump-patch-for-minor-pre-major") is False
+    assert pkg_config.get("draft") is False
+    assert pkg_config.get("prerelease") is False
+
+    # Validate manifest version
+    assert manifest_data.get(".") == "0.2.0"
+
+    # Validate pyproject.toml and airtell.__version__ alignment
+    import airtell
+
+    assert airtell.__version__ == "0.2.0"
+
+    pyproject_file = repo_root / "pyproject.toml"
+    assert 'version = "0.2.0"' in pyproject_file.read_text(encoding="utf-8")
+
+
+def test_release_please_workflow_configuration():
+    """Verify .github/workflows/release-please.yml syntax, permissions, triggers, and dual-tier codeowner gating."""
+    repo_root = Path(__file__).resolve().parent.parent
+    workflow_file = repo_root / ".github" / "workflows" / "release-please.yml"
+
+    assert workflow_file.exists(), ".github/workflows/release-please.yml must exist"
+    content = workflow_file.read_text(encoding="utf-8")
+
+    # Workflow name
+    assert 'name: "Release Please"' in content
+
+    # Triggers: push to main and workflow_dispatch
+    assert "push:" in content
+    assert "main" in content
+    assert "workflow_dispatch:" in content
+
+    # Concurrency control
+    assert "group: release-please-${{ github.ref }}" in content
+    assert "cancel-in-progress: false" in content
+
+    # Permissions
+    assert "contents: write" in content
+    assert "pull-requests: write" in content
+
+    # Tier 1 Job-level codeowner actor check
+    assert "if: github.actor == 'ncouture' || github.triggering_actor == 'ncouture'" in content
+
+    # Step sequence
+    checkout_pos = content.index("uses: actions/checkout@v4")
+    auth_pos = content.index('- name: "Authorize Codeowner Execution"')
+    release_pos = content.index("uses: google-github-actions/release-please-action@v4")
+    assert checkout_pos < auth_pos < release_pos
+
+    # Release action arguments
+    assert "config-file: release-please-config.json" in content
+    assert "manifest-file: .release-please-manifest.json" in content
+
+
+def test_release_please_tier2_codeowner_authorization_step(tmp_path: Path):
+    """Verify Tier 2 runner-level CODEOWNERS verification script dynamically enforces codeowners."""
+    import re
+    import subprocess
+    import textwrap
+
+    repo_root = Path(__file__).resolve().parent.parent
+    workflow_file = repo_root / ".github" / "workflows" / "release-please.yml"
+    content = workflow_file.read_text(encoding="utf-8")
+
+    match = re.search(
+        r'- name: "Authorize Codeowner Execution".*?run: \|\n(.*?)\n\s+- name: "Run Release Please Action"',
+        content,
+        re.DOTALL,
+    )
+    assert match is not None, "Could not extract Authorize Codeowner Execution script from workflow"
+    auth_script = textwrap.dedent(match.group(1))
+
+    # Create dummy repo with .github/CODEOWNERS
+    sim_repo = tmp_path / "sim_repo"
+    sim_co_dir = sim_repo / ".github"
+    sim_co_dir.mkdir(parents=True)
+    (sim_co_dir / "CODEOWNERS").write_text("* @ncouture # owner\n", encoding="utf-8")
+
+    # 1. Authorized codeowner
+    proc_auth = subprocess.run(
+        ["bash", "-c", auth_script],
+        cwd=str(sim_repo),
+        env={"PATH": "/usr/bin:/bin", "ACTOR": "ncouture"},
+        capture_output=True,
+        text=True,
+    )
+    assert proc_auth.returncode == 0
+    assert "Authorized codeowner execution: @ncouture" in proc_auth.stdout
+
+    # 2. Case-insensitive authorized codeowner
+    proc_case = subprocess.run(
+        ["bash", "-c", auth_script],
+        cwd=str(sim_repo),
+        env={"PATH": "/usr/bin:/bin", "ACTOR": "NCouture"},
+        capture_output=True,
+        text=True,
+    )
+    assert proc_case.returncode == 0
+    assert "Authorized codeowner execution: @ncouture" in proc_case.stdout
+
+    # 3. Unauthorized actor
+    proc_unauth = subprocess.run(
+        ["bash", "-c", auth_script],
+        cwd=str(sim_repo),
+        env={"PATH": "/usr/bin:/bin", "ACTOR": "attacker"},
+        capture_output=True,
+        text=True,
+    )
+    assert proc_unauth.returncode != 0
+    assert "Unauthorized actor @attacker not recognized in CODEOWNERS" in proc_unauth.stderr
+
+    # 4. Missing or empty actor
+    proc_empty = subprocess.run(
+        ["bash", "-c", auth_script],
+        cwd=str(sim_repo),
+        env={"PATH": "/usr/bin:/bin", "ACTOR": ""},
+        capture_output=True,
+        text=True,
+    )
+    assert proc_empty.returncode != 0
+
+    # 5. Missing CODEOWNERS file
+    (sim_co_dir / "CODEOWNERS").unlink()
+    proc_missing_co = subprocess.run(
+        ["bash", "-c", auth_script],
+        cwd=str(sim_repo),
+        env={"PATH": "/usr/bin:/bin", "ACTOR": "ncouture"},
+        capture_output=True,
+        text=True,
+    )
+    assert proc_missing_co.returncode != 0
+    assert "CODEOWNERS not found" in proc_missing_co.stderr
+
 
