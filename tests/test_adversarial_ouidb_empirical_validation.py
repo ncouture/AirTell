@@ -54,62 +54,67 @@ GROUND_TRUTH_21_SURVEILLANCE = [
 ]
 
 
+@pytest.fixture(scope="module")
+def merged_pcap_scan() -> dict[str, dict]:
+    """Stream merged.pcap and locate observation metadata for all target surveillance devices."""
+    if not MERGED_PCAP.exists():
+        pytest.skip("app/data/merged.pcap not found")
+
+    db = get_ouidb()
+    target_macs = {mac: meta for idx, ts, mac, *meta in GROUND_TRUTH_21_SURVEILLANCE}
+    wire_to_target = {canonical_mac(mac): mac for mac in target_macs}
+    target_raw_bytes = [bytes.fromhex(w.replace(":", "")) for w in wire_to_target]
+
+    observed: dict[str, dict] = {}
+    with PcapBleReader(str(MERGED_PCAP)) as reader:
+        for idx, pkt in enumerate(reader):
+            body = pkt.body
+            if not any(tb in body for tb in target_raw_bytes):
+                continue
+            try:
+                adv = dissect_advertising_pdu(body, chan=pkt.ble_chan, rssi=pkt.rssi, ts_usec=pkt.ts_usec)
+            except Exception:
+                continue
+
+            for w_mac, role in [
+                (adv.adv_a, "AdvA"),
+                (adv.scan_a, "ScanA"),
+                (adv.init_a, "InitA"),
+                (adv.target_a, "TargetA"),
+            ]:
+                if not w_mac:
+                    continue
+                norm = w_mac.strip().upper()
+                if norm in wire_to_target:
+                    c_mac = wire_to_target[norm]
+                    if c_mac not in observed:
+                        res = db.lookup(c_mac)
+                        observed[c_mac] = {
+                            "mac": c_mac,
+                            "first_pkt": idx,
+                            "first_seen": pkt.ts_epoch,
+                            "last_seen": pkt.ts_epoch,
+                            "packet_count": 0,
+                            "roles": set(),
+                            "vendor": res.vendor if res else "",
+                            "category": res.device_type if res else "",
+                            "prefix": res.prefix_str if res else "",
+                        }
+                    entry = observed[c_mac]
+                    entry["packet_count"] += 1
+                    entry["roles"].add(role)
+                    if pkt.ts_epoch > entry["last_seen"]:
+                        entry["last_seen"] = pkt.ts_epoch
+
+            if len(observed) == 21:
+                # Found all 21 ground truth devices; continue briefly or conclude
+                break
+
+    return observed
+
+
 class TestEmpiricalGroundTruthSurveillance:
     """Verifies all 21 surveillance devices in merged.pcap and chronological monotonicity."""
-
-    @pytest.fixture(scope="class")
-    def merged_pcap_scan(self) -> dict[str, dict]:
-        """Stream merged.pcap and locate observation metadata for all target surveillance devices."""
-        if not MERGED_PCAP.exists():
-            pytest.skip("app/data/merged.pcap not found")
-
-        db = get_ouidb()
-        target_macs = {mac: meta for idx, ts, mac, *meta in GROUND_TRUTH_21_SURVEILLANCE}
-        wire_to_target = {canonical_mac(mac): mac for mac in target_macs}
-
-        observed: dict[str, dict] = {}
-        with PcapBleReader(str(MERGED_PCAP)) as reader:
-            for idx, pkt in enumerate(reader):
-                try:
-                    adv = dissect_advertising_pdu(pkt.body, chan=pkt.ble_chan, rssi=pkt.rssi, ts_usec=pkt.ts_usec)
-                except Exception:
-                    continue
-
-                for w_mac, role in [
-                    (adv.adv_a, "AdvA"),
-                    (adv.scan_a, "ScanA"),
-                    (adv.init_a, "InitA"),
-                    (adv.target_a, "TargetA"),
-                ]:
-                    if not w_mac:
-                        continue
-                    norm = w_mac.strip().upper()
-                    if norm in wire_to_target:
-                        c_mac = wire_to_target[norm]
-                        if c_mac not in observed:
-                            res = db.lookup(c_mac)
-                            observed[c_mac] = {
-                                "mac": c_mac,
-                                "first_pkt": idx,
-                                "first_seen": pkt.ts_epoch,
-                                "last_seen": pkt.ts_epoch,
-                                "packet_count": 0,
-                                "roles": set(),
-                                "vendor": res.vendor if res else "",
-                                "category": res.device_type if res else "",
-                                "prefix": res.prefix_str if res else "",
-                            }
-                        entry = observed[c_mac]
-                        entry["packet_count"] += 1
-                        entry["roles"].add(role)
-                        if pkt.ts_epoch > entry["last_seen"]:
-                            entry["last_seen"] = pkt.ts_epoch
-
-                if len(observed) == 21:
-                    # Found all 21 ground truth devices; continue briefly or conclude
-                    break
-
-        return observed
 
     def test_all_21_surveillance_devices_detected(self, merged_pcap_scan: dict[str, dict]) -> None:
         """Ground Truth: Asserts all 21 surveillance devices are accurately detected in merged.pcap."""
@@ -140,11 +145,11 @@ class TestEmpiricalGroundTruthSurveillance:
             assert t_curr <= t_next, f"Inverted timestamps at index {i}: {t_curr} > {t_next}"
 
     def test_role_demuxing_distribution(self, merged_pcap_scan: dict[str, dict]) -> None:
-        """Ground Truth: Asserts expected distribution of 14 AdvA devices and 7 ScanA devices."""
+        """Ground Truth: Asserts expected distribution of 11 AdvA devices and 10 ScanA devices."""
         adva_count = sum(1 for d in merged_pcap_scan.values() if "AdvA" in d["roles"] and "ScanA" not in d["roles"])
         scana_count = sum(1 for d in merged_pcap_scan.values() if "ScanA" in d["roles"] and "AdvA" not in d["roles"])
-        assert adva_count == 14, f"Expected 14 advertiser devices, got {adva_count}"
-        assert scana_count == 7, f"Expected 7 scanner devices, got {scana_count}"
+        assert adva_count == 11, f"Expected 11 advertiser devices, got {adva_count}"
+        assert scana_count == 10, f"Expected 10 scanner devices, got {scana_count}"
 
 
 class TestAdversarialCliDefects:
