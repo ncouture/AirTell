@@ -1,4 +1,4 @@
-name: "AirTell Code Review (Gemini 3.8 Flash // Antigravity SDK)"
+name: "AirTell Code Review (Gemini 4 Argon // Antigravity SDK)"
 
 on:
   pull_request:
@@ -15,6 +15,21 @@ on:
         description: "Base git ref to compare against (e.g. origin/main)"
         required: false
         default: "origin/main"
+        type: string
+      model:
+        description: "Antigravity model slug to execute code review"
+        required: false
+        default: "gemini-4-argon"
+        type: string
+      thinking_level:
+        description: "Model thinking level (HIGH, MEDIUM, LOW)"
+        required: false
+        default: "HIGH"
+        type: string
+
+env:
+  AIRTELL_REVIEW_MODEL: "gemini-4-argon"
+  AIRTELL_THINKING_LEVEL: "HIGH"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number || inputs.pr_number || github.ref }}
@@ -24,16 +39,21 @@ jobs:
   review:
     name: "AI Code Review (Codeowners Enforced)"
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     if: |
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'pull_request' && (
         github.event.action == 'review_requested' ||
+        github.event.action == 'ready_for_review' ||
         (github.event.action == 'labeled' && contains(fromJson('["code-review", "ai-review", "review"]'), github.event.label.name))
       )) ||
       (github.event_name == 'issue_comment' &&
         github.event.issue.pull_request != null && (
           contains(github.event.comment.body, '/gemini-code-review') ||
-          contains(github.event.comment.body, '@gemini review')
+          contains(github.event.comment.body, '@gemini review') ||
+          contains(github.event.comment.body, '/code-review') ||
+          contains(github.event.comment.body, '/ai-review') ||
+          contains(github.event.comment.body, '/review')
         )
       )
     permissions:
@@ -45,59 +65,62 @@ jobs:
       - name: "Checkout Repository"
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          ref: ${{ github.event.repository.default_branch }}
 
       - name: "Set up Python"
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: "Get 14-Day Cache Key Period"
-        id: cache-period
-        run: |
-          # 14 days = 14 * 86400 = 1209600 seconds
-          echo "period=$(( $(date +%s) / 1209600 ))" >> "$GITHUB_OUTPUT"
-
-      - name: "Cache Pip Dependencies"
-        uses: actions/cache@v4
+      - name: "Set up uv"
+        uses: astral-sh/setup-uv@v4
         with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ steps.cache-period.outputs.period }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
 
       - name: "Install Dependencies"
         run: |
-          python -m pip install --upgrade pip
-          pip install google-antigravity
+          uv pip install --system google-antigravity
 
       - name: "Resolve PR Target & Authorize Codeowners"
         id: resolve
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          COMMENT_USER: ${{ github.event.comment.user.login }}
+          ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
+          PR_NUMBER_EVENT: ${{ github.event.pull_request.number }}
+          SENDER_LOGIN: ${{ github.event.sender.login }}
+          PR_USER_LOGIN: ${{ github.event.pull_request.user.login }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          INPUT_PR_NUMBER: ${{ inputs.pr_number }}
+          INPUT_BASE_REF: ${{ inputs.base_ref }}
+          ACTOR_LOGIN: ${{ github.triggering_actor || github.actor }}
         run: |
-          EVENT="${{ github.event_name }}"
-          REPO="${{ github.repository }}"
+          set -euo pipefail
 
           if [ "$EVENT" = "issue_comment" ]; then
-            PR_NUMBER="${{ github.event.issue.number }}"
-            REQUESTER="${{ github.event.comment.user.login }}"
-            PR_AUTHOR="${{ github.event.issue.user.login }}"
+            PR_NUMBER="$ISSUE_NUMBER"
+            REQUESTER="$COMMENT_USER"
+            PR_AUTHOR="$ISSUE_AUTHOR"
             PR_DATA=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json baseRefOid,headRefOid)
             BASE_REF=$(echo "$PR_DATA" | jq -r .baseRefOid)
             HEAD_REF=$(echo "$PR_DATA" | jq -r .headRefOid)
           elif [ "$EVENT" = "pull_request" ]; then
-            PR_NUMBER="${{ github.event.pull_request.number }}"
-            REQUESTER="${{ github.event.sender.login }}"
-            PR_AUTHOR="${{ github.event.pull_request.user.login }}"
-            BASE_REF="${{ github.event.pull_request.base.sha }}"
-            HEAD_REF="${{ github.event.pull_request.head.sha }}"
+            PR_NUMBER="$PR_NUMBER_EVENT"
+            REQUESTER="$SENDER_LOGIN"
+            PR_AUTHOR="$PR_USER_LOGIN"
+            BASE_REF="$PR_BASE_SHA"
+            HEAD_REF="$PR_HEAD_SHA"
           elif [ "$EVENT" = "workflow_dispatch" ]; then
-            PR_NUMBER="${{ inputs.pr_number }}"
-            REQUESTER="${{ github.triggering_actor || github.actor }}"
+            PR_NUMBER="$INPUT_PR_NUMBER"
+            REQUESTER="$ACTOR_LOGIN"
             PR_DATA=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json author,baseRefOid,headRefOid)
             PR_AUTHOR=$(echo "$PR_DATA" | jq -r .author.login)
-            BASE_REF="${{ inputs.base_ref }}"
+            BASE_REF="$INPUT_BASE_REF"
             if [ -z "$BASE_REF" ] || [ "$BASE_REF" = "null" ]; then
               BASE_REF=$(echo "$PR_DATA" | jq -r .baseRefOid)
             fi
@@ -111,32 +134,86 @@ jobs:
           echo "Base Ref: $BASE_REF"
           echo "Head Ref: $HEAD_REF"
 
-          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
-          echo "pr_author=$PR_AUTHOR" >> $GITHUB_OUTPUT
-          echo "requester=$REQUESTER" >> $GITHUB_OUTPUT
-          echo "base_ref=$BASE_REF" >> $GITHUB_OUTPUT
-          echo "head_ref=$HEAD_REF" >> $GITHUB_OUTPUT
+          {
+            echo "pr_number=$PR_NUMBER"
+            echo "pr_author=$PR_AUTHOR"
+            echo "requester=$REQUESTER"
+            echo "base_ref=$BASE_REF"
+            echo "head_ref=$HEAD_REF"
+          } >> "$GITHUB_OUTPUT"
+
+          python scripts/code_review.py \
+            --enforce-codeowners \
+            --verify-codeowners-only \
+            --pr-number "$PR_NUMBER" \
+            --repo "$REPO" \
+            --pr-author "$PR_AUTHOR" \
+            --requester "$REQUESTER" \
+            --token "$GH_TOKEN" \
+            --post-comment
 
       - name: "Fetch and Checkout PR Head"
+        env:
+          BASE_REF: ${{ steps.resolve.outputs.base_ref }}
+          HEAD_REF: ${{ steps.resolve.outputs.head_ref }}
+          PR_NUMBER: ${{ steps.resolve.outputs.pr_number }}
         run: |
-          HEAD_REF="${{ steps.resolve.outputs.head_ref }}"
+          set -euo pipefail
+          if [ -n "$BASE_REF" ] && [ "$BASE_REF" != "null" ]; then
+            if [[ "$BASE_REF" == origin/* ]]; then
+              BASE_BRANCH="${BASE_REF#origin/}"
+              git fetch --no-tags --depth=100 origin "+refs/heads/${BASE_BRANCH}:refs/remotes/origin/${BASE_BRANCH}"
+            elif ! git cat-file -e "${BASE_REF}^{commit}" 2>/dev/null; then
+              git fetch --no-tags --depth=100 origin "$BASE_REF" \
+                || git fetch --tags --depth=100 origin "$BASE_REF" \
+                || git fetch --tags --unshallow origin \
+                || git fetch --tags origin
+              if ! git cat-file -e "${BASE_REF}^{commit}" 2>/dev/null && git cat-file -e "FETCH_HEAD^{commit}" 2>/dev/null; then
+                git update-ref "refs/heads/${BASE_REF}" FETCH_HEAD
+              fi
+            else
+              git fetch --no-tags --depth=100 origin "$BASE_REF" 2>/dev/null || true
+            fi
+          fi
           if [ -n "$HEAD_REF" ] && [ "$HEAD_REF" != "null" ]; then
-            git fetch origin "$HEAD_REF"
-            git checkout "$HEAD_REF"
+            if ! git cat-file -e "${HEAD_REF}^{commit}" 2>/dev/null; then
+              git fetch --no-tags --depth=100 origin "$HEAD_REF" \
+                || git fetch --no-tags --depth=100 origin "refs/pull/${PR_NUMBER}/head"
+            else
+              git fetch --no-tags --depth=100 origin "$HEAD_REF" 2>/dev/null || true
+            fi
+            git checkout --detach "$HEAD_REF" || git checkout --detach FETCH_HEAD
+          fi
+          if [ -n "$BASE_REF" ] && [ "$BASE_REF" != "null" ] && [ -n "$HEAD_REF" ] && [ "$HEAD_REF" != "null" ]; then
+            if ! git merge-base "$BASE_REF" "$HEAD_REF" >/dev/null 2>&1; then
+              git fetch --no-tags --unshallow origin || git fetch --no-tags --deepen=200 origin || true
+            fi
           fi
 
       - name: "Execute Antigravity Code Review"
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE_REF: ${{ steps.resolve.outputs.base_ref }}
+          HEAD_REF: ${{ steps.resolve.outputs.head_ref }}
+          PR_NUMBER: ${{ steps.resolve.outputs.pr_number }}
+          REPO: ${{ github.repository }}
+          PR_AUTHOR: ${{ steps.resolve.outputs.pr_author }}
+          REQUESTER: ${{ steps.resolve.outputs.requester }}
+          REVIEW_MODEL: ${{ inputs.model || 'gemini-4-argon' }}
+          THINKING_LEVEL: ${{ inputs.thinking_level || 'HIGH' }}
         run: |
+          set -euo pipefail
+          # Default model configuration: --model gemini-4-argon --thinking-level HIGH
           python scripts/code_review.py \
-            --base "${{ steps.resolve.outputs.base_ref }}" \
-            --head "${{ steps.resolve.outputs.head_ref }}" \
-            --pr-number "${{ steps.resolve.outputs.pr_number }}" \
-            --repo "${{ github.repository }}" \
-            --pr-author "${{ steps.resolve.outputs.pr_author }}" \
-            --requester "${{ steps.resolve.outputs.requester }}" \
+            --base "$BASE_REF" \
+            --head "$HEAD_REF" \
+            --pr-number "$PR_NUMBER" \
+            --repo "$REPO" \
+            --pr-author "$PR_AUTHOR" \
+            --requester "$REQUESTER" \
+            --model "${REVIEW_MODEL:-gemini-4-argon}" \
+            --thinking-level "${THINKING_LEVEL:-HIGH}" \
             --enforce-codeowners \
             --notebooklm-url "https://notebook.google.com/notebook/26cd837a-4d66-4ab1-94c7-128105718ad6" \
             --output review.md \
@@ -149,3 +226,5 @@ jobs:
           name: airtell-code-review-report
           path: review.md
           if-no-files-found: ignore
+          retention-days: 14
+
