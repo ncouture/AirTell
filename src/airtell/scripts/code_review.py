@@ -2,7 +2,7 @@
 """AirTell Automated Code Review Runner powered by Google Antigravity SDK.
 
 Executes in-depth architectural and adversarial code reviews for AirTell BLE
-testbed changes using Gemini 3.8 Flash with high thinking, grounded in the
+testbed changes using Gemini 4 Argon with high thinking, grounded in the
 AirTell Research NotebookLM Workspace (https://notebook.google.com/notebook/26cd837a-4d66-4ab1-94c7-128105718ad6)
 and the domain-specific review skill (.github/skills/code-review/SKILL.md).
 
@@ -18,6 +18,7 @@ import json
 import os
 import subprocess
 import sys
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -27,6 +28,9 @@ except ImportError:
     agy = None
 
 DEFAULT_NOTEBOOKLM_URL = "https://notebook.google.com/notebook/26cd837a-4d66-4ab1-94c7-128105718ad6"
+DEFAULT_MODEL = "gemini-4-argon"
+DEFAULT_THINKING_LEVEL = "HIGH"
+VALID_THINKING_LEVELS = ("LOW", "MEDIUM", "HIGH")
 
 
 def get_git_diff(base: str | None = None, head: str | None = None, staged: bool = False) -> str:
@@ -40,6 +44,8 @@ def get_git_diff(base: str | None = None, head: str | None = None, staged: bool 
         cmd.append(base)
 
     result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    if result.returncode != 0 and base and head and not staged:
+        result = subprocess.run(["git", "diff", base, head], capture_output=True, text=True, check=False)
     if result.returncode != 0:
         print(f"Error computing git diff: {result.stderr}", file=sys.stderr)
         return ""
@@ -57,6 +63,10 @@ def get_changed_files(base: str | None = None, head: str | None = None, staged: 
         cmd.append(base)
 
     result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    if result.returncode != 0 and base and head and not staged:
+        result = subprocess.run(
+            ["git", "diff", "--name-only", base, head], capture_output=True, text=True, check=False
+        )
     if result.returncode != 0:
         return []
     return [line.strip() for line in result.stdout.strip().splitlines() if line.strip()]
@@ -73,10 +83,13 @@ def get_codeowners(codeowners_path: Path) -> set[str]:
             continue
         parts = line.split()
         for part in parts[1:]:
+            if part.startswith("#"):
+                break
             if part.startswith("@"):
                 # Handle @org/team or @username
                 username = part.lstrip("@").split("/")[-1].lower()
-                owners.add(username)
+                if username:
+                    owners.add(username)
             elif "@" in part:
                 owners.add(part.lower())
     return owners
@@ -99,28 +112,27 @@ def verify_codeowner_authorization(
     if not codeowners:
         return False, "Authorization error: CODEOWNERS file does not define any codeowners."
 
-    if not pr_author:
+    clean_author = (pr_author or "").strip().lstrip("@").strip().lower()
+    if not clean_author:
         return False, "Authorization error: PR author must be specified when enforcing codeowner execution."
 
-    if not requester:
+    clean_requester = (requester or "").strip().lstrip("@").strip().lower()
+    if not clean_requester:
         return False, "Authorization error: Review requester must be specified when enforcing codeowner execution."
-
-    clean_author = pr_author.lower().lstrip("@")
-    clean_requester = requester.lower().lstrip("@")
 
     if clean_author not in codeowners:
         return False, (
-            f"PR author '@{pr_author}' is not a repository codeowner. "
+            f"PR author '@{pr_author.strip().lstrip('@').strip()}' is not a repository codeowner. "
             f"AirTell code review execution is restricted to PRs created by codeowners: {sorted(codeowners)}"
         )
 
     if clean_requester not in codeowners:
         return False, (
-            f"Review requester '@{requester}' is not a repository codeowner. "
+            f"Review requester '@{requester.strip().lstrip('@').strip()}' is not a repository codeowner. "
             f"AirTell code review execution must be requested by a codeowner: {sorted(codeowners)}"
         )
 
-    return True, f"Authorized: PR author '@{pr_author}' and requester '@{requester}' are verified codeowners."
+    return True, f"Authorized: PR author '@{clean_author}' and requester '@{clean_requester}' are verified codeowners."
 
 
 def load_notebooklm_context(context_path: Path | None) -> str:
@@ -131,9 +143,25 @@ def load_notebooklm_context(context_path: Path | None) -> str:
             if len(content) > 15000:
                 return content[:15000] + "\n\n[... NotebookLM context truncated for prompt budget ...]"
             return content
-        except Exception as e:
+        except OSError as e:
             print(f"Warning: Failed to read NotebookLM context file {context_path}: {e}", file=sys.stderr)
     return ""
+
+
+def resolve_thinking_level(thinking_level: str) -> object:
+    """Resolve thinking level string (LOW, MEDIUM, HIGH) to Antigravity SDK enum or normalized string."""
+    if not isinstance(thinking_level, str):
+        raise ValueError(
+            f"Invalid thinking level '{thinking_level}'. Must be one of: {', '.join(VALID_THINKING_LEVELS)}"
+        )
+    normalized = thinking_level.strip().upper()
+    if normalized not in VALID_THINKING_LEVELS:
+        raise ValueError(
+            f"Invalid thinking level '{thinking_level}'. Must be one of: {', '.join(VALID_THINKING_LEVELS)}"
+        )
+    if agy is not None and hasattr(agy, "ThinkingLevel"):
+        return getattr(agy.ThinkingLevel, normalized, normalized)
+    return normalized
 
 
 async def run_review(
@@ -142,6 +170,8 @@ async def run_review(
     skills_dir: Path,
     notebooklm_url: str = DEFAULT_NOTEBOOKLM_URL,
     notebooklm_context: str = "",
+    model: str = DEFAULT_MODEL,
+    thinking_level: str = DEFAULT_THINKING_LEVEL,
 ) -> str:
     """Run code review agent using Google Antigravity SDK with NotebookLM grounding."""
     global agy
@@ -154,8 +184,10 @@ async def run_review(
                 "Install it via 'pip install google-antigravity'."
             ) from e
 
+    resolved_model = (model or "").strip() or DEFAULT_MODEL
+    resolved_thinking = resolve_thinking_level(thinking_level)
     endpoint = agy.GeminiAPIEndpoint(
-        options=agy.GeminiModelOptions(thinking_level=agy.ThinkingLevel.HIGH)
+        options=agy.GeminiModelOptions(thinking_level=resolved_thinking)
     )
 
     capabilities = agy.CapabilitiesConfig(
@@ -167,8 +199,8 @@ async def run_review(
     )
 
     config = agy.LocalAgentConfig(
-        model="gemini-3.8-flash",
-        models=[agy.ModelTarget(name="gemini-3.8-flash", endpoint=endpoint)],
+        model=resolved_model,
+        models=[agy.ModelTarget(name=resolved_model, endpoint=endpoint)],
         skills_paths=[str(skills_dir)],
         capabilities=capabilities,
     )
@@ -232,12 +264,29 @@ def post_github_pr_comment(review_text: str, repo: str, pr_number: str, token: s
                 return True
             print(f"Failed to post comment. HTTP Status: {resp.status}", file=sys.stderr)
             return False
-    except Exception as exc:
+    except (OSError, urllib.error.URLError) as exc:
         print(f"Error posting GitHub comment: {exc}", file=sys.stderr)
         return False
 
 
-def main() -> None:
+def _normalize_model_arg(value: str) -> str:
+    cleaned = value.strip()
+    if not cleaned:
+        raise argparse.ArgumentTypeError("Model slug cannot be empty.")
+    return cleaned
+
+
+def _normalize_thinking_level_arg(value: str) -> str:
+    return value.strip().upper()
+
+
+def create_parser() -> argparse.ArgumentParser:
+    """Create and return the CLI argument parser for the code review runner."""
+    env_model = (os.getenv("AIRTELL_REVIEW_MODEL") or "").strip() or DEFAULT_MODEL
+    env_thinking = (os.getenv("AIRTELL_THINKING_LEVEL") or "").strip().upper()
+    if env_thinking not in VALID_THINKING_LEVELS:
+        env_thinking = DEFAULT_THINKING_LEVEL
+
     parser = argparse.ArgumentParser(description="AirTell AI Code Reviewer (Google Antigravity SDK + NotebookLM)")
     parser.add_argument("--base", help="Base commit or branch (e.g. origin/main)")
     parser.add_argument("--head", help="Head commit or branch (e.g. HEAD)")
@@ -247,6 +296,19 @@ def main() -> None:
     parser.add_argument("--pr-number", help="GitHub Pull Request number")
     parser.add_argument("--repo", help="GitHub repository (owner/repo)")
     parser.add_argument("--token", default=os.getenv("GITHUB_TOKEN"), help="GitHub API Token")
+    parser.add_argument(
+        "--model",
+        default=env_model,
+        type=_normalize_model_arg,
+        help=f"Antigravity model slug for code review (default: {DEFAULT_MODEL})",
+    )
+    parser.add_argument(
+        "--thinking-level",
+        default=env_thinking,
+        choices=VALID_THINKING_LEVELS,
+        type=_normalize_thinking_level_arg,
+        help=f"Model thinking level: LOW, MEDIUM, or HIGH (default: {DEFAULT_THINKING_LEVEL})",
+    )
     parser.add_argument(
         "--notebooklm-url",
         default=os.getenv("AIRTELL_NOTEBOOKLM_URL", DEFAULT_NOTEBOOKLM_URL),
@@ -262,6 +324,11 @@ def main() -> None:
         help="Enforce that PR author and requester are designated repository codeowners",
     )
     parser.add_argument(
+        "--verify-codeowners-only",
+        action="store_true",
+        help="Verify codeowner authorization and exit without running the AI code review",
+    )
+    parser.add_argument(
         "--pr-author",
         default=os.getenv("PR_AUTHOR"),
         help="GitHub username of the Pull Request author",
@@ -271,6 +338,11 @@ def main() -> None:
         default=os.getenv("REQUESTER"),
         help="GitHub username of the user requesting the code review",
     )
+    return parser
+
+
+def main() -> None:
+    parser = create_parser()
     args = parser.parse_args()
 
     project_root = Path(__file__).resolve().parent.parent.parent.parent
@@ -283,7 +355,7 @@ def main() -> None:
         sys.exit(1)
 
     # Enforce codeowner authorization if requested
-    if args.enforce_codeowners:
+    if args.enforce_codeowners or args.verify_codeowners_only:
         authorized, reason = verify_codeowner_authorization(
             project_root=project_root,
             requester=args.requester,
@@ -303,6 +375,8 @@ def main() -> None:
                 post_github_pr_comment(comment, args.repo, args.pr_number, args.token)
             sys.exit(1)
         print(f"✅ Authorization Verified: {reason}")
+        if args.verify_codeowners_only:
+            sys.exit(0)
 
     diff = get_git_diff(base=args.base, head=args.head, staged=args.staged)
     if not diff:
@@ -326,7 +400,7 @@ def main() -> None:
     if context_file and notebooklm_context_text:
         print(f"Loaded local NotebookLM research index snapshot from {context_file}")
 
-    print("Running Antigravity code review with Gemini 3.8 Flash (Thinking = High)...")
+    print(f"Running Antigravity code review with Gemini 4 Argon (model={args.model}, Thinking = {args.thinking_level})...")
     review_content = asyncio.run(
         run_review(
             diff_text=diff,
@@ -334,6 +408,8 @@ def main() -> None:
             skills_dir=skills_dir,
             notebooklm_url=args.notebooklm_url,
             notebooklm_context=notebooklm_context_text,
+            model=args.model,
+            thinking_level=args.thinking_level,
         )
     )
 
