@@ -16,10 +16,12 @@ import time
 from collections.abc import Sequence
 from pathlib import Path
 
+import serial
+
 from airtell.adversarial import (
+    DualDongleRelayEngine,
     LinkabilityObservation,
-    PairingRelayBridge,
-    RelayedLinkLayerPacket,
+    RelayConfig,
     RogueBeaconGenerator,
     RotationDesyncAnalyzer,
     StaticLeakageDetector,
@@ -656,44 +658,30 @@ def handle_verify_hardware(args: argparse.Namespace) -> int:
 def handle_relay(args: argparse.Namespace) -> int:
     """Execute two-ended pairing relay testbed."""
     logger.info("Initializing Pairing Relay on %s -> %s (mock=%s)", args.port1, args.port2, args.mock)
-    bridge = PairingRelayBridge()
-    if args.mock:
-        now_us = int(time.time() * 1_000_000)
-        pkt1 = RelayedLinkLayerPacket(
-            channel=37,
-            rssi=-55,
-            timestamp_usec=now_us,
-            pdu_type="CONNECT_IND",
-            initiator_mac="40:11:22:33:44:11",
-            target_mac="50:AA:BB:CC:DD:EE",
-            raw_pdu=bytes.fromhex("052240112233441150aabbccddee"),
+    try:
+        config = RelayConfig(
+            port1=args.port1,
+            port2=args.port2,
+            mac=getattr(args, "mac", None),
+            irk=getattr(args, "irk", None),
+            search_string=getattr(args, "string", None),
+            is_public=getattr(args, "public", False),
+            advchan=getattr(args, "advchan", 37),
+            fast_slave=getattr(args, "fastslave", False),
+            fast_master=getattr(args, "fastmaster", False),
+            preload_str=getattr(args, "preload", None),
+            pause=getattr(args, "pause", False),
+            quiet=getattr(args, "quiet", False),
+            pcap_path=getattr(args, "pcap", None),
+            duration_sec=getattr(args, "duration_sec", None),
+            mock=getattr(args, "mock", False),
         )
-        bridge.ingest_sniffed_packet(pkt1)
-        bridge.feed_pdu(pkt1.pdu_type, pkt1.initiator_mac, pkt1.target_mac, pkt1.raw_pdu, pkt1.timestamp_usec)
-
-        pkt2 = RelayedLinkLayerPacket(
-            channel=37,
-            rssi=-56,
-            timestamp_usec=now_us + 50_000,
-            pdu_type="SMP",
-            initiator_mac="40:11:22:33:44:11",
-            target_mac="50:AA:BB:CC:DD:EE",
-            raw_pdu=bytes([0x01, 0x03, 0x00, 0x01, 0x10, 0x07, 0x07]),
-        )
-        bridge.ingest_sniffed_packet(pkt2)
-        bridge.feed_pdu(pkt2.pdu_type, pkt2.initiator_mac, pkt2.target_mac, pkt2.raw_pdu, pkt2.timestamp_usec)
-
-        forwarded = []
-        while bridge.pending_packets_count() > 0:
-            p = bridge.drain_next_packet()
-            if p:
-                forwarded.append(p)
-
-        print(f"Pairing Relay Testbed: Forwarded {len(forwarded)} packets. State: {bridge.current_pairing_state.name}")
-        return 0
-    else:
-        print("Hardware pairing relay requires attached Sniffle radios.")
-        return 0
+        engine = DualDongleRelayEngine(config=config)
+        return engine.run()
+    except (ValueError, serial.SerialException, OSError) as exc:
+        logger.error("Pairing relay initialization error: %s", exc)
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
 
 
 def handle_deanonymize(args: argparse.Namespace) -> int:
@@ -1408,10 +1396,60 @@ def create_parser(prog: str = "airtell") -> argparse.ArgumentParser:
         "relay",
         help="Run two-ended BLE pairing relay testbed",
     )
-    p_relay.add_argument("--port1", type=str, default="/dev/ttyUSB0", help="Device 1 sniffer serial port")
-    p_relay.add_argument("--port2", type=str, default="/dev/ttyUSB1", help="Device 2 proxy serial port")
-    p_relay.add_argument("--mock", action="store_true", help="Run in mock simulation mode")
-    p_relay.add_argument("--duration-sec", type=float, default=5.0, help="Relay execution duration in seconds")
+    p_relay.add_argument(
+        "--port1", "-s", type=str, default="/dev/ttyUSB0", help="Device 1 (Master / Central) serial port"
+    )
+    p_relay.add_argument(
+        "--port2", type=str, default="/dev/ttyUSB1", help="Device 2 (Slave / Peripheral) serial port"
+    )
+    p_relay.add_argument(
+        "--mac", "-m", type=str, default=None, help="Target peripheral MAC address (e.g. 12:34:56:78:9A:BC)"
+    )
+    p_relay.add_argument(
+        "--irk", "-i", type=str, default=None, help="Target Identity Resolving Key (16 hex bytes)"
+    )
+    p_relay.add_argument(
+        "--string", "-S", type=str, default=None, help="Target advertisement search string"
+    )
+    p_relay.add_argument(
+        "--public", "-P", action="store_true", help="Supplied MAC address is public (default: random/RPA)"
+    )
+    p_relay.add_argument(
+        "--advchan",
+        "-c",
+        type=int,
+        default=37,
+        choices=[37, 38, 39],
+        help="Advertising channel to listen on (default: 37)",
+    )
+    p_relay.add_argument(
+        "--fastslave", "-f", action="store_true", help="Relay slave should request a fast connection interval"
+    )
+    p_relay.add_argument(
+        "--fastmaster", "-F", action="store_true", help="Relay master should specify a fast connection interval"
+    )
+    p_relay.add_argument(
+        "--preload",
+        "-Q",
+        type=str,
+        default=None,
+        help="Preload expected encrypted connection parameter changes (e.g. 6:6,39:6)",
+    )
+    p_relay.add_argument(
+        "--pause", "-p", action="store_true", help="Wait for key press on master before relaying"
+    )
+    p_relay.add_argument(
+        "--quiet", "-q", action="store_true", help="Don't print empty packets"
+    )
+    p_relay.add_argument(
+        "--pcap", "-o", "--output", dest="pcap", type=str, default=None, help="PCAP output capture file"
+    )
+    p_relay.add_argument(
+        "--duration-sec", type=float, default=None, help="Relay execution duration in seconds"
+    )
+    p_relay.add_argument(
+        "--mock", action="store_true", help="Run in mock simulation mode"
+    )
 
     # 6. Deanonymize
     p_deanon = subparsers.add_parser(
