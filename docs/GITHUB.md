@@ -14,7 +14,11 @@ This document specifies the operational architecture, community governance, issu
    - [Dual-Tier Codeowner Authorization Policy on Community PRs](#dual-tier-codeowner-authorization-policy-on-community-prs)
    - [CI/CD Workflow & Trigger Mechanics](#cicd-workflow--trigger-mechanics)
    - [Local CLI Execution](#local-cli-execution)
-5. [Repository File Map](#5-repository-file-map)
+5. [Release Automation (Release Please)](#5-release-automation-release-please)
+   - [Manifest-Driven Architecture](#manifest-driven-architecture)
+   - [Dual-Tier Codeowner Release Gating](#dual-tier-codeowner-release-gating)
+   - [Release Please Workflow Mechanics](#release-please-workflow-mechanics)
+6. [Repository File Map](#6-repository-file-map)
 
 ---
 
@@ -152,7 +156,60 @@ python scripts/code_review.py \
 
 ---
 
-## 5. Repository File Map
+## 5. Release Automation (Release Please)
+
+AirTell automates semantic versioning, changelog generation, and GitHub releases using [**Google Release Please Action (`release-please-action@v4`)**](https://github.com/google-github-actions/release-please-action) with manifest-driven configuration.
+
+```
+                  Merge to main or Manual Dispatch
+                                 │
+                                 ▼
+           ┌───────────────────────────────────────────┐
+           │ .github/workflows/release-please.yml      │
+           │ Tier 1: Actor Check (github.actor)        │
+           └─────────────────────┬─────────────────────┘
+                                 │
+                                 ▼
+           ┌───────────────────────────────────────────┐
+           │ Runner: Tier 2 Codeowner Verification     │
+           │ Dynamic .github/CODEOWNERS parsing        │
+           └─────────────────────┬─────────────────────┘
+                                 │
+                        ┌────────┴────────┐
+                        ▼                 ▼
+                 ❌ Unauthorized    ✅ Authorized
+                 (Halt runner)      (Execute release-please)
+                                          │
+                                          ▼
+                                ┌───────────────────┐
+                                │ Release Please v4 │
+                                │ Manifest Strategy │
+                                └───────────────────┘
+```
+
+### Manifest-Driven Architecture
+Release configuration and version tracking are maintained via root manifest files:
+- **[`release-please-config.json`](../release-please-config.json)**: Configured for Python package `airtell`, updating `pyproject.toml` and `src/airtell/__init__.py`. Configured with `bump-minor-pre-major: true` and `bump-patch-for-minor-pre-major: false` for pre-1.0 semantic versioning.
+- **[`.release-please-manifest.json`](../.release-please-manifest.json)**: Tracks the current released version (`0.2.0`).
+
+### Dual-Tier Codeowner Release Gating
+In strict compliance with repository security governance, release automation enforces defense-in-depth codeowner restriction:
+1. **Tier 1 (Job-Level Trigger Gate)**: Evaluated before runner allocation:
+   ```yaml
+   if: github.actor == 'ncouture' || github.triggering_actor == 'ncouture'
+   ```
+   Ensures non-codeowners cannot allocate runners or trigger release workflows.
+2. **Tier 2 (Runner-Level Codeowner Gate)**: The step `Authorize Codeowner Execution` parses [`.github/CODEOWNERS`](../.github/CODEOWNERS) directly on the runner to dynamically verify the triggering actor prior to invoking `release-please-action@v4`.
+
+### Release Please Workflow Mechanics
+Configured in [`.github/workflows/release-please.yml`](../.github/workflows/release-please.yml):
+- **Triggers**: Runs on `push` to `main` and manual `workflow_dispatch`.
+- **Permissions**: Requires `contents: write` (to create tags and releases) and `pull-requests: write` (to manage release pull requests).
+- **Concurrency**: Governed by `group: release-please-${{ github.ref }}` with `cancel-in-progress: false` to ensure in-flight release tasks are not aborted prematurely.
+
+---
+
+## 6. Repository File Map
 
 ```text
 .github/
@@ -166,11 +223,15 @@ python scripts/code_review.py \
 │   └── code-review/
 │       └── SKILL.md                 # Gemini 3.8 Flash (Thinking=High) AirTell review skill
 └── workflows/
-    └── code-review.yml              # CI/CD automated review workflow with codeowner gates
+    ├── code-review.yml              # CI/CD automated review workflow with codeowner gates
+    └── release-please.yml           # Semantic release and changelog automation workflow
 
 scripts/
 └── code_review.py                   # Antigravity SDK review runner (symlinked to src/airtell/scripts/)
 
 tests/
 └── test_codeowner_enforcement.py    # Unit test suite verifying codeowner authorization policies
+
+release-please-config.json           # Release Please manifest configuration (package airtell)
+.release-please-manifest.json        # Release Please version tracker (0.2.0)
 ```
