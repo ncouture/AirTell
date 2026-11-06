@@ -313,3 +313,25 @@ def test_hardware_clean_teardown_no_thread_or_lock_leak(
     new_threads = current_threads - initial_threads
     leaked_sniffle_threads = [name for name in new_threads if name.startswith("SniffleReader-")]
     assert len(leaked_sniffle_threads) == 0, f"Leaked SniffleReader threads: {leaked_sniffle_threads}"
+
+
+@pytest.mark.hardware
+def test_hardware_cli_pairing_relay_execution(
+    hardware_ports: tuple[str, str],
+) -> None:
+    """Verify CLI airtell relay initializes dual Sniffle radios and tears down cleanly."""
+    dev1, dev2 = hardware_ports
+    try:
+        rc = cli_main([
+            "relay",
+            "--port1",
+            dev1,
+            "--port2",
+            dev2,
+            "--duration-sec",
+            "1.0",
+            "--quiet",
+        ])
+        assert rc == 0, f"airtell relay failed with return code {rc}"
+    finally:
+        time.sleep(0.20)

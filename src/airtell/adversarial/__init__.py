@@ -12,11 +12,15 @@ from airtell.adversarial.deanonymizer import (
     TrajectoryReconstructor,
 )
 from airtell.adversarial.relay import (
+    DualDongleRelayEngine,
     PairingFailureCode,
     PairingHandshakeEvent,
     PairingRelayBridge,
     PairingSignature,
+    RelayConfig,
     RelayedLinkLayerPacket,
+    RelayMasterRunner,
+    RelaySlaveRunner,
     SMPPairingState,
 )
 from airtell.adversarial.rogue_beacon import (
@@ -29,12 +33,16 @@ from airtell.adversarial.rogue_beacon import (
 
 __all__ = [
     "AntiStalkingEvasionEvaluator",
+    "DualDongleRelayEngine",
     "EvasionBenchmarkResult",
     "LinkabilityObservation",
     "PairingFailureCode",
     "PairingHandshakeEvent",
     "PairingRelayBridge",
     "PairingSignature",
+    "RelayConfig",
+    "RelayMasterRunner",
+    "RelaySlaveRunner",
     "RelayedLinkLayerPacket",
     "RogueBeaconGenerator",
     "RotationDesyncAnalyzer",
