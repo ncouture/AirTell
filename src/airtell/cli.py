@@ -1622,7 +1622,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     parser = create_parser(prog=prog)
 
-    if "-h" in argv or "--help" in argv:
+    if "-h" in argv or "--help" in argv or "--version" in argv:
         parser.parse_args(argv)
         return 0
 

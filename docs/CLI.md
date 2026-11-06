@@ -770,14 +770,18 @@ Unlike raw per-packet logs, each row in this summary table corresponds to a dist
 | `service_uuids` | `str` | Semicolon-delimited | Semicolon-separated sorted list of unique 16-bit, 32-bit, or 128-bit Service UUIDs (e.g. `0x180D;0xFD6F;0xFEAA`). Empty if none observed. |
 | `beacon_types` | `str` | Semicolon-delimited | Semicolon-separated list of identified beacon protocols (`AltBeacon`, `Eddystone-TLM`, `Eddystone-UID`, `Eddystone-URL`, `GAEN`, `iBeacon`, `FindMy`). Empty if not a recognized beacon. |
 | `channels` | `str` | Semicolon-delimited | Semicolon-separated sorted list of 2.4 GHz RF channels on which packets from this device were captured (e.g. `37`, `38;39`, or `37;38;39`). |
+| `vendor` | `str` | Text string (or empty `""`) | Hardware manufacturer resolved from IEEE OUI database (e.g. `Apple, Inc.`, `Flock Safety`). Empty if unresolved. |
+| `device_class` | `str` | Categorical string | Device category classification resolved from OUI DB: `camera`, `drone`, `alpr`, `bodycam`, or empty `""`. |
+| `oui_prefix` | `str` | `XX:XX:XX` | IEEE OUI prefix matching the hardware vendor. Empty if unresolved. |
+| `is_surveillance` | `bool` | `True` / `False` | Boolean indicator whether the device classification matches surveillance device profiles (camera, drone, alpr, bodycam). |
 
 #### 6.3.2 Example CSV Export
 
 ```csv
-mac_address,address_type,packet_count,rssi_min,rssi_max,rssi_avg,first_seen_iso,last_seen_iso,duration_sec,observed_names,service_uuids,beacon_types,channels
-54:E4:BD:11:22:33,Public,4,-68,-62,-64.5,2026-10-14T20:09:44.102300+00:00,2026-10-14T20:09:45.314500+00:00,1.212,SniffleHRM,0x180D,,37;38
-6C:79:B8:AA:BB:CC,RPA,1,-72,-72,-72.0,2026-10-14T20:09:45.001200+00:00,2026-10-14T20:09:45.001200+00:00,0.0,,,,38
-ED:6F:63:63:6F:ED,Random Static,18,-60,-60,-60.0,2026-10-14T20:09:43.800201+00:00,2026-10-14T20:09:43.817201+00:00,0.017,,0xFD6F;0xFEAA,AltBeacon;Eddystone-TLM;Eddystone-UID;Eddystone-URL;GAEN;iBeacon,37;38;39
+mac_address,address_type,packet_count,rssi_min,rssi_max,rssi_avg,first_seen_iso,last_seen_iso,duration_sec,observed_names,service_uuids,beacon_types,channels,vendor,device_class,oui_prefix,is_surveillance
+54:E4:BD:11:22:33,Public,4,-68,-62,-64.5,2026-10-14T20:09:44.102300+00:00,2026-10-14T20:09:45.314500+00:00,1.212,SniffleHRM,0x180D,,37;38,,,,False
+6C:79:B8:AA:BB:CC,RPA,1,-72,-72,-72.0,2026-10-14T20:09:45.001200+00:00,2026-10-14T20:09:45.001200+00:00,0.0,,,,38,,,,False
+ED:6F:63:63:6F:ED,Random Static,18,-60,-60,-60.0,2026-10-14T20:09:43.800201+00:00,2026-10-14T20:09:43.817201+00:00,0.017,,0xFD6F;0xFEAA,AltBeacon;Eddystone-TLM;Eddystone-UID;Eddystone-URL;GAEN;iBeacon,37;38;39,,,,False
 ```
 
 #### 6.3.3 Stimulus-Response Event CSV Log (API / Secondary Export)

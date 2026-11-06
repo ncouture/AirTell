@@ -290,6 +290,10 @@ class TestDocsCliMockExecution:
             "service_uuids",
             "beacon_types",
             "channels",
+            "vendor",
+            "device_class",
+            "oui_prefix",
+            "is_surveillance",
         ]
         with open(csv_path, mode="r", newline="", encoding="utf-8") as f:
             reader = csv.reader(f)
@@ -366,6 +370,10 @@ class TestDocsCliMockExecution:
             "service_uuids",
             "beacon_types",
             "channels",
+            "vendor",
+            "device_class",
+            "oui_prefix",
+            "is_surveillance",
         ]
         assert doc_header == expected_fields, (
             f"Documented CSV header in docs/CLI.md §6.3 does not match TelemetrySession device fields:\n"

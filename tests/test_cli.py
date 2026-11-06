@@ -343,6 +343,10 @@ class TestMockSimulateCli:
                 "service_uuids",
                 "beacon_types",
                 "channels",
+                "vendor",
+                "device_class",
+                "oui_prefix",
+                "is_surveillance",
             ]
             rows = list(reader)
             assert len(rows) >= 1
