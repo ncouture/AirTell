@@ -40,15 +40,41 @@ def test_verify_codeowner_authorization_success():
     assert "Authorized" in reason
 
 
-def test_verify_codeowner_authorization_unauthorized_author():
+def test_verify_codeowner_authorization_non_codeowner_author_authorized():
+    """Verify that codeowner requests on non-codeowner PRs are authorized under R3."""
     repo_root = Path(__file__).resolve().parent.parent
     authorized, reason = verify_codeowner_authorization(
         project_root=repo_root,
         requester="ncouture",
         pr_author="unauthorized_contributor",
     )
+    assert authorized is True
+    assert "Authorized" in reason
+    assert "unauthorized_contributor" in reason
+
+
+def test_verify_codeowner_authorization_unauthorized_requester_non_codeowner_author():
+    """Verify that non-codeowner requests on non-codeowner PRs are blocked."""
+    repo_root = Path(__file__).resolve().parent.parent
+    authorized, reason = verify_codeowner_authorization(
+        project_root=repo_root,
+        requester="unauthorized_requester",
+        pr_author="unauthorized_contributor",
+    )
     assert authorized is False
-    assert "PR author '@unauthorized_contributor' is not a repository codeowner" in reason
+    assert "Review requester '@unauthorized_requester' is not a repository codeowner" in reason
+
+
+def test_verify_codeowner_authorization_empty_author():
+    """Verify that an empty or missing PR author is rejected with an informative error."""
+    repo_root = Path(__file__).resolve().parent.parent
+    authorized, reason = verify_codeowner_authorization(
+        project_root=repo_root,
+        requester="ncouture",
+        pr_author="   ",
+    )
+    assert authorized is False
+    assert "PR author must be specified" in reason
 
 
 def test_verify_codeowner_authorization_unauthorized_requester():
@@ -194,6 +220,7 @@ def test_run_review_configures_gemini_4_argon_high(monkeypatch: pytest.MonkeyPat
 
 
 def test_verify_codeowners_only_cli_mode(monkeypatch: pytest.MonkeyPatch):
+    # 1. Codeowner requester on codeowner PR -> exit 0
     monkeypatch.setattr(
         "sys.argv",
         [
@@ -205,10 +232,11 @@ def test_verify_codeowners_only_cli_mode(monkeypatch: pytest.MonkeyPatch):
             "ncouture",
         ],
     )
-    with pytest.raises(SystemExit) as exc_info:
+    with pytest.raises(SystemExit) as exc_info_co_co:
         code_review_mod.main()
-    assert exc_info.value.code == 0
+    assert exc_info_co_co.value.code == 0
 
+    # 2. Codeowner requester on non-codeowner PR -> exit 0 (R3 core behavior)
     monkeypatch.setattr(
         "sys.argv",
         [
@@ -220,9 +248,41 @@ def test_verify_codeowners_only_cli_mode(monkeypatch: pytest.MonkeyPatch):
             "ncouture",
         ],
     )
-    with pytest.raises(SystemExit) as exc_info_fail:
+    with pytest.raises(SystemExit) as exc_info_co_non:
         code_review_mod.main()
-    assert exc_info_fail.value.code == 1
+    assert exc_info_co_non.value.code == 0
+
+    # 3. Non-codeowner requester on codeowner PR -> exit 1
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "code_review.py",
+            "--verify-codeowners-only",
+            "--pr-author",
+            "ncouture",
+            "--requester",
+            "intruder",
+        ],
+    )
+    with pytest.raises(SystemExit) as exc_info_non_co:
+        code_review_mod.main()
+    assert exc_info_non_co.value.code == 1
+
+    # 4. Non-codeowner requester on non-codeowner PR -> exit 1
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "code_review.py",
+            "--verify-codeowners-only",
+            "--pr-author",
+            "intruder",
+            "--requester",
+            "intruder",
+        ],
+    )
+    with pytest.raises(SystemExit) as exc_info_non_non:
+        code_review_mod.main()
+    assert exc_info_non_non.value.code == 1
 
 
 def test_code_review_workflow_configuration(tmp_path: Path):
@@ -239,6 +299,7 @@ def test_code_review_workflow_configuration(tmp_path: Path):
     assert "gemini-4-argon" in content
     assert "Gemma 4" not in content
     assert "timeout-minutes: 15" in content
+    assert "github.actor == 'ncouture' || github.triggering_actor == 'ncouture'" in content
     assert "github.event.action == 'ready_for_review'" in content
     assert "astral-sh/setup-uv@v4" in content
     assert "retention-days: 14" in content

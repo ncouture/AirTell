@@ -8,10 +8,10 @@ This document specifies the operational architecture, community governance, issu
 1. [Governance & Repository Ownership](#1-governance--repository-ownership)
 2. [Community Discussions Architecture](#2-community-discussions-architecture)
 3. [Issue Templates & Triage Engine](#3-issue-templates--triage-engine)
-4. [AI Code Review System (Gemini 3.8 Flash & Antigravity SDK)](#4-ai-code-review-system)
+4. [AI Code Review System (Gemini 4 Argon & Antigravity SDK)](#4-ai-code-review-system)
    - [Architectural Skill Protocol](#architectural-skill-protocol)
    - [Google NotebookLM Grounding](#google-notebooklm-grounding)
-   - [Dual-Gate Codeowner Authorization Policy](#dual-gate-codeowner-authorization-policy)
+   - [Dual-Tier Codeowner Authorization Policy on Community PRs](#dual-tier-codeowner-authorization-policy-on-community-prs)
    - [CI/CD Workflow & Trigger Mechanics](#cicd-workflow--trigger-mechanics)
    - [Local CLI Execution](#local-cli-execution)
 5. [Repository File Map](#5-repository-file-map)
@@ -75,7 +75,7 @@ Requires contributors to articulate the research motivation, technical proposal,
 
 ## 4. AI Code Review System
 
-AirTell deploys a specialized, automated code review agent built on the **Google Antigravity SDK (`google-antigravity`)** and powered by **Gemini 3.8 Flash with High Thinking**.
+AirTell deploys a specialized, automated code review agent built on the **Google Antigravity SDK (`google-antigravity`)** and powered by **Gemini 4 Argon with High Thinking**.
 
 ```
                            PR Event or Comment Trigger
@@ -83,24 +83,25 @@ AirTell deploys a specialized, automated code review agent built on the **Google
                                         ▼
                   ┌───────────────────────────────────────────┐
                   │ .github/workflows/code-review.yml         │
+                  │ Tier 1: Actor Check (github.actor)        │
                   │ Resolve: PR_AUTHOR & REQUESTER            │
                   └─────────────────────┬─────────────────────┘
                                         │
                                         ▼
                   ┌───────────────────────────────────────────┐
                   │ scripts/code_review.py                    │
-                  │ --enforce-codeowners                      │
-                  │ Dual-Gate Authorization Check             │
+                  │ Tier 2: --verify-codeowners-only          │
+                  │ Codeowner Authorization Check             │
                   └─────────────────────┬─────────────────────┘
                                         │
                ┌────────────────────────┴────────────────────────┐
                ▼                                                 ▼
         ❌ Unauthorized                                  ✅ Authorized
-  (PR author or requester                         (Both PR author & requester
-   not in CODEOWNERS)                              in .github/CODEOWNERS)
+  (Requester not in CODEOWNERS                    (Requester in .github/CODEOWNERS;
+   or empty PR author)                             PR author: codeowner or community)
                │                                                 │
   - Abort execution immediately                    - Load NotebookLM Research Context
-  - Post policy warning to PR                      - Execute Gemini 3.8 Flash (Thinking=High)
+  - Post policy warning to PR                      - Execute Gemini 4 Argon (Thinking=High)
                                                    - Post Review Report to PR & Step Summary
 ```
 
@@ -117,12 +118,12 @@ The code reviewer is grounded in the authoritative **[AirTell Research NotebookL
 - **Dual-Tier Knowledge Loading**: In addition to web URL grounding, [`scripts/code_review.py`](../scripts/code_review.py) automatically ingests [`docs/AirTell-PoPETs.md`](AirTell-PoPETs.md) (the synchronized offline research index of all 259 papers) directly into the agent context.
 - **Empirical Validation**: Reviews cross-reference link-layer heuristics, timing side-channels, and active stimulus patterns against empirical privacy research standards.
 
-### Dual-Gate Codeowner Authorization Policy
-To prevent abuse of high-thinking reasoning compute, code review execution is strictly enforced:
-1. **Gate 1 (PR Creator)**: The Pull Request must have been created by a designated repository codeowner (`ncouture`).
-2. **Gate 2 (Requester)**: The review must be explicitly requested by a designated repository codeowner (`ncouture`).
+### Dual-Tier Codeowner Authorization Policy on Community PRs
+To prevent abuse of high-thinking reasoning compute while supporting open-source community contributions, workflow execution and automated reviews are strictly protected by a dual-tier authorization model:
+1. **Tier 1 (Workflow Trigger Gate)**: In [`.github/workflows/code-review.yml`](../.github/workflows/code-review.yml), a job-level `if:` condition requires `(github.actor == 'ncouture' || github.triggering_actor == 'ncouture')`. Non-codeowners cannot allocate GitHub Actions runner instances or execute workflows.
+2. **Tier 2 (Runner Codeowner Verification Gate)**: In [`scripts/code_review.py`](../scripts/code_review.py), `verify_codeowner_authorization` validates that the review requester is a verified repository codeowner listed in [`.github/CODEOWNERS`](../.github/CODEOWNERS). Codeowners can authorize and trigger automated code reviews on pull requests authored by external community contributors as well as internal codeowners.
 
-If either check fails, [`scripts/code_review.py`](../scripts/code_review.py) terminates immediately with exit code 1 and posts an explanatory policy notice to the PR, ensuring zero LLM API calls are dispatched.
+If review requester authorization fails or the PR author is missing, [`scripts/code_review.py`](../scripts/code_review.py) terminates immediately with exit code 1 and posts an explanatory policy notice to the PR, ensuring zero LLM API calls are dispatched.
 
 ### CI/CD Workflow & Trigger Mechanics
 The GitHub Actions workflow at [`.github/workflows/code-review.yml`](../.github/workflows/code-review.yml) supports four on-demand trigger mechanisms:
@@ -141,11 +142,11 @@ python scripts/code_review.py --staged
 # Review local branch against origin/main and write output to a file
 python scripts/code_review.py --base origin/main --output review.md
 
-# Enforce codeowner policy locally
+# Enforce codeowner policy locally (authorized on community PRs)
 python scripts/code_review.py \
   --base origin/main \
   --enforce-codeowners \
-  --pr-author "ncouture" \
+  --pr-author "community-contributor" \
   --requester "ncouture"
 ```
 
