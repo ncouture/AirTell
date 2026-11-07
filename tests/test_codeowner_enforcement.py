@@ -427,17 +427,26 @@ def test_release_please_workflow_configuration():
     assert "group: release-please-${{ github.ref }}" in content
     assert "cancel-in-progress: false" in content
 
+    # Pinned Ubuntu runner (avoids ubuntu-latest migration notice)
+    assert "runs-on: ubuntu-24.04" in content
+    assert "ubuntu-latest" not in content
+
     # Permissions
     assert "contents: write" in content
+    assert "issues: write" in content
     assert "pull-requests: write" in content
 
     # Tier 1 Job-level codeowner actor check
     assert "if: github.actor == 'ncouture' || github.triggering_actor == 'ncouture'" in content
 
-    # Step sequence
-    checkout_pos = content.index("uses: actions/checkout@v4")
+    # Deprecated actions and Node 20 targets must not be present
+    assert "google-github-actions/release-please-action" not in content
+    assert "actions/checkout@v4" not in content
+
+    # Step sequence (Node 24 actions)
+    checkout_pos = content.index("uses: actions/checkout@v6")
     auth_pos = content.index('- name: "Authorize Codeowner Execution"')
-    release_pos = content.index("uses: google-github-actions/release-please-action@v4")
+    release_pos = content.index("uses: googleapis/release-please-action@v5")
     assert checkout_pos < auth_pos < release_pos
 
     # Release action arguments

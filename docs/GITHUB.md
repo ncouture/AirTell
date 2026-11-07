@@ -158,7 +158,7 @@ python scripts/code_review.py \
 
 ## 5. Release Automation (Release Please)
 
-AirTell automates semantic versioning, changelog generation, and GitHub releases using [**Google Release Please Action (`release-please-action@v4`)**](https://github.com/google-github-actions/release-please-action) with manifest-driven configuration.
+AirTell automates semantic versioning, changelog generation, and GitHub releases using [**Google Release Please Action (`googleapis/release-please-action@v5`)**](https://github.com/googleapis/release-please-action) with manifest-driven configuration.
 
 ```
                   Merge to main or Manual Dispatch
@@ -182,7 +182,7 @@ AirTell automates semantic versioning, changelog generation, and GitHub releases
                                           │
                                           ▼
                                 ┌───────────────────┐
-                                │ Release Please v4 │
+                                │ Release Please v5 │
                                 │ Manifest Strategy │
                                 └───────────────────┘
 ```
@@ -199,12 +199,13 @@ In strict compliance with repository security governance, release automation enf
    if: github.actor == 'ncouture' || github.triggering_actor == 'ncouture'
    ```
    Ensures non-codeowners cannot allocate runners or trigger release workflows.
-2. **Tier 2 (Runner-Level Codeowner Gate)**: The step `Authorize Codeowner Execution` parses [`.github/CODEOWNERS`](../.github/CODEOWNERS) directly on the runner to dynamically verify the triggering actor prior to invoking `release-please-action@v4`.
+2. **Tier 2 (Runner-Level Codeowner Gate)**: The step `Authorize Codeowner Execution` parses [`.github/CODEOWNERS`](../.github/CODEOWNERS) directly on the runner to dynamically verify the triggering actor prior to invoking `googleapis/release-please-action@v5`.
 
 ### Release Please Workflow Mechanics
 Configured in [`.github/workflows/release-please.yml`](../.github/workflows/release-please.yml):
 - **Triggers**: Runs on `push` to `main` and manual `workflow_dispatch`.
-- **Permissions**: Requires `contents: write` (to create tags and releases) and `pull-requests: write` (to manage release pull requests).
+- **Runner & Runtime**: Pinned to `runs-on: ubuntu-24.04` using Node.js 24 native actions (`actions/checkout@v6` and `googleapis/release-please-action@v5`).
+- **Permissions**: Requires `contents: write` (to create tags and releases), `issues: write` (to manage `autorelease` labels), and `pull-requests: write` (to manage release pull requests), paired with repository workflow permission `can_approve_pull_request_reviews: true`.
 - **Concurrency**: Governed by `group: release-please-${{ github.ref }}` with `cancel-in-progress: false` to ensure in-flight release tasks are not aborted prematurely.
 
 ---

@@ -13,15 +13,16 @@ concurrency:
 jobs:
   release-please:
     name: "Automate Semantic Release & Changelog"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: github.actor == 'ncouture' || github.triggering_actor == 'ncouture'
     permissions:
       contents: write
+      issues: write
       pull-requests: write
 
     steps:
       - name: "Checkout Repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: "Authorize Codeowner Execution"
         env:
@@ -59,7 +60,7 @@ jobs:
 
       - name: "Run Release Please Action"
         id: release
-        uses: google-github-actions/release-please-action@v4
+        uses: googleapis/release-please-action@v5
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
