@@ -335,7 +335,7 @@ gh pr merge --rebase --delete-branch
 
 ### 5. Automated releases and changelog generation
 
-AirTell automates semantic versioning and changelog maintenance via [Google Release Please Action (`release-please-action@v4`)](https://github.com/google-github-actions/release-please-action) configured in [`.github/workflows/release-please.yml`](.github/workflows/release-please.yml):
+AirTell automates semantic versioning and changelog maintenance via [Google Release Please Action (`googleapis/release-please-action@v5`)](https://github.com/googleapis/release-please-action) configured in [`.github/workflows/release-please.yml`](.github/workflows/release-please.yml):
 
 * **Conventional Commits**: Every merged commit on `main` is evaluated by `release-please`. `feat:` commits increment minor versions (`0.2.0` -> `0.3.0`), and `fix:` commits increment patch versions (`0.2.0` -> `0.2.1`), while updating `CHANGELOG.md`, `pyproject.toml`, and `src/airtell/__init__.py`.
 * **Release Pull Requests**: `release-please` maintains an open Release PR on `main` aggregating unreleased changes. Merging this PR creates a new GitHub Release and publishes git tags.
