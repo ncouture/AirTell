@@ -132,7 +132,9 @@ def test_dispatch_webhook_alert_success_and_hmac_signature():
         assert req.get_full_url() == target_url
         assert req.get_method() == "POST"
         assert req.get_header("Content-type") == "application/json"
-        assert req.get_header("User-agent") == "AirTell-Tracker/0.2.0"
+        import airtell
+
+        assert req.get_header("User-agent") == f"AirTell-Tracker/{airtell.__version__}"
         assert req.get_header("Authorization") == f"Bearer {secret}"
         assert req.get_header("X-custom-source") == "AirTell-Testbed"
 

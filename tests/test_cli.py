@@ -61,7 +61,9 @@ class TestCliArgumentParsing:
         rc = main(["--version"])
         assert rc == 0
         captured = capsys.readouterr()
-        assert "airtell 0.2.0" in captured.out
+        import airtell
+
+        assert f"airtell {airtell.__version__}" in captured.out
 
     def test_empty_arguments_returns_error(self, capsys: pytest.CaptureFixture[str]) -> None:
         rc = main([])

@@ -31,6 +31,8 @@ from typing import Any
 
 from dotenv import load_dotenv
 
+import airtell
+
 load_dotenv()  # project root's .env
 
 logger = logging.getLogger("airtell.tracker")
@@ -184,7 +186,7 @@ def dispatch_webhook_alert(
 
     req_headers: dict[str, str] = {
         "Content-Type": "application/json",
-        "User-Agent": "AirTell-Tracker/0.2.0",
+        "User-Agent": f"AirTell-Tracker/{airtell.__version__}",
     }
 
     if secret:
