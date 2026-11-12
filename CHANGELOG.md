@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/ncouture/AirTell/compare/v0.3.0...v0.3.1) (2026-11-12)
+
+
+### Continuous Integration
+
+* **release:** synchronize backfilled changelog and automate release-please merges ([acb7981](https://github.com/ncouture/AirTell/commit/acb7981ca1f02e814d3f3061ca6e6ad4e88c49c4))
+
 ## [0.3.0](https://github.com/ncouture/AirTell/compare/v0.2.0...v0.3.0) (2026-11-07)
 
 

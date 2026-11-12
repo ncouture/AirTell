@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "airtell"
-version = "0.3.0"
+version = "0.3.1"
 description = "AirTell: Python testbed framework coordinating Sniffle-enabled USB devices for BLE tracking research"
 readme = "README.md"
 requires-python = ">=3.10"
