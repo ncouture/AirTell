@@ -19,10 +19,16 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
+    outputs:
+      releases_created: ${{ steps.release.outputs.releases_created == 'true' || steps.finalize_release.outputs.releases_created == 'true' }}
+      tag_name: ${{ steps.finalize_release.outputs.tag_name || steps.release.outputs.tag_name }}
+      version: ${{ steps.finalize_release.outputs.version || steps.release.outputs.version }}
 
     steps:
       - name: "Checkout Repository"
         uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: "Authorize Codeowner Execution"
         env:
@@ -62,5 +68,152 @@ jobs:
         id: release
         uses: googleapis/release-please-action@v5
         with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+      - name: "Bootstrap Fallback Release PR for Non-Conventional Merges"
+        id: fallback_pr
+        if: >-
+          github.event_name == 'push' &&
+          steps.release.outputs.releases_created != 'true' &&
+          steps.release.outputs.prs_created != 'true' &&
+          !startsWith(github.event.head_commit.message, 'chore(main): release ')
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.sha }}
+          HEAD_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          NEXT_VER=$(python3 - <<'PY'
+          import datetime
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          manifest = Path(".release-please-manifest.json")
+          data = json.loads(manifest.read_text(encoding="utf-8"))
+          cur = data["."]
+          major, minor, patch = [int(x) for x in cur.split(".")]
+          nxt = f"{major}.{minor}.{patch + 1}"
+          data["."] = nxt
+          manifest.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+
+          pyproj = Path("pyproject.toml")
+          pyproj.write_text(
+              re.sub(r'^version = ".*"$', f'version = "{nxt}"', pyproj.read_text(encoding="utf-8"), count=1, flags=re.M),
+              encoding="utf-8",
+          )
+          init_py = Path("src/airtell/__init__.py")
+          init_py.write_text(
+              re.sub(r'^__version__ = ".*"$', f'__version__ = "{nxt}"', init_py.read_text(encoding="utf-8"), count=1, flags=re.M),
+              encoding="utf-8",
+          )
+
+          sha = os.environ["HEAD_SHA"]
+          subj = os.environ["HEAD_MSG"].splitlines()[0].strip()
+          repo = os.environ["REPO"]
+          today = datetime.date.today().isoformat()
+          entry = (
+              f"## [{nxt}](https://github.com/{repo}/compare/v{cur}...v{nxt}) ({today})\n\n\n"
+              f"### Miscellaneous Chores\n\n"
+              f"* {subj} ([{sha[:7]}](https://github.com/{repo}/commit/{sha}))\n"
+          )
+          cl = Path("CHANGELOG.md")
+          if cl.exists():
+              existing = cl.read_text(encoding="utf-8")
+              if existing.startswith("# Changelog\n\n"):
+                  cl.write_text("# Changelog\n\n" + entry + "\n" + existing[len("# Changelog\n\n"):], encoding="utf-8")
+              else:
+                  cl.write_text("# Changelog\n\n" + entry + "\n" + existing, encoding="utf-8")
+          else:
+              cl.write_text("# Changelog\n\n" + entry, encoding="utf-8")
+
+          pr_body = (
+              ":robot: I have created a release *beep* *boop*\n"
+              "---\n\n\n"
+              f"{entry.rstrip()}\n\n"
+              "---\n"
+              "This PR was generated with [Release Please](https://github.com/googleapis/release-please). "
+              "See [documentation](https://github.com/googleapis/release-please#release-please).\n"
+          )
+          Path("/tmp/rp_fallback_body.md").write_text(pr_body, encoding="utf-8")
+          print(nxt)
+          PY
+          )
+
+          REL_BRANCH="release-please--branches--main--components--airtell"
+          git checkout -B "$REL_BRANCH"
+          git add .release-please-manifest.json pyproject.toml src/airtell/__init__.py CHANGELOG.md
+          git commit -m "chore(main): release ${NEXT_VER}"
+          git push --force origin "$REL_BRANCH"
+
+          gh label create "autorelease: pending" --color "ededed" --force >/dev/null 2>&1 || true
+          PR_NUM=$(gh pr list --head "$REL_BRANCH" --base main --state open --json number --jq '.[0].number // empty')
+          if [ -z "$PR_NUM" ]; then
+            PR_URL=$(gh pr create \
+              --base main \
+              --head "$REL_BRANCH" \
+              --title "chore(main): release ${NEXT_VER}" \
+              --body-file /tmp/rp_fallback_body.md \
+              --label "autorelease: pending")
+            PR_NUM="${PR_URL##*/}"
+          else
+            gh pr edit "$PR_NUM" \
+              --title "chore(main): release ${NEXT_VER}" \
+              --body-file /tmp/rp_fallback_body.md \
+              --add-label "autorelease: pending" >/dev/null
+          fi
+          echo "pr_created=true" >> "$GITHUB_OUTPUT"
+          echo "pr_number=${PR_NUM}" >> "$GITHUB_OUTPUT"
+
+      - name: "Auto-Merge Release Pull Request"
+        id: auto_merge
+        if: steps.release.outputs.prs_created == 'true' || steps.fallback_pr.outputs.pr_created == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          REL_PRS_JSON: ${{ steps.release.outputs.prs }}
+          FALLBACK_PR_NUM: ${{ steps.fallback_pr.outputs.pr_number }}
+        run: |
+          set -euo pipefail
+          PR_NUM=""
+          if [ -n "$REL_PRS_JSON" ]; then
+            PR_NUM=$(printf '%s' "$REL_PRS_JSON" | jq -r '.[0].number // empty')
+          fi
+          if [ -z "$PR_NUM" ] && [ -n "$FALLBACK_PR_NUM" ]; then
+            PR_NUM="$FALLBACK_PR_NUM"
+          fi
+          if [ -z "$PR_NUM" ]; then
+            PR_NUM=$(gh pr list --head "release-please--branches--main--components--airtell" --base main --state open --json number --jq '.[0].number // empty')
+          fi
+          if [ -z "$PR_NUM" ]; then
+            echo "No open release-please PR found to merge."
+            exit 0
+          fi
+
+          for attempt in 1 2 3 4 5 6; do
+            MERGEABLE=$(gh pr view "$PR_NUM" --json mergeable --jq '.mergeable')
+            if [ "$MERGEABLE" != "UNKNOWN" ]; then
+              break
+            fi
+            sleep 2
+          done
+
+          gh pr merge "$PR_NUM" --rebase --delete-branch
+          echo "merged=true" >> "$GITHUB_OUTPUT"
+          echo "pr_number=${PR_NUM}" >> "$GITHUB_OUTPUT"
+
+      - name: "Finalize GitHub Release & Tag"
+        id: finalize_release
+        if: steps.auto_merge.outputs.merged == 'true'
+        uses: googleapis/release-please-action@v5
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          skip-github-pull-request: true

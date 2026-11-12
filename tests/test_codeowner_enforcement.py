@@ -395,16 +395,17 @@ def test_release_please_config_and_manifest():
     assert pkg_config.get("draft") is False
     assert pkg_config.get("prerelease") is False
 
-    # Validate manifest version
-    assert manifest_data.get(".") == "0.2.0"
+    # Validate manifest, pyproject.toml, and airtell.__version__ dynamic SemVer alignment
+    import re
 
-    # Validate pyproject.toml and airtell.__version__ alignment
     import airtell
 
-    assert airtell.__version__ == "0.2.0"
+    manifest_ver = manifest_data.get(".", "")
+    assert re.match(r"^\d+\.\d+\.\d+$", manifest_ver), f"Invalid manifest SemVer: {manifest_ver}"
+    assert airtell.__version__ == manifest_ver
 
     pyproject_file = repo_root / "pyproject.toml"
-    assert 'version = "0.2.0"' in pyproject_file.read_text(encoding="utf-8")
+    assert f'version = "{manifest_ver}"' in pyproject_file.read_text(encoding="utf-8")
 
 
 def test_release_please_workflow_configuration():
@@ -443,15 +444,19 @@ def test_release_please_workflow_configuration():
     assert "google-github-actions/release-please-action" not in content
     assert "actions/checkout@v4" not in content
 
-    # Step sequence (Node 24 actions)
+    # Step sequence (Node 24 actions + auto-merge + same-run release finalization)
     checkout_pos = content.index("uses: actions/checkout@v6")
     auth_pos = content.index('- name: "Authorize Codeowner Execution"')
     release_pos = content.index("uses: googleapis/release-please-action@v5")
-    assert checkout_pos < auth_pos < release_pos
+    fallback_pos = content.index('- name: "Bootstrap Fallback Release PR for Non-Conventional Merges"')
+    automerge_pos = content.index('- name: "Auto-Merge Release Pull Request"')
+    finalize_pos = content.index('- name: "Finalize GitHub Release & Tag"')
+    assert checkout_pos < auth_pos < release_pos < fallback_pos < automerge_pos < finalize_pos
 
-    # Release action arguments
+    # Release action arguments & same-run GITHUB_TOKEN push-suppression bypass
     assert "config-file: release-please-config.json" in content
     assert "manifest-file: .release-please-manifest.json" in content
+    assert "skip-github-pull-request: true" in content
 
 
 def test_release_please_tier2_codeowner_authorization_step(tmp_path: Path):
