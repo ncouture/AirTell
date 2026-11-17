@@ -37,6 +37,19 @@ NAVIGATION_VIEWS: dict[str, dict[str, str]] = {
     },
 }
 
+PRIVACY_DEFENSE_VIEW: dict[str, dict[str, str]] = {
+    "privacy_defense": {
+        "label": "Privacy & Defense",
+        "icon": "🛡️",
+        "description": "ARIEL logical entailment proofs, IDBLEED side-channel verification & Edge Defense Gateway",
+    },
+}
+
+ALL_NAVIGATION_VIEWS: dict[str, dict[str, str]] = {
+    **NAVIGATION_VIEWS,
+    **PRIVACY_DEFENSE_VIEW,
+}
+
 
 def get_m3_layout_css() -> str:
     """Return Material Design v3 Dark Tactical CSS rules for Streamlit layout."""
@@ -277,8 +290,8 @@ def render_navigation(
         unsafe_allow_html=True,
     )
 
-    options = list(NAVIGATION_VIEWS.keys())
-    format_map = {key: f"{meta['icon']}  {meta['label']}" for key, meta in NAVIGATION_VIEWS.items()}
+    options = list(ALL_NAVIGATION_VIEWS.keys())
+    format_map = {key: f"{meta['icon']}  {meta['label']}" for key, meta in ALL_NAVIGATION_VIEWS.items()}
 
     selected = st.sidebar.radio(
         label="Navigation Rail",

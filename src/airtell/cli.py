@@ -62,6 +62,14 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+def _is_existing_file(path: Path) -> bool:
+    """Safely check whether path exists and is a regular file without raising on restricted parent dirs."""
+    try:
+        return path.exists() and path.is_file()
+    except OSError:
+        return False
+
+
 def build_beacon_payload(burst_type: str) -> bytes:
     """Build a standard beacon AD payload corresponding to burst_type."""
     b_type = burst_type.lower().strip()
@@ -754,7 +762,7 @@ def handle_deanonymize(args: argparse.Namespace) -> int:
         raw_packet_count = len(observations)
     else:
         pcap_path = Path(args.pcap)
-        if not pcap_path.exists() or not pcap_path.is_file():
+        if not _is_existing_file(pcap_path):
             logger.error("PCAP file not found: %s", args.pcap)
             print(f"ERROR: PCAP file not found: {args.pcap}", file=sys.stderr)
             return 2
@@ -1094,7 +1102,7 @@ def handle_sidechannel(args: argparse.Namespace) -> int:
     # 2. Validate PCAP file existence
     if args.pcap:
         pcap_file = Path(args.pcap)
-        if not pcap_file.exists() or not pcap_file.is_file():
+        if not _is_existing_file(pcap_file):
             logger.error("PCAP file not found: %s", args.pcap)
             print(f"ERROR: PCAP file not found: {args.pcap}", file=sys.stderr)
             return 2
@@ -1196,7 +1204,7 @@ def handle_pcap_timeline(args: argparse.Namespace) -> int:
     """Execute chronological BLE PCAP MAC timeline extraction with Spectra Mesh OUI classification."""
     pcap_path = getattr(args, "pcap", None) or "app/data/merged.pcap"
     pcap_file = Path(pcap_path)
-    if not pcap_file.exists() or not pcap_file.is_file():
+    if not _is_existing_file(pcap_file):
         logger.error("PCAP file not found: %s", pcap_path)
         print(f"ERROR: PCAP file not found: {pcap_path}", file=sys.stderr)
         return 2
@@ -1204,7 +1212,7 @@ def handle_pcap_timeline(args: argparse.Namespace) -> int:
     ouidb_path = getattr(args, "ouidb", None)
     if ouidb_path:
         ouidb_file = Path(ouidb_path)
-        if not ouidb_file.exists() or not ouidb_file.is_file():
+        if not _is_existing_file(ouidb_file):
             logger.error("Spectra Mesh OUI database file not found: %s", ouidb_path)
             print(f"ERROR: OUI database not found: {ouidb_path}", file=sys.stderr)
             return 2
@@ -1266,6 +1274,935 @@ def handle_pcap_timeline(args: argparse.Namespace) -> int:
         logger.exception("Failed to generate PCAP timeline: %s", exc)
         print(f"ERROR: Failed to generate PCAP timeline: {exc}", file=sys.stderr)
         return 1
+
+
+def _deliver_formatted_output(content: str, output_path: str | None) -> int:
+    """Write formatted report to optional output_path and print to stdout."""
+    if output_path:
+        try:
+            out_file = Path(output_path).resolve()
+            out_file.parent.mkdir(parents=True, exist_ok=True)
+            out_file.write_text(content, encoding="utf-8")
+        except OSError as exc:
+            logger.error("Failed to write report output: %s", exc)
+            print(f"ERROR: Failed to write output file: {exc}", file=sys.stderr)
+            return 2
+    print(content)
+    return 0
+
+
+def _parse_anchor_roles(raw_roles: Sequence[str] | None) -> list[tuple[str, int]] | None:
+    """Parse repeatable --anchor-role ROLE=LEVEL pairs into (role, rank) tuples."""
+    if not raw_roles:
+        return []
+    from airtell.ariel import level_to_rank
+
+    parsed: list[tuple[str, int]] = []
+    for entry in raw_roles:
+        if "=" not in entry:
+            print(
+                f"ERROR: Invalid --anchor-role '{entry}'; expected ROLE=LEVEL (e.g. housemate=L3)",
+                file=sys.stderr,
+            )
+            return None
+        role_part, level_part = entry.split("=", 1)
+        role_clean = role_part.strip()
+        level_clean = level_part.strip()
+        if not role_clean or not level_clean:
+            print(
+                f"ERROR: Invalid --anchor-role '{entry}'; expected non-empty ROLE=LEVEL",
+                file=sys.stderr,
+            )
+            return None
+        try:
+            rank = int(level_clean) if level_clean.isdigit() else level_to_rank(level_clean)
+            if rank < 1:
+                raise ValueError("rank must be >= 1")
+        except ValueError:
+            print(
+                f"ERROR: Invalid ontology level '{level_clean}' in --anchor-role '{entry}'",
+                file=sys.stderr,
+            )
+            return None
+        parsed.append((role_clean, rank))
+    return parsed
+
+
+def handle_ariel(args: argparse.Namespace) -> int:
+    """Execute ARIEL neurosymbolic logical entailment evaluation, benchmark, or memory ablation."""
+    from airtell.ariel import (
+        AdaptiveMemoryAnchoredMapper,
+        ARIELSolver,
+        DecisionLabel,
+        GeneralCINormsBaseline,
+        InformationFlowRequest,
+        LightweightEdgeOntologyMapper,
+        OntologyMapper,
+        SimulatedICLBaseline,
+        StructuredOntologyMapper,
+        build_education_benchmark,
+        build_spa_benchmark,
+        compute_evaluation_metrics,
+        rank_to_level,
+        run_memory_ablation,
+    )
+
+    anchor_pairs = _parse_anchor_roles(getattr(args, "anchor_role", None))
+    if anchor_pairs is None:
+        return 2
+
+    domain_key = str(getattr(args, "domain", "spa")).lower()
+    seed = int(getattr(args, "seed", 42))
+    edge_offload = bool(getattr(args, "edge_offload", False))
+
+    if getattr(args, "ablation", False):
+        raw_sizes = str(getattr(args, "memory_sizes", "10,20,40,60"))
+        try:
+            sizes = [int(tok.strip()) for tok in raw_sizes.split(",") if tok.strip()]
+            if not sizes or any(s < 1 for s in sizes):
+                raise ValueError("memory sizes must be positive integers")
+        except ValueError:
+            print(
+                f"ERROR: Invalid --memory-sizes '{raw_sizes}'; expected comma-separated positive integers",
+                file=sys.stderr,
+            )
+            return 2
+
+        dataset = (
+            build_spa_benchmark(seed=seed) if domain_key == "spa" else build_education_benchmark(seed=seed)
+        )
+        ablation = run_memory_ablation(dataset, memory_sizes=sizes)
+        model_key = "ariel_edge_lightweight" if edge_offload else "ariel"
+
+        payload = {
+            "mode": "ablation",
+            "domain": ablation.domain,
+            "seed": seed,
+            "edge_offload": edge_offload,
+            "memory_sizes": list(ablation.memory_sizes),
+            "edge_mapper_parity": {str(k): round(v, 4) for k, v in ablation.edge_mapper_parity.items()},
+            "results": {
+                model_name: {
+                    str(sz): {
+                        "f1_appropriate": round(m.f1_appropriate, 4),
+                        "f1_inappropriate": round(m.f1_inappropriate, 4),
+                        "abstention_accuracy": round(m.abstention_accuracy, 4),
+                        "contradiction_escalation_rate": round(m.contradiction_escalation_rate, 4),
+                    }
+                    for sz, m in by_size.items()
+                }
+                for model_name, by_size in ablation.results.items()
+            },
+        }
+        if getattr(args, "json", False):
+            content = json.dumps(payload, indent=2)
+        elif getattr(args, "markdown", False):
+            lines = [
+                f"# ARIEL Memory-Scaling Ablation ({ablation.domain})",
+                "",
+                (
+                    "| `|D_u|` | Model | `F1_A` (Utility) | `F1_I` (Privacy) "
+                    "| Abstention Acc | Contradiction Esc | Edge Parity |"
+                ),
+                "| :---: | :--- | :---: | :---: | :---: | :---: | :---: |",
+            ]
+            for sz in ablation.memory_sizes:
+                m_ariel = ablation.results[model_key][sz]
+                m_norms = ablation.results["general_ci_norms"][sz]
+                m_icl = ablation.results["simulated_icl"][sz]
+                parity = ablation.edge_mapper_parity[sz]
+                lines.append(
+                    f"| {sz} | `{model_key}` | {m_ariel.f1_appropriate:.4f} | {m_ariel.f1_inappropriate:.4f} "
+                    f"| {m_ariel.abstention_accuracy:.4f} | {m_ariel.contradiction_escalation_rate:.4f} "
+                    f"| {parity:.4f} |"
+                )
+                lines.append(
+                    f"| {sz} | `general_ci_norms` | {m_norms.f1_appropriate:.4f} | {m_norms.f1_inappropriate:.4f} "
+                    f"| {m_norms.abstention_accuracy:.4f} | {m_norms.contradiction_escalation_rate:.4f} | - |"
+                )
+                lines.append(
+                    f"| {sz} | `simulated_icl` | {m_icl.f1_appropriate:.4f} | {m_icl.f1_inappropriate:.4f} "
+                    f"| {m_icl.abstention_accuracy:.4f} | {m_icl.contradiction_escalation_rate:.4f} | - |"
+                )
+            content = "\n".join(lines)
+        else:
+            lines = [f"ARIEL Memory-Scaling Ablation — Domain: {ablation.domain} (seed={seed})"]
+            for sz in ablation.memory_sizes:
+                m_ariel = ablation.results[model_key][sz]
+                parity = ablation.edge_mapper_parity[sz]
+                lines.append(
+                    f"  |D_u|={sz:2d} [{model_key}]: F1_A={m_ariel.f1_appropriate:.4f}, "
+                    f"F1_I={m_ariel.f1_inappropriate:.4f}, AbstainAcc={m_ariel.abstention_accuracy:.4f}, "
+                    f"ContraEsc={m_ariel.contradiction_escalation_rate:.4f}, EdgeParity={parity:.4f}"
+                )
+            content = "\n".join(lines)
+        return _deliver_formatted_output(content, getattr(args, "output", None))
+
+    if getattr(args, "benchmark", False):
+        dataset = (
+            build_spa_benchmark(seed=seed) if domain_key == "spa" else build_education_benchmark(seed=seed)
+        )
+        host_solver = ARIELSolver(dataset.ontology, StructuredOntologyMapper())
+        edge_solver = ARIELSolver(dataset.ontology, LightweightEdgeOntologyMapper())
+        norms = GeneralCINormsBaseline(dataset.ontology)
+        icl = SimulatedICLBaseline(dataset.ontology)
+
+        truth_all: list[DecisionLabel] = []
+        contra_all: list[bool] = []
+        preds_host: list[DecisionLabel] = []
+        esc_host: list[bool] = []
+        preds_edge: list[DecisionLabel] = []
+        esc_edge: list[bool] = []
+        preds_norms: list[DecisionLabel] = []
+        esc_norms: list[bool] = []
+        preds_icl: list[DecisionLabel] = []
+        esc_icl: list[bool] = []
+
+        for user in dataset.users:
+            for case in user.eval_cases:
+                truth_all.append(case.ground_truth)
+                contra_all.append(case.is_contradictory)
+                r_h = host_solver.evaluate(case.request, user.memory)
+                preds_host.append(r_h.label)
+                esc_host.append(r_h.escalate_to_user)
+                r_e = edge_solver.evaluate(case.request, user.memory)
+                preds_edge.append(r_e.label)
+                esc_edge.append(r_e.escalate_to_user)
+                l_n, e_n = norms.evaluate(case.request, user.memory)
+                preds_norms.append(l_n)
+                esc_norms.append(e_n)
+                l_i, e_i = icl.evaluate(case.request, user.memory)
+                preds_icl.append(l_i)
+                esc_icl.append(e_i)
+
+        m_host = compute_evaluation_metrics(preds_host, truth_all, esc_host, contra_all)
+        m_edge = compute_evaluation_metrics(preds_edge, truth_all, esc_edge, contra_all)
+        m_norms = compute_evaluation_metrics(preds_norms, truth_all, esc_norms, contra_all)
+        m_icl = compute_evaluation_metrics(preds_icl, truth_all, esc_icl, contra_all)
+        parity = sum(1 for a, b in zip(preds_host, preds_edge, strict=True) if a == b) / len(preds_host)
+        active_metrics = m_edge if edge_offload else m_host
+
+        bench_payload = {
+            "mode": "benchmark",
+            "domain": dataset.domain,
+            "seed": seed,
+            "users_evaluated": len(dataset.users),
+            "queries_evaluated": len(truth_all),
+            "edge_offload": edge_offload,
+            "edge_mapper_parity": round(parity, 4),
+            "metrics": {
+                "ariel": {
+                    "f1_appropriate": round(m_host.f1_appropriate, 4),
+                    "f1_inappropriate": round(m_host.f1_inappropriate, 4),
+                    "abstention_accuracy": round(m_host.abstention_accuracy, 4),
+                    "contradiction_escalation_rate": round(m_host.contradiction_escalation_rate, 4),
+                },
+                "ariel_edge_lightweight": {
+                    "f1_appropriate": round(m_edge.f1_appropriate, 4),
+                    "f1_inappropriate": round(m_edge.f1_inappropriate, 4),
+                    "abstention_accuracy": round(m_edge.abstention_accuracy, 4),
+                    "contradiction_escalation_rate": round(m_edge.contradiction_escalation_rate, 4),
+                },
+                "general_ci_norms": {
+                    "f1_appropriate": round(m_norms.f1_appropriate, 4),
+                    "f1_inappropriate": round(m_norms.f1_inappropriate, 4),
+                    "abstention_accuracy": round(m_norms.abstention_accuracy, 4),
+                    "contradiction_escalation_rate": round(m_norms.contradiction_escalation_rate, 4),
+                },
+                "simulated_icl": {
+                    "f1_appropriate": round(m_icl.f1_appropriate, 4),
+                    "f1_inappropriate": round(m_icl.f1_inappropriate, 4),
+                    "abstention_accuracy": round(m_icl.abstention_accuracy, 4),
+                    "contradiction_escalation_rate": round(m_icl.contradiction_escalation_rate, 4),
+                },
+            },
+        }
+        if getattr(args, "json", False):
+            content = json.dumps(bench_payload, indent=2)
+        elif getattr(args, "markdown", False):
+            content = "\n".join(
+                [
+                    f"# ARIEL Domain Benchmark ({dataset.domain})",
+                    "",
+                    f"- **Users**: {len(dataset.users)} (`|D_u| = 60` records/user)",
+                    f"- **Queries**: {len(truth_all)}",
+                    f"- **Edge Mapper Parity**: {parity:.4f}",
+                    "",
+                    "| Engine | `F1_A` (Utility) | `F1_I` (Privacy) | Abstention Acc | Contradiction Esc |",
+                    "| :--- | :---: | :---: | :---: | :---: |",
+                    f"| `ariel` | {m_host.f1_appropriate:.4f} | {m_host.f1_inappropriate:.4f} "
+                    f"| {m_host.abstention_accuracy:.4f} | {m_host.contradiction_escalation_rate:.4f} |",
+                    f"| `ariel_edge_lightweight` | {m_edge.f1_appropriate:.4f} | {m_edge.f1_inappropriate:.4f} "
+                    f"| {m_edge.abstention_accuracy:.4f} | {m_edge.contradiction_escalation_rate:.4f} |",
+                    f"| `general_ci_norms` | {m_norms.f1_appropriate:.4f} | {m_norms.f1_inappropriate:.4f} "
+                    f"| {m_norms.abstention_accuracy:.4f} | {m_norms.contradiction_escalation_rate:.4f} |",
+                    f"| `simulated_icl` | {m_icl.f1_appropriate:.4f} | {m_icl.f1_inappropriate:.4f} "
+                    f"| {m_icl.abstention_accuracy:.4f} | {m_icl.contradiction_escalation_rate:.4f} |",
+                ]
+            )
+        else:
+            content = (
+                f"ARIEL Benchmark ({dataset.domain}, {len(truth_all)} queries, edge_offload={edge_offload}):\n"
+                f"  Active ARIEL: F1_A={active_metrics.f1_appropriate:.4f}, "
+                f"F1_I={active_metrics.f1_inappropriate:.4f}, "
+                f"AbstainAcc={active_metrics.abstention_accuracy:.4f}, "
+                f"ContraEsc={active_metrics.contradiction_escalation_rate:.4f}\n"
+                f"  General CI Norms: F1_A={m_norms.f1_appropriate:.4f}, F1_I={m_norms.f1_inappropriate:.4f}\n"
+                f"  Simulated ICL:    F1_A={m_icl.f1_appropriate:.4f}, F1_I={m_icl.f1_inappropriate:.4f}\n"
+                f"  Edge Mapper Parity: {parity:.4f}"
+            )
+        return _deliver_formatted_output(content, getattr(args, "output", None))
+
+    # Single 5-tuple request evaluation mode
+    has_tuple_arg = any(
+        getattr(args, attr, None) is not None
+        for attr in (
+            "data_type",
+            "data_subject",
+            "data_sender",
+            "data_recipient",
+            "transmission_principle",
+        )
+    )
+    if not has_tuple_arg:
+        print(
+            "ERROR: Specify --benchmark, --ablation, or at least one 5-tuple parameter (e.g. --data-type)",
+            file=sys.stderr,
+        )
+        return 2
+
+    dataset = (
+        build_spa_benchmark(num_users=1, seed=seed)
+        if domain_key == "spa"
+        else build_education_benchmark(num_users=1, seed=seed)
+    )
+    ontology = dataset.ontology
+    memory = dataset.users[0].memory
+
+    if domain_key == "spa":
+        defaults = {
+            "data_type": "calendar availability",
+            "data_subject": "user",
+            "data_sender": "assistant provider",
+            "data_recipient": "close friend",
+            "transmission_principle": "with subject's consent",
+        }
+    else:
+        defaults = {
+            "data_type": "course grades",
+            "data_subject": "student",
+            "data_sender": "professor",
+            "data_recipient": "graduate schools",
+            "transmission_principle": "with subject's consent",
+        }
+
+    try:
+        req = InformationFlowRequest(
+            data_type=args.data_type or defaults["data_type"],
+            data_subject=args.data_subject or defaults["data_subject"],
+            data_sender=args.data_sender or defaults["data_sender"],
+            data_recipient=args.data_recipient or defaults["data_recipient"],
+            transmission_principle=args.transmission_principle or defaults["transmission_principle"],
+        )
+    except ValueError as exc:
+        print(f"ERROR: Invalid 5-tuple request: {exc}", file=sys.stderr)
+        return 2
+
+    tuned_ranks: dict[tuple[str, str], int] = {}
+    for role_name, rank_val in anchor_pairs:
+        ontology = ontology.with_updated_rank("data_recipient", role_name, rank_val)
+        ontology = ontology.with_updated_rank("data_sender", role_name, rank_val)
+        tuned_ranks[("data_recipient", role_name)] = rank_val
+        tuned_ranks[("data_sender", role_name)] = rank_val
+
+    mapper: OntologyMapper
+    if anchor_pairs:
+        mapper = AdaptiveMemoryAnchoredMapper(memory=memory, tuned_ranks=tuned_ranks)
+    elif edge_offload:
+        mapper = LightweightEdgeOntologyMapper()
+    else:
+        mapper = StructuredOntologyMapper()
+
+    solver = ARIELSolver(ontology_set=ontology, mapper=mapper)
+    res = solver.evaluate(req, memory)
+
+    single_payload = {
+        "mode": "entailment",
+        "domain": ontology.domain,
+        "edge_offload": edge_offload,
+        "anchored_roles": {role: rank_to_level(rank) for role, rank in anchor_pairs},
+        "request": req.as_dict(),
+        "decision": res.label.value,
+        "c_plus": res.c_plus,
+        "c_minus": res.c_minus,
+        "neighbors_checked": res.proof.neighbors_checked,
+        "abstention_reason": res.abstention_reason,
+        "escalate_to_user": res.escalate_to_user,
+        "entailed_steps": [
+            {
+                "rule": step.rule,
+                "entailed_label": step.entailed_label.value,
+                "hamming_distance": step.hamming_distance,
+                "varied_parameter": step.varied_parameter,
+                "prior_rank": step.prior_rank,
+                "incoming_rank": step.incoming_rank,
+                "prior_request": step.prior.request.as_dict(),
+            }
+            for step in res.proof.entailed_steps
+        ],
+    }
+
+    if getattr(args, "json", False):
+        content = json.dumps(single_payload, indent=2)
+    elif getattr(args, "markdown", False):
+        lines = [
+            f"# ARIEL Entailment Verdict (`{ontology.domain}`)",
+            "",
+            f"- **Decision**: `{res.label.value}`",
+            f"- **Evidence**: `c_plus={res.c_plus}`, `c_minus={res.c_minus}` "
+            f"(neighbors checked: `{res.proof.neighbors_checked}`)",
+            f"- **Escalate to User**: `{res.escalate_to_user}`",
+            f"- **Abstention Reason**: `{res.abstention_reason or 'none'}`",
+            "",
+            "## 5-Tuple Information Flow Request",
+            f"- `data_type`: `{req.data_type}`",
+            f"- `data_subject`: `{req.data_subject}`",
+            f"- `data_sender`: `{req.data_sender}`",
+            f"- `data_recipient`: `{req.data_recipient}`",
+            f"- `transmission_principle`: `{req.transmission_principle}`",
+        ]
+        content = "\n".join(lines)
+    else:
+        content = (
+            f"ARIEL Entailment [{ontology.domain}]: decision={res.label.value} "
+            f"(c_plus={res.c_plus}, c_minus={res.c_minus}, "
+            f"neighbors={res.proof.neighbors_checked}, escalate={res.escalate_to_user})"
+        )
+    return _deliver_formatted_output(content, getattr(args, "output", None))
+
+
+def handle_idbleed_verify(args: argparse.Namespace) -> int:
+    """Audit BLE Link-Layer side-channel leakage using the IDBLEED verification specification."""
+    import io
+    import unittest
+
+    from airtell.sidechannel.idbleed_spec import (
+        ActiveRelayProbeOrchestrator,
+        AppAuthOracleEvaluator,
+        ATTOpcode,
+        ATTSignedWritePayload,
+        BLEFrame,
+        CSRKSigningOracleEvaluator,
+        IdbleedVerificationAnalyzer,
+        LLEncryptionOracleEvaluator,
+        LLEncryptionReqPayload,
+        LLOpcode,
+        OracleResult,
+        TestIDBLEEDSpecification,
+        compute_csrk_cmac,
+    )
+
+    mock_mode = bool(getattr(args, "mock", False))
+    pcap_arg = getattr(args, "pcap", None)
+    selftest_mode = bool(getattr(args, "selftest", False))
+
+    source_count = sum(bool(x) for x in (mock_mode, pcap_arg, selftest_mode))
+    if source_count == 0:
+        print(
+            "ERROR: Must specify one input mode (--mock, --pcap, or --selftest)",
+            file=sys.stderr,
+        )
+        return 2
+    if source_count > 1:
+        print(
+            "ERROR: Conflicting modes specified; choose exactly one of --mock, --pcap, or --selftest",
+            file=sys.stderr,
+        )
+        return 2
+
+    target_mac = getattr(args, "target_mac", None)
+    if target_mac is not None:
+        try:
+            str_to_mac(target_mac)
+        except Exception as exc:
+            print(f"ERROR: Invalid --target-mac '{target_mac}': {exc}", file=sys.stderr)
+            return 2
+
+    feature = str(getattr(args, "feature", "all")).lower()
+
+    if selftest_mode:
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(TestIDBLEEDSpecification)
+        stream = io.StringIO()
+        runner = unittest.TextTestRunner(stream=stream, verbosity=2)
+        test_res = runner.run(suite)
+        passed_count = test_res.testsRun - len(test_res.failures) - len(test_res.errors)
+        payload = {
+            "mode": "selftest",
+            "tests_run": test_res.testsRun,
+            "passed": passed_count,
+            "failures": len(test_res.failures),
+            "errors": len(test_res.errors),
+            "success": test_res.wasSuccessful(),
+        }
+        if getattr(args, "json", False):
+            content = json.dumps(payload, indent=2)
+        elif getattr(args, "markdown", False):
+            content = "\n".join(
+                [
+                    "# IDBLEED Specification Canonical Self-Test",
+                    "",
+                    f"- **Tests Run**: `{test_res.testsRun}`",
+                    f"- **Passed**: `{passed_count}`",
+                    f"- **Success**: `{test_res.wasSuccessful()}`",
+                ]
+            )
+        else:
+            content = (
+                f"IDBLEED Self-Test {'PASSED' if test_res.wasSuccessful() else 'FAILED'}: "
+                f"{passed_count}/{test_res.testsRun} specification checks succeeded."
+            )
+        out_rc = _deliver_formatted_output(content, getattr(args, "output", None))
+        if out_rc != 0:
+            return out_rc
+        return 0 if test_res.wasSuccessful() else 1
+
+    if mock_mode:
+        resolved_target = (target_mac or "5A:11:22:33:44:55").upper()
+        central_mac = "AA:BB:CC:DD:EE:01"
+        findings_out: list[dict[str, object]] = []
+        correlated_rpas: list[str] = []
+
+        if feature in ("all", "ll-enc"):
+            ll_eval = LLEncryptionOracleEvaluator(target_mac=resolved_target)
+            enc_req = LLEncryptionReqPayload(
+                rand=b"\x10\x20\x30\x40\x50\x60\x70\x80",
+                ediv=0x1A2B,
+                skd_c=b"\x01\x02\x03\x04\x05\x06\x07\x08",
+                iv_c=b"\xa1\xb2\xc3\xd4",
+            ).serialize()
+            ll_eval.process_frame(BLEFrame(1.0, 12, -52, central_mac, resolved_target, "LL_CONTROL", enc_req))
+            res_p, reason_p = ll_eval.process_frame(
+                BLEFrame(
+                    1.06,
+                    12,
+                    -53,
+                    resolved_target,
+                    central_mac,
+                    "LL_CONTROL",
+                    bytes([LLOpcode.LL_START_ENC_RSP]),
+                )
+            )
+            ll_unpaired = LLEncryptionOracleEvaluator(target_mac=resolved_target)
+            ll_unpaired.process_frame(BLEFrame(2.0, 12, -58, central_mac, resolved_target, "LL_CONTROL", enc_req))
+            res_u, reason_u = ll_unpaired.process_frame(
+                BLEFrame(
+                    2.04,
+                    12,
+                    -58,
+                    resolved_target,
+                    central_mac,
+                    "LL_CONTROL",
+                    bytes([LLOpcode.LL_REJECT_IND, 0x06]),
+                )
+            )
+            findings_out.append(
+                {"feature": "ll-enc", "oracle": res_p.name, "reason": reason_p, "target_mac": resolved_target}
+            )
+            findings_out.append(
+                {"feature": "ll-enc", "oracle": res_u.name, "reason": reason_u, "target_mac": resolved_target}
+            )
+
+        if feature in ("all", "csrk"):
+            csrk_key = bytes.fromhex("2b7e151628aed2a6abf7158809cf4f3c")
+            cmac_tag = compute_csrk_cmac(csrk_key, 0x0018, b"\x01\x02\x03", 1)
+            signed_pdu = ATTSignedWritePayload(
+                handle=0x0018,
+                value=b"\x01\x02\x03",
+                signature_counter=1,
+                cmac=cmac_tag,
+            ).serialize()
+            csrk_eval = CSRKSigningOracleEvaluator(target_mac=resolved_target, csrk=csrk_key)
+            req_f = BLEFrame(5.0, 15, -55, central_mac, resolved_target, "ATT", signed_pdu)
+            ack_f = BLEFrame(5.02, 15, -56, resolved_target, central_mac, "LL_ACK", b"\x01\x00")
+            c_res, c_reason = csrk_eval.evaluate_signature_response(req_f, ack_f)
+            findings_out.append(
+                {"feature": "csrk", "oracle": c_res.name, "reason": c_reason, "target_mac": resolved_target}
+            )
+
+        if feature in ("all", "app-auth"):
+            app_eval = AppAuthOracleEvaluator(target_mac=resolved_target, auth_handle=0xFFF1)
+            app_eval.process_att_frame(
+                BLEFrame(10.0, 20, -50, resolved_target, central_mac, "ATT", bytes([ATTOpcode.ATT_READ_RSP, 0x01]))
+            )
+            app_eval.process_att_frame(
+                BLEFrame(
+                    10.1,
+                    20,
+                    -50,
+                    central_mac,
+                    resolved_target,
+                    "ATT",
+                    bytes([ATTOpcode.ATT_WRITE_CMD]) + struct.pack("<H", 0xFFF1) + b"CHALLENGE",
+                )
+            )
+            a_res, a_reason = app_eval.process_att_frame(
+                BLEFrame(
+                    10.2,
+                    20,
+                    -50,
+                    resolved_target,
+                    central_mac,
+                    "ATT",
+                    bytes([ATTOpcode.ATT_HANDLE_VALUE_NOTI]) + struct.pack("<H", 0xFFF1) + b"OK",
+                )
+            )
+            findings_out.append(
+                {"feature": "app-auth", "oracle": a_res.name, "reason": a_reason, "target_mac": resolved_target}
+            )
+
+        if feature in ("all", "relay"):
+            orch = ActiveRelayProbeOrchestrator(canonical_target_id=resolved_target, rpa_rotation_window_sec=900.0)
+            orch.evaluate_and_correlate(resolved_target, OracleResult.PAIRED, timestamp=100.0)
+            orch.evaluate_and_correlate("6E:AA:BB:CC:DD:02", OracleResult.PAIRED, timestamp=1000.0)
+            orch.evaluate_and_correlate("71:FF:EE:DD:CC:99", OracleResult.UNPAIRED, timestamp=200.0)
+            summary = orch.correlation_summary()
+            correlated_rpas = list(summary["observed_rpas"])
+            findings_out.append(
+                {
+                    "feature": "relay",
+                    "oracle": "PAIRED",
+                    "reason": f"Correlated {len(correlated_rpas)} rotating RPAs across 900.0s window",
+                    "target_mac": resolved_target,
+                }
+            )
+
+        mock_payload = {
+            "mode": "mock",
+            "feature": feature,
+            "target_mac": resolved_target,
+            "findings_count": len(findings_out),
+            "correlated_rpas": correlated_rpas,
+            "leakage_detected": len(findings_out) > 0,
+            "findings": findings_out,
+        }
+        if getattr(args, "json", False):
+            content = json.dumps(mock_payload, indent=2)
+        elif getattr(args, "markdown", False):
+            lines = [
+                f"# IDBLEED Link-Layer Verification Report (`{feature}`)",
+                "",
+                f"- **Target MAC**: `{resolved_target}`",
+                f"- **Findings**: `{len(findings_out)}`",
+                f"- **Correlated RPAs**: `{', '.join(correlated_rpas) if correlated_rpas else 'none'}`",
+                "",
+                "| Feature | Oracle Verdict | Audit Detail |",
+                "| :--- | :---: | :--- |",
+            ]
+            for item in findings_out:
+                lines.append(f"| `{item['feature']}` | `{item['oracle']}` | {item['reason']} |")
+            content = "\n".join(lines)
+        else:
+            lines = [
+                f"IDBLEED Verification (mode=mock, feature={feature}, target={resolved_target}): "
+                f"{len(findings_out)} findings"
+            ]
+            for item in findings_out:
+                lines.append(f"  [{item['feature']}] {item['oracle']}: {item['reason']}")
+            content = "\n".join(lines)
+        return _deliver_formatted_output(content, getattr(args, "output", None))
+
+    # PCAP mode
+    pcap_path = Path(str(pcap_arg))
+    if not _is_existing_file(pcap_path):
+        print(f"ERROR: PCAP file not found: {pcap_arg}", file=sys.stderr)
+        return 2
+
+    analyzer = IdbleedVerificationAnalyzer(target_mac=target_mac)
+    try:
+        with PcapBleReader(pcap_path) as reader:
+            for pkt in reader:
+                analyzer.process_packet(pkt)
+    except Exception as exc:
+        print(f"ERROR: Failed to parse PCAP '{pcap_arg}': {exc}", file=sys.stderr)
+        return 2
+
+    rep = analyzer.finalize()
+    evaluator_filter = {
+        "ll-enc": "LLEncryptionOracleEvaluator",
+        "csrk": "CSRKSigningOracleEvaluator",
+        "app-auth": "AppAuthOracleEvaluator",
+    }.get(feature)
+    filtered_findings = [
+        f
+        for f in rep.findings
+        if evaluator_filter is None or f.details.get("evaluator") == evaluator_filter
+    ]
+    pcap_payload = {
+        "mode": "pcap",
+        "pcap": str(pcap_arg),
+        "feature": feature,
+        "target_mac": target_mac,
+        "verdict": rep.verdict,
+        "summary": rep.summary,
+        "metrics": rep.metrics,
+        "findings": [f.to_dict() for f in filtered_findings],
+    }
+    if getattr(args, "json", False):
+        content = json.dumps(pcap_payload, indent=2)
+    elif getattr(args, "markdown", False):
+        content = "\n".join(
+            [
+                "# IDBLEED PCAP Side-Channel Audit",
+                "",
+                f"- **PCAP**: `{pcap_arg}`",
+                f"- **Verdict**: `{rep.verdict}`",
+                f"- **Summary**: {rep.summary}",
+                f"- **Findings**: `{len(filtered_findings)}`",
+            ]
+        )
+    else:
+        content = f"IDBLEED PCAP Audit ({pcap_arg}): verdict={rep.verdict} — {rep.summary}"
+    return _deliver_formatted_output(content, getattr(args, "output", None))
+
+
+def handle_defense_gateway(args: argparse.Namespace) -> int:
+    """Execute Integrated Edge Defense Gateway and Cross-Domain Threat Coupling Verifier."""
+    import secrets
+
+    from airtell.ariel import ARIELSolver, InformationFlowRequest, build_education_benchmark, build_spa_benchmark
+    from airtell.defense import (
+        ATT_SIGNED_WRITE_CMD,
+        LL_ENC_REQ,
+        LL_REJECT_EXT_IND,
+        LL_REJECT_IND,
+        LL_TERMINATE_IND,
+        CrossDomainCouplingVerifier,
+        CryptographicLocalOptOutSwitch,
+        IDBLEEDSideChannelMonitor,
+        IntegratedDefenseGateway,
+        LightweightEdgeOntologyOffloader,
+        LinkLayerHardeningConfig,
+        MonitorBLEFrame,
+    )
+
+    mock_mode = bool(getattr(args, "mock", False))
+    coupling_sim = bool(getattr(args, "coupling_sim", False))
+    if not mock_mode and not coupling_sim:
+        print(
+            "ERROR: Specify --mock and/or --coupling-sim for defense-gateway execution",
+            file=sys.stderr,
+        )
+        return 2
+
+    anchor_pairs = _parse_anchor_roles(getattr(args, "anchor_role", None))
+    if anchor_pairs is None:
+        return 2
+
+    constant_time_ms = float(getattr(args, "constant_time_ms", 25.0))
+    try:
+        hardening_cfg = LinkLayerHardeningConfig(constant_time_window_ms=constant_time_ms)
+    except ValueError as exc:
+        print(f"ERROR: Invalid --constant-time-ms: {exc}", file=sys.stderr)
+        return 2
+
+    domain_key = str(getattr(args, "domain", "spa")).lower()
+    dataset = build_spa_benchmark(num_users=1) if domain_key == "spa" else build_education_benchmark(num_users=1)
+    ontology = dataset.ontology
+    memory = dataset.users[0].memory
+
+    for role_name, rank_val in anchor_pairs:
+        ontology = ontology.with_updated_rank("data_recipient", role_name, rank_val)
+        ontology = ontology.with_updated_rank("data_sender", role_name, rank_val)
+
+    report_payload: dict[str, object] = {
+        "domain": ontology.domain,
+        "constant_time_ms": constant_time_ms,
+        "opt_out_requested": bool(getattr(args, "opt_out", False)),
+        "ambient_authorized": bool(getattr(args, "ambient_authorized", False)),
+    }
+    md_sections: list[str] = [f"# AirTell Integrated Defense Gateway (`{ontology.domain}`)"]
+    text_lines: list[str] = [
+        f"Integrated Defense Gateway — Domain: {ontology.domain} (window={constant_time_ms:.1f}ms)"
+    ]
+
+    if mock_mode:
+        monitor = IDBLEEDSideChannelMonitor(config=hardening_cfg)
+        opt_out_switch = CryptographicLocalOptOutSwitch(secrets.token_bytes(32))
+        if getattr(args, "opt_out", False):
+            opt_out_switch.set_opt_out(memory.user_id, ontology.domain, opted_out=True)
+
+        solver = ARIELSolver(ontology)
+        gateway = IntegratedDefenseGateway(
+            ontology_set=ontology,
+            solver=solver,
+            edge_offloader=LightweightEdgeOntologyOffloader(),
+            side_channel_monitor=monitor,
+            opt_out_switch=opt_out_switch,
+            domain=ontology.domain,
+        )
+
+        if domain_key == "spa":
+            req = InformationFlowRequest(
+                data_type="exact GPS location",
+                data_subject="user",
+                data_sender="assistant provider",
+                data_recipient=anchor_pairs[0][0] if anchor_pairs else "advertising agency",
+                transmission_principle="for targeted advertising",
+            )
+        else:
+            req = InformationFlowRequest(
+                data_type="disciplinary record",
+                data_subject="student",
+                data_sender="professor",
+                data_recipient=anchor_pairs[0][0] if anchor_pairs else "advertising agencies",
+                transmission_principle="if subject is performing poorly",
+            )
+
+        probe_frames = [
+            MonitorBLEFrame(
+                timestamp=1.000,
+                channel=12,
+                rssi=-55,
+                source_mac="E0:AA:BB:CC:DD:99",
+                dest_mac="5A:01:02:03:04:C1",
+                pdu_type="LL_CONTROL",
+                payload=bytes([LL_ENC_REQ]) + b"\x11" * 22,
+            ),
+            MonitorBLEFrame(
+                timestamp=1.004,
+                channel=12,
+                rssi=-55,
+                source_mac="5A:01:02:03:04:C1",
+                dest_mac="E0:AA:BB:CC:DD:99",
+                pdu_type="LL_CONTROL",
+                payload=bytes([LL_REJECT_IND, 0x06]),
+            ),
+            MonitorBLEFrame(
+                timestamp=1.010,
+                channel=12,
+                rssi=-56,
+                source_mac="5A:01:02:03:04:C1",
+                dest_mac="E0:AA:BB:CC:DD:99",
+                pdu_type="LL_CONTROL",
+                payload=bytes([LL_REJECT_EXT_IND, LL_ENC_REQ, 0x06]),
+            ),
+            MonitorBLEFrame(
+                timestamp=1.015,
+                channel=12,
+                rssi=-56,
+                source_mac="5A:01:02:03:04:C1",
+                dest_mac="E0:AA:BB:CC:DD:99",
+                pdu_type="LL_CONTROL",
+                payload=bytes([LL_TERMINATE_IND, 0x13]),
+            ),
+            MonitorBLEFrame(
+                timestamp=1.020,
+                channel=12,
+                rssi=-56,
+                source_mac="E0:AA:BB:CC:DD:99",
+                dest_mac="5A:01:02:03:04:C1",
+                pdu_type="ATT",
+                payload=bytes([ATT_SIGNED_WRITE_CMD]) + b"\x18\x00\x01" + b"\x00" * 12,
+            ),
+        ]
+
+        verdict = gateway.evaluate_and_enforce(
+            req,
+            memory,
+            ble_frames=probe_frames,
+            domain=ontology.domain,
+            is_ambient_flow=True,
+            active_agent_authorized=bool(getattr(args, "ambient_authorized", False)),
+        )
+        report_payload["gateway_verdict"] = {
+            "decision": verdict.decision,
+            "flow_allowed": verdict.flow_allowed,
+            "escalate_to_user": verdict.escalate_to_user,
+            "automated_execution_halted": verdict.automated_execution_halted,
+            "abstention_reason": verdict.abstention_reason,
+            "c_plus": verdict.c_plus,
+            "c_minus": verdict.c_minus,
+            "opted_out": verdict.opted_out,
+            "opt_out_verified": verdict.opt_out_verified,
+            "edge_offloaded": verdict.edge_offloaded,
+            "mitigated_failure_modes": [fm.value for fm in verdict.mitigated_failure_modes],
+            "exposure_report": verdict.exposure_report.to_dict(),
+            "frame_actions": [fd.action.value for fd in verdict.frame_decisions],
+        }
+        md_sections.extend(
+            [
+                "",
+                "## Operational Gateway Verdict",
+                f"- **Software Decision**: `{verdict.decision}` (`flow_allowed={verdict.flow_allowed}`)",
+                f"- **Mitigated Failure Modes**: "
+                f"`{', '.join(fm.value for fm in verdict.mitigated_failure_modes) or 'none'}`",
+                f"- **Suppressed Rejections**: `{verdict.exposure_report.suppressed_rejections}` / "
+                f"`{verdict.exposure_report.total_frames}` frames",
+                f"- **Oracle Distinguishability**: "
+                f"`{verdict.exposure_report.oracle_distinguishability_before:.2f}` -> "
+                f"`{verdict.exposure_report.oracle_distinguishability_after:.2f}`",
+            ]
+        )
+        text_lines.append(
+            f"  Gateway Verdict: decision={verdict.decision}, allowed={verdict.flow_allowed}, "
+            f"suppressed={verdict.exposure_report.suppressed_rejections}, "
+            f"oracle={verdict.exposure_report.oracle_distinguishability_before:.2f}->"
+            f"{verdict.exposure_report.oracle_distinguishability_after:.2f}"
+        )
+
+    if coupling_sim:
+        verifier = CrossDomainCouplingVerifier()
+        comparison = verifier.verify_coupling_mitigation()
+        report_payload["coupling_simulation"] = {
+            "rpa_linkage_eliminated": comparison.rpa_linkage_eliminated,
+            "oracle_advantage_collapsed": comparison.oracle_advantage_collapsed,
+            "unhardened": {
+                "software_decision": comparison.unhardened.software_decision,
+                "correlated_rpa_count": comparison.unhardened.correlated_rpa_count,
+                "correlated_rpas": list(comparison.unhardened.correlated_rpas),
+                "oracle_outcomes": list(comparison.unhardened.oracle_outcomes),
+                "privacy_preserved": comparison.unhardened.privacy_preserved,
+                "exposure": comparison.unhardened.exposure_report.to_dict(),
+            },
+            "hardened": {
+                "software_decision": comparison.hardened.software_decision,
+                "correlated_rpa_count": comparison.hardened.correlated_rpa_count,
+                "correlated_rpas": list(comparison.hardened.correlated_rpas),
+                "oracle_outcomes": list(comparison.hardened.oracle_outcomes),
+                "privacy_preserved": comparison.hardened.privacy_preserved,
+                "exposure": comparison.hardened.exposure_report.to_dict(),
+            },
+        }
+        md_sections.extend(
+            [
+                "",
+                "## Cross-Domain Coupling Verification (`C_1 -> C_2 -> C_3`, `Delta_RPA = 15 min`)",
+                "| Mode | Software Decision | Correlated RPAs | Oracle Outcomes | Privacy Preserved |",
+                "| :--- | :---: | :---: | :--- | :---: |",
+                f"| `unhardened` | `{comparison.unhardened.software_decision}` "
+                f"| `{comparison.unhardened.correlated_rpa_count}` "
+                f"| `{', '.join(comparison.unhardened.oracle_outcomes)}` "
+                f"| `{comparison.unhardened.privacy_preserved}` |",
+                f"| `hardened` | `{comparison.hardened.software_decision}` "
+                f"| `{comparison.hardened.correlated_rpa_count}` "
+                f"| `{', '.join(comparison.hardened.oracle_outcomes)}` "
+                f"| `{comparison.hardened.privacy_preserved}` |",
+            ]
+        )
+        text_lines.append(
+            f"  Coupling Sim (C_1->C_2->C_3): unhardened_linked={comparison.unhardened.correlated_rpa_count} "
+            f"(privacy={comparison.unhardened.privacy_preserved}) -> "
+            f"hardened_linked={comparison.hardened.correlated_rpa_count} "
+            f"(privacy={comparison.hardened.privacy_preserved})"
+        )
+
+    if getattr(args, "json", False):
+        content = json.dumps(report_payload, indent=2)
+    elif getattr(args, "markdown", False):
+        content = "\n".join(md_sections)
+    else:
+        content = "\n".join(text_lines)
+    return _deliver_formatted_output(content, getattr(args, "output", None))
 
 
 class SafeArgumentParser(argparse.ArgumentParser):
@@ -1610,6 +2547,198 @@ def create_parser(prog: str = "airtell") -> argparse.ArgumentParser:
         help="Include human-readable summary text",
     )
 
+    # 10. ARIEL Neurosymbolic Privacy Entailment Engine
+    p_ariel = subparsers.add_parser(
+        "ariel",
+        aliases=["entailment"],
+        help="Evaluate ARIEL Contextual Integrity 5-tuple logical entailment, benchmarks, and ablations",
+    )
+    p_ariel.add_argument(
+        "--domain",
+        type=str.lower,
+        default="spa",
+        choices=["spa", "education"],
+        help="Contextual Integrity domain ontology ('spa' or 'education', default: spa)",
+    )
+    p_ariel.add_argument("--data-type", type=str, default=None, help="5-tuple data_type attribute")
+    p_ariel.add_argument("--data-subject", type=str, default=None, help="5-tuple data_subject attribute")
+    p_ariel.add_argument("--data-sender", type=str, default=None, help="5-tuple data_sender attribute")
+    p_ariel.add_argument("--data-recipient", type=str, default=None, help="5-tuple data_recipient attribute")
+    p_ariel.add_argument(
+        "--transmission-principle",
+        type=str,
+        default=None,
+        help="5-tuple transmission_principle attribute",
+    )
+    p_ariel.add_argument(
+        "--anchor-role",
+        action="append",
+        default=None,
+        metavar="ROLE=LEVEL",
+        help="Anchor dynamic social role to ontology rank (e.g. housemate=L3), repeatable",
+    )
+    p_ariel.add_argument(
+        "--benchmark",
+        action="store_true",
+        help="Run deterministic domain benchmark evaluation across personalized user memories",
+    )
+    p_ariel.add_argument(
+        "--ablation",
+        action="store_true",
+        help="Run memory-size scaling ablation across |D_u| slices",
+    )
+    p_ariel.add_argument(
+        "--memory-sizes",
+        type=str,
+        default="10,20,40,60",
+        help="Comma-separated |D_u| memory sizes for --ablation (default: 10,20,40,60)",
+    )
+    p_ariel.add_argument(
+        "--edge-offload",
+        action="store_true",
+        help="Use LightweightEdgeOntologyMapper (strict Pydantic v2 JSON edge schema)",
+    )
+    p_ariel.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Deterministic PRNG seed for benchmark/ablation scenarios (default: 42)",
+    )
+    p_ariel.add_argument("--json", action="store_true", help="Output report in JSON format")
+    p_ariel.add_argument(
+        "--markdown",
+        "--md",
+        dest="markdown",
+        action="store_true",
+        help="Output report in Markdown format",
+    )
+    p_ariel.add_argument(
+        "-o",
+        "--output",
+        dest="output",
+        type=str,
+        default=None,
+        help="File path to save output report",
+    )
+
+    # 11. IDBLEED Link-Layer Side-Channel Verification
+    p_idbleed = subparsers.add_parser(
+        "idbleed-verify",
+        aliases=["idbleed"],
+        help="Audit BLE Link-Layer boolean side-channels across mock traces, PCAPs, or specification self-tests",
+    )
+    p_idbleed.add_argument(
+        "--mock",
+        action="store_true",
+        help="Audit simulated IDBLEED protocol traces",
+    )
+    p_idbleed.add_argument(
+        "-i",
+        "--pcap",
+        "--input",
+        dest="pcap",
+        type=str,
+        default=None,
+        help="Path to BLE PCAP capture file for IDBLEED audit",
+    )
+    p_idbleed.add_argument(
+        "--selftest",
+        action="store_true",
+        help="Run canonical TestIDBLEEDSpecification verification self-test suite",
+    )
+    p_idbleed.add_argument(
+        "--feature",
+        type=str.lower,
+        default="all",
+        choices=["all", "ll-enc", "csrk", "app-auth", "relay"],
+        help="Protocol feature oracle selection: all, ll-enc, csrk, app-auth, or relay (default: all)",
+    )
+    p_idbleed.add_argument(
+        "--target-mac",
+        type=str,
+        default=None,
+        help="Optional target peripheral/central MAC address filter (e.g. 5A:11:22:33:44:55)",
+    )
+    p_idbleed.add_argument("--json", action="store_true", help="Output report in JSON format")
+    p_idbleed.add_argument(
+        "--markdown",
+        "--md",
+        dest="markdown",
+        action="store_true",
+        help="Output report in Markdown format",
+    )
+    p_idbleed.add_argument(
+        "-o",
+        "--output",
+        dest="output",
+        type=str,
+        default=None,
+        help="File path to save output report",
+    )
+
+    # 12. Integrated Edge Defense Gateway & Cross-Domain Coupling Verifier
+    p_gateway = subparsers.add_parser(
+        "defense-gateway",
+        aliases=["gateway"],
+        help="Execute Integrated Edge Defense Gateway and Cross-Domain Threat Coupling Verifier",
+    )
+    p_gateway.add_argument(
+        "--mock",
+        action="store_true",
+        help="Run IntegratedDefenseGateway across mock CI entailment and BLE control/ATT probe frames",
+    )
+    p_gateway.add_argument(
+        "--coupling-sim",
+        action="store_true",
+        help="Run CrossDomainCouplingVerifier across rotating RPAs (C_1 -> C_2 -> C_3, Delta_RPA = 15 min)",
+    )
+    p_gateway.add_argument(
+        "--domain",
+        type=str.lower,
+        default="spa",
+        choices=["spa", "education"],
+        help="Contextual Integrity domain ontology ('spa' or 'education', default: spa)",
+    )
+    p_gateway.add_argument(
+        "--constant-time-ms",
+        type=float,
+        default=25.0,
+        help="Uniform BLE Link-Layer response window in milliseconds (default: 25.0)",
+    )
+    p_gateway.add_argument(
+        "--opt-out",
+        action="store_true",
+        help="Activate cryptographic HMAC-SHA256 local opt-out directive for the target domain",
+    )
+    p_gateway.add_argument(
+        "--ambient-authorized",
+        action="store_true",
+        help="Mark pervasive/ambient sensing flow as explicitly authorized by active user agent",
+    )
+    p_gateway.add_argument(
+        "--anchor-role",
+        action="append",
+        default=None,
+        metavar="ROLE=LEVEL",
+        help="Anchor dynamic social role to ontology rank (e.g. housemate=L3), repeatable",
+    )
+    p_gateway.add_argument("--json", action="store_true", help="Output report in JSON format")
+    p_gateway.add_argument(
+        "--markdown",
+        "--md",
+        dest="markdown",
+        action="store_true",
+        help="Output report in Markdown format",
+    )
+    p_gateway.add_argument(
+        "-o",
+        "--output",
+        dest="output",
+        type=str,
+        default=None,
+        help="File path to save output report",
+    )
+
     return parser
 
 
@@ -1662,6 +2791,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         return handle_sidechannel(args)
     elif cmd in ("pcap-timeline", "timeline"):
         return handle_pcap_timeline(args)
+    elif cmd in ("ariel", "entailment"):
+        return handle_ariel(args)
+    elif cmd in ("idbleed-verify", "idbleed"):
+        return handle_idbleed_verify(args)
+    elif cmd in ("defense-gateway", "gateway"):
+        return handle_defense_gateway(args)
     else:
         logger.error("Unknown command: %s", cmd)
         parser.print_help(sys.stderr)

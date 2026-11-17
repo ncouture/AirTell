@@ -41,6 +41,9 @@
   - [5.6 `relay`](#56-relay)
   - [5.7 `deanonymize`](#57-deanonymize)
   - [5.8 `rogue-inject`](#58-rogue-inject)
+  - [5.9 `ariel`](#59-ariel)
+  - [5.10 `idbleed-verify`](#510-idbleed-verify)
+  - [5.11 `defense-gateway`](#511-defense-gateway)
 - [6. Output Formats & Data Schemas](#6-output-formats--data-schemas)
   - [6.1 PCAP Wire Format (DLT 256)](#61-pcap-wire-format-dlt-256)
   - [6.2 JSON Session Telemetry Schema](#62-json-session-telemetry-schema)
@@ -84,6 +87,10 @@ Usage: airtell [-h] [-v] [--version] <subcommand> [subcommand-options]
 | `relay` | *(none)* | Two-ended BLE pairing relay testbed |
 | `deanonymize` | *(none)* | Trajectory reconstruction across RPA rotations |
 | `rogue-inject` | *(none)* | Synthesize and inject rogue tracking beacons |
+| `pcap-timeline` | `timeline` | Chronological BLE PCAP MAC timeline with Spectra Mesh OUI DB |
+| `ariel` | `entailment` | Neurosymbolic Contextual Integrity 5-tuple privacy entailment |
+| `idbleed-verify` | `idbleed` | IDBLEED link-layer side-channel verification & self-test |
+| `defense-gateway` | `gateway` | Integrated Edge Defense Gateway & RPA coupling verifier |
 
 ### Exit Codes Contract
 
@@ -664,6 +671,82 @@ Usage: airtell rogue-inject [-h]
 | `--key` | `str` | None | `None` | No | Custom ephemeral public key hex string |
 | `--mac` | `str` | None | `None` | No | Custom MAC address |
 | `--mock` | flag | None | `False` | No | Simulate burst injection in mock mode |
+
+### 5.9 `ariel`
+
+**Aliases**: `entailment`
+
+Evaluates Contextual Integrity 5-tuple information flow requests (`R = {d_u, u, s, r, t}`), personalized domain benchmarks (`SPA` and `Education`), and memory-scaling ablations (`|D_u|` slices) documented in [ariel_idbleed_blueprint.md](ariel_idbleed_blueprint.md).
+
+```bash
+airtell ariel --domain spa --data-type "exact GPS location" --data-recipient "close friend" --json
+airtell entailment --domain spa --ablation --memory-sizes 10,20,40,60 --markdown
+airtell ariel --domain education --benchmark --edge-offload --seed 42
+```
+
+| Option Flag(s) | Type | Choices | Default | Required? | Help Description |
+| :--- | :---: | :---: | :---: | :---: | :--- |
+| `--domain` | `str` | `spa`, `education` | `"spa"` | No | Contextual Integrity domain ontology |
+| `--data-type` | `str` | None | `None` | No | 5-tuple `data_type` attribute |
+| `--data-subject` | `str` | None | `None` | No | 5-tuple `data_subject` attribute |
+| `--data-sender` | `str` | None | `None` | No | 5-tuple `data_sender` attribute |
+| `--data-recipient` | `str` | None | `None` | No | 5-tuple `data_recipient` attribute |
+| `--transmission-principle` | `str` | None | `None` | No | 5-tuple `transmission_principle` attribute |
+| `--anchor-role` | `str` | None | `None` | No | Repeatable `ROLE=LEVEL` dynamic social role anchor |
+| `--benchmark` | flag | None | `False` | No | Run deterministic domain benchmark evaluation |
+| `--ablation` | flag | None | `False` | No | Run memory-size scaling ablation across `|D_u|` slices |
+| `--memory-sizes` | `str` | None | `"10,20,40,60"` | No | Comma-separated `|D_u|` memory slice sizes |
+| `--edge-offload` | flag | None | `False` | No | Use strict Pydantic v2 JSON edge mapper (`Gemma 3 4B IT`) |
+| `--seed` | `int` | None | `42` | No | Deterministic PRNG seed |
+| `--json` | flag | None | `False` | No | Output report in JSON format |
+| `--markdown`, `--md` | flag | None | `False` | No | Output report in Markdown format |
+| `-o`, `--output` | `str` | None | `None` | No | File path to save output report |
+
+### 5.10 `idbleed-verify`
+
+**Aliases**: `idbleed`
+
+Audits BLE Link-Layer boolean side-channels across simulated traces (`--mock`), captured PCAP files (`--pcap`), or the canonical specification test suite (`--selftest`).
+
+```bash
+airtell idbleed-verify --selftest --json
+airtell idbleed --mock --feature all --target-mac 5A:11:22:33:44:55 --markdown
+```
+
+| Option Flag(s) | Type | Choices | Default | Required? | Help Description |
+| :--- | :---: | :---: | :---: | :---: | :--- |
+| `--mock` | flag | None | `False` | 1 of 3 | Audit simulated IDBLEED protocol traces |
+| `-i`, `--pcap`, `--input` | `str` | None | `None` | 1 of 3 | Path to BLE PCAP capture file |
+| `--selftest` | flag | None | `False` | 1 of 3 | Run canonical `TestIDBLEEDSpecification` self-test suite |
+| `--feature` | `str` | `all`, `ll-enc`, `csrk`, `app-auth`, `relay` | `"all"` | No | Protocol feature oracle selection |
+| `--target-mac` | `str` | None | `None` | No | Optional peripheral/central MAC address filter |
+| `--json` | flag | None | `False` | No | Output report in JSON format |
+| `--markdown`, `--md` | flag | None | `False` | No | Output report in Markdown format |
+| `-o`, `--output` | `str` | None | `None` | No | File path to save output report |
+
+### 5.11 `defense-gateway`
+
+**Aliases**: `gateway`
+
+Executes the `IntegratedDefenseGateway` and `CrossDomainCouplingVerifier` (`C_1 -> C_2 -> C_3`, `Delta_RPA = 15 min`), coupling ARIEL software entailment with constant-time BLE side-channel suppression.
+
+```bash
+airtell defense-gateway --mock --coupling-sim --domain spa --constant-time-ms 25.0 --json
+airtell gateway --mock --domain education --opt-out --markdown
+```
+
+| Option Flag(s) | Type | Choices | Default | Required? | Help Description |
+| :--- | :---: | :---: | :---: | :---: | :--- |
+| `--mock` | flag | None | `False` | 1+ | Run mock CI entailment and BLE frame hardening |
+| `--coupling-sim` | flag | None | `False` | 1+ | Run `C_1 -> C_2 -> C_3` RPA rotation coupling simulation |
+| `--domain` | `str` | `spa`, `education` | `"spa"` | No | Contextual Integrity domain ontology |
+| `--constant-time-ms` | `float` | None | `25.0` | No | Uniform BLE response window in milliseconds |
+| `--opt-out` | flag | None | `False` | No | Activate HMAC-SHA256 local opt-out directive |
+| `--ambient-authorized` | flag | None | `False` | No | Mark ambient sensing flow as actively authorized |
+| `--anchor-role` | `str` | None | `None` | No | Repeatable `ROLE=LEVEL` dynamic social role anchor |
+| `--json` | flag | None | `False` | No | Output report in JSON format |
+| `--markdown`, `--md` | flag | None | `False` | No | Output report in Markdown format |
+| `-o`, `--output` | `str` | None | `None` | No | File path to save output report |
 
 ---
 
