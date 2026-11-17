@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/ncouture/AirTell/compare/v0.3.1...v0.4.0) (2026-11-17)
+
+
+### Features
+
+* **ouidb:** add spectramesh_ouidb C engine, binary SOUI database, and Python bindings ([#246](https://github.com/ncouture/AirTell/issues/246)) ([5104c52](https://github.com/ncouture/AirTell/commit/5104c5221988aa6923c7ecc551576aa17dfcc7c7))
+
 ## [0.3.1](https://github.com/ncouture/AirTell/compare/v0.3.0...v0.3.1) (2026-11-12)
 
 
