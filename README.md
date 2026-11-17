@@ -125,6 +125,7 @@ The application checks this status continuously via `airtell.device.serial_port.
 
 Full technical documentation is centralized in [`docs/`](docs/):
 - [**Documentation Index**](docs/index.md): Central navigation hub.
+- [**ARIEL Privacy Entailment & IDBLEED Link-Layer Defense Blueprint**](docs/ariel_idbleed_blueprint.md): Unified Contextual Integrity neurosymbolic solver (`ARIELSolver`), IDBLEED side-channel verification (`idbleed_spec.py`), and constant-time BLE defense gateway (`IntegratedDefenseGateway`).
 - [**Unified CLI Reference & Adversarial Ingestion**](docs/CLI.md): Complete CLI reference for topologies, side-channels, deanonymization, and rogue injection.
 - [**Link Layer Traffic Relay Specifications**](docs/relay_specifications.md): Master/Slave topology on USB0/USB1.
 - [**Device Status & LSOF Validation**](docs/device_status.md): In-use determination mechanics.
@@ -235,6 +236,15 @@ airtell rogue-inject --mock --network "Apple Find My" --count 5
 
 # Over-the-air rogue beacon injection with multi-channel hopping and jitter
 airtell rogue-inject --port /dev/ttyUSB0 --network "Google Find Hub" --count 10 --interval-ms 200 --channels 37,38,39
+
+# Run ARIEL Contextual Integrity domain benchmark and memory-scaling ablation
+airtell ariel --domain spa --ablation --memory-sizes 10,20,40,60 --markdown
+
+# Run canonical IDBLEED link-layer side-channel verification self-test
+airtell idbleed-verify --selftest --json
+
+# Verify cross-domain RPA rotation protection (C_1 -> C_2 -> C_3) via the Edge Defense Gateway
+airtell defense-gateway --mock --coupling-sim --domain spa --constant-time-ms 25.0 --json
 ```
 
 ---

@@ -27,6 +27,7 @@ VALID_DOC_PATHS = [
     "CONTRIBUTE.md",
     "docs/CLI.md",
     "docs/index.md",
+    "docs/ariel_idbleed_blueprint.md",
 ]
 
 VALID_COMMAND_PREFIXES = {
@@ -43,6 +44,14 @@ VALID_COMMAND_PREFIXES = {
     "relay",
     "deanonymize",
     "rogue-inject",
+    "pcap-timeline",
+    "timeline",
+    "ariel",
+    "entailment",
+    "idbleed-verify",
+    "idbleed",
+    "defense-gateway",
+    "gateway",
     "-h",
     "--help",
     "-v",
@@ -219,7 +228,10 @@ class TestMarkdownLinks:
 class TestCliSnippetsSyntax:
     """Verifies that all CLI snippets in documentation parse against create_parser()."""
 
-    @pytest.mark.parametrize("doc_rel_path", ["README.md", "CONTRIBUTE.md", "docs/CLI.md"])
+    @pytest.mark.parametrize(
+        "doc_rel_path",
+        ["README.md", "CONTRIBUTE.md", "docs/CLI.md", "docs/ariel_idbleed_blueprint.md"],
+    )
     def test_cli_snippets_parse_cleanly(self, doc_rel_path: str) -> None:
         doc_path = REPO_ROOT / doc_rel_path
         commands = extract_cli_commands(doc_path)

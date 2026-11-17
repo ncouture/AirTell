@@ -48,6 +48,14 @@ VALID_COMMAND_PREFIXES = {
     "relay",
     "deanonymize",
     "rogue-inject",
+    "pcap-timeline",
+    "timeline",
+    "ariel",
+    "entailment",
+    "idbleed-verify",
+    "idbleed",
+    "defense-gateway",
+    "gateway",
     "-h",
     "--help",
     "-v",
@@ -220,6 +228,8 @@ def main() -> int:
     cli_docs = [REPO_ROOT / "README.md", REPO_ROOT / "docs" / "CLI.md"]
     if (REPO_ROOT / "CONTRIBUTE.md").exists():
         cli_docs.append(REPO_ROOT / "CONTRIBUTE.md")
+    if (REPO_ROOT / "docs" / "ariel_idbleed_blueprint.md").exists():
+        cli_docs.append(REPO_ROOT / "docs" / "ariel_idbleed_blueprint.md")
     for doc in cli_docs:
         rel_path = doc.relative_to(REPO_ROOT)
         commands = extract_cli_commands(doc)

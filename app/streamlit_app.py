@@ -17,6 +17,7 @@ from app.views.adversarial_evaluation import render_adversarial_evaluation
 from app.views.alert_feed import render_alert_feed
 from app.views.offline_replay import render_offline_replay
 from app.views.packet_inspector import render_packet_inspector
+from app.views.privacy_defense import render_privacy_defense
 from app.views.radio_controls import (
     get_tshark_topology_manager,
     render_radio_controls,
@@ -167,6 +168,13 @@ def main() -> None:
                 render_radio_controls(tracker_db=tracker_db, event_queue=event_queue)
             elif active_view == "adversarial":
                 render_adversarial_evaluation(conn=conn, tracker_db=tracker_db, event_queue=event_queue)
+            elif active_view == "privacy_defense":
+                render_privacy_defense(
+                    conn=conn,
+                    tracker_db=tracker_db,
+                    event_queue=event_queue,
+                    backend=backend,
+                )
         finally:
             if conn:
                 conn.close()

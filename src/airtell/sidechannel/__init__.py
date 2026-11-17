@@ -19,6 +19,22 @@ from airtell.sidechannel.differential_encryption import (
     EncryptionSession,
     EncryptionSessionState,
 )
+from airtell.sidechannel.idbleed_spec import (
+    ActiveRelayProbeOrchestrator,
+    AppAuthOracleEvaluator,
+    ATTOpcode,
+    ATTSignedWritePayload,
+    BLEFrame,
+    CSRKSigningOracleEvaluator,
+    IdbleedVerificationAnalyzer,
+    IdentityRecord,
+    LLEncryptionOracleEvaluator,
+    LLEncryptionReqPayload,
+    LLOpcode,
+    OracleResult,
+    ble_packet_record_to_frame,
+    compute_csrk_cmac,
+)
 from airtell.sidechannel.ll_dissector import (
     ATT_OPCODE_ERROR_RSP,
     ATT_OPCODE_HANDLE_VALUE_IND,
@@ -193,4 +209,19 @@ __all__ = [
     "generate_synthetic_captured_stream",
     "generate_synthetic_pcap",
     "generate_synthetic_stream",
+    # IDBLEED Verification Specification
+    "OracleResult",
+    "LLOpcode",
+    "ATTOpcode",
+    "BLEFrame",
+    "LLEncryptionReqPayload",
+    "ATTSignedWritePayload",
+    "LLEncryptionOracleEvaluator",
+    "CSRKSigningOracleEvaluator",
+    "AppAuthOracleEvaluator",
+    "IdentityRecord",
+    "ActiveRelayProbeOrchestrator",
+    "IdbleedVerificationAnalyzer",
+    "ble_packet_record_to_frame",
+    "compute_csrk_cmac",
 ]

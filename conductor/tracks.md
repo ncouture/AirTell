@@ -28,3 +28,6 @@
 
 - [x] **Track 9: GitHub Issue & Conductor Track Commit/Branch/PR Traceability**
   *Link: [./tracks/github_issue_traceability_20261017/index.md](./tracks/github_issue_traceability_20261017/index.md)*
+
+- [x] **Track 10: ARIEL Neurosymbolic Privacy Entailment & IDBLEED Link-Layer Defense Blueprint**
+  *Link: [./tracks/ariel_idbleed_defense_20261117/index.md](./tracks/ariel_idbleed_defense_20261117/index.md)*

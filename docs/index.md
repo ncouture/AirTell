@@ -17,6 +17,8 @@ This repository pairs firmware for Texas Instruments CC1352 / CC26x2 wireless mi
   Technical breakdown of wireless-scanning SDK privacy risks, empirical testbed methodology, and countermeasure evaluation workflows.
 
 ### 1. Specifications & Topologies
+* [**ARIEL Privacy Entailment & IDBLEED Link-Layer Defense Blueprint**](ariel_idbleed_blueprint.md)
+  Unified architecture blueprint coupling Contextual Integrity neurosymbolic logical entailment (`ARIELSolver`, `<=_O`), IDBLEED boolean side-channel verification (`idbleed_spec.py`), and constant-time BLE link-layer hardening (`IntegratedDefenseGateway` + `IDBLEEDSideChannelMonitor`).
 * [**2D Radio Tomographic Sensing Engine**](2D_tomographic_sensing.md)
   Technical architecture, mathematical models (Tikhonov regularization, Mahalanobis anomaly detection, alpha-beta tracking), and operational guide for device-free passive RF imaging and human localization using ambient BLE RSSI perturbations.
 * [**Link Layer Traffic Relay Specifications**](relay_specifications.md)
