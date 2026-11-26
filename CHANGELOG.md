@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.5.0](https://github.com/ncouture/AirTell/compare/v0.4.0...v0.5.0) (2026-11-26)
+
+
+### Features
+
+* **ariel:** implement neurosymbolic logical entailment privacy engine ([0a9d663](https://github.com/ncouture/AirTell/commit/0a9d663d861f23377b4a0dd68cff78d27e47fc17))
+* **defense:** add unified operational defense gateway and side-channel monitor ([550701c](https://github.com/ncouture/AirTell/commit/550701c7371d6813102598ed599ff60367b24fa2))
+* **privacy:** integrate ARIEL entailment, IDBLEED CLI/dashboard, and defense blueprint ([7672670](https://github.com/ncouture/AirTell/commit/76726706d78436aa3599718e5c8f7e194d79bfd6))
+* **sidechannel:** add IDBLEED link-layer verification specification ([5ee9268](https://github.com/ncouture/AirTell/commit/5ee92685150e87fc3e1c4e7f4aa2362d6e3645b5))
+
 ## [0.4.0](https://github.com/ncouture/AirTell/compare/v0.3.1...v0.4.0) (2026-11-17)
 
 
