@@ -16,7 +16,7 @@ import time
 from datetime import datetime
 from typing import Any
 
-from app.queue_bridge import EventQueue
+from airtell.telemetry.queue_bridge import EventQueue
 
 logger = logging.getLogger(__name__)
 

@@ -1202,7 +1202,7 @@ def handle_sidechannel(args: argparse.Namespace) -> int:
 
 def handle_pcap_timeline(args: argparse.Namespace) -> int:
     """Execute chronological BLE PCAP MAC timeline extraction with Spectra Mesh OUI classification."""
-    pcap_path = getattr(args, "pcap", None) or "app/data/merged.pcap"
+    pcap_path = getattr(args, "pcap", None) or "data/merged.pcap"
     pcap_file = Path(pcap_path)
     if not _is_existing_file(pcap_file):
         logger.error("PCAP file not found: %s", pcap_path)
@@ -2475,8 +2475,8 @@ def create_parser(prog: str = "airtell") -> argparse.ArgumentParser:
         "--input",
         dest="pcap",
         type=str,
-        default="app/data/merged.pcap",
-        help="Input BLE PCAP file (default: app/data/merged.pcap)",
+        default="data/merged.pcap",
+        help="Input BLE PCAP file (default: data/merged.pcap)",
     )
     p_timeline.add_argument(
         "--ouidb",

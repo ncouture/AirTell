@@ -19,7 +19,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 SRC_DIR = REPO_ROOT / "src"
 SPECTRAMESH_DIR = REPO_ROOT / "spectramesh_ouidb"
 OUIDB_BIN = SPECTRAMESH_DIR / "oui_db.bin"
-MERGED_PCAP = REPO_ROOT / "app" / "data" / "merged.pcap"
+MERGED_PCAP = REPO_ROOT / "data" / "merged.pcap"
 
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))

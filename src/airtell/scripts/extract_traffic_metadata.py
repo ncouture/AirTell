@@ -252,7 +252,7 @@ def main() -> None:
         "-i", "--input", default=str(REPO_ROOT / "merged.json"), help="Path to merged.json"
     )
     parser.add_argument(
-        "-p", "--pcap", default=str(REPO_ROOT / "app/data/merged.pcap"), help="Path to merged.pcap"
+        "-p", "--pcap", default=str(REPO_ROOT / "data/merged.pcap"), help="Path to merged.pcap"
     )
     parser.add_argument(
         "-o", "--output", default=None, help="Path to output JSON result file"

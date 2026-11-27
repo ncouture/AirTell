@@ -1,7 +1,7 @@
 """Empirical Ground Truth & CLI Adversarial Challenge Test Suite.
 
 Authored by Empirical Challenger 2 (challenger_ouidb_2).
-Conducts empirical ground-truth validation against app/data/merged.pcap,
+Conducts empirical ground-truth validation against data/merged.pcap,
 asserts exact classification of all 21 surveillance devices, checks chronological
 monotonicity, and exposes boundary/CLI edge argument behaviors.
 """
@@ -16,7 +16,7 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SRC_DIR = REPO_ROOT / "src"
 SPECTRAMESH_DIR = REPO_ROOT / "spectramesh_ouidb"
-MERGED_PCAP = REPO_ROOT / "app" / "data" / "merged.pcap"
+MERGED_PCAP = REPO_ROOT / "data" / "merged.pcap"
 
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
@@ -58,7 +58,7 @@ GROUND_TRUTH_21_SURVEILLANCE = [
 def merged_pcap_scan() -> dict[str, dict]:
     """Stream merged.pcap and locate observation metadata for all target surveillance devices."""
     if not MERGED_PCAP.exists():
-        pytest.skip("app/data/merged.pcap not found")
+        pytest.skip("data/merged.pcap not found")
 
     db = get_ouidb()
     target_macs = {mac: meta for idx, ts, mac, *meta in GROUND_TRUTH_21_SURVEILLANCE}
