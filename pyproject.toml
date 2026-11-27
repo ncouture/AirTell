@@ -20,8 +20,7 @@ dependencies = [
     "pytest>=9.1.1",
     "matplotlib>=3.10.9",
     "python-dotenv>=1.2.4",
-    "streamlit>=1.64.0",
-    "plotly>=7.1.0",
+    "pandas>=2.0.0",
     "duckdb>=1.5.6",
 ]
 
