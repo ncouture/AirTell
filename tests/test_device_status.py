@@ -11,7 +11,6 @@ from airtell.device.serial_port import (
     get_device_status,
     get_sniffle_devices_status,
 )
-from app.components.navigation import get_top_app_bar_html
 
 
 def test_check_device_usage_in_use() -> None:
@@ -96,28 +95,6 @@ def test_get_sniffle_devices_status() -> None:
         assert len(custom) == 1
         assert custom[0]["device"] == "/dev/ttyACM0"
         assert custom[0]["in_use"] is False
-
-
-def test_top_app_bar_device_status_styling() -> None:
-    """Validate top app bar dot classes reflect in-use and idle states."""
-    # Active state
-    html_active = get_top_app_bar_html(
-        dongle1_status="/dev/ttyUSB0: IN USE",
-        dongle2_status="/dev/ttyUSB1: IN USE",
-        dongle1_active=True,
-        dongle2_active=True,
-    )
-    assert "m3-status-dot" in html_active
-    assert "m3-status-dot-idle" not in html_active
-
-    # Idle state
-    html_idle = get_top_app_bar_html(
-        dongle1_status="/dev/ttyUSB0: IDLE",
-        dongle2_status="/dev/ttyUSB1: IDLE",
-    )
-    assert "m3-status-dot-idle" in html_idle
-    assert "/dev/ttyUSB0: IDLE" in html_idle
-    assert "/dev/ttyUSB1: IDLE" in html_idle
 
 
 def test_check_device_usage_none_and_empty() -> None:

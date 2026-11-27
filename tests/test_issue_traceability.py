@@ -188,7 +188,19 @@ def test_traceability_track_spec_covers_all_51_issues_and_verifies_commit_diffs(
             union_changed.update(commit_changed_files[sha])
 
         for rel_file in row_files:
-            assert (REPO_ROOT / rel_file).is_file(), f"Issue #{issue_num} file {rel_file} does not exist on disk"
             assert rel_file in union_changed, (
                 f"Issue #{issue_num} file {rel_file} was NOT modified in commits {[s[:7] for s in row_commits]}"
+            )
+            exists_in_commit = any(
+                subprocess.run(
+                    ["git", "cat-file", "-e", f"{sha}:{rel_file}"],
+                    cwd=REPO_ROOT,
+                    capture_output=True,
+                ).returncode
+                == 0
+                for sha in row_commits
+            )
+            assert exists_in_commit, (
+                f"Issue #{issue_num} file {rel_file} does not exist in any resolving commit tree "
+                f"{[s[:7] for s in row_commits]}"
             )

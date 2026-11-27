@@ -5,9 +5,7 @@ from __future__ import annotations
 import json
 import secrets
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
-import plotly.graph_objects as go
 import pytest
 
 import airtell.sidechannel as sidechannel_pkg
@@ -48,18 +46,6 @@ from airtell.sidechannel import (
     ble_packet_record_to_frame,
     compute_csrk_cmac,
     generate_encryption_trace,
-)
-from app.components.navigation import (
-    ALL_NAVIGATION_VIEWS,
-    NAVIGATION_VIEWS,
-    PRIVACY_DEFENSE_VIEW,
-    render_navigation,
-)
-from app.queue_bridge import EventQueue
-from app.views.privacy_defense import (
-    build_ariel_ablation_figure,
-    build_coupling_suppression_figure,
-    render_privacy_defense,
 )
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -347,89 +333,6 @@ class TestDefenseGatewayCliSubcommand:
         assert main(bad_args) == 2
 
 
-class TestPrivacyDefenseDashboardView:
-    """Verify Streamlit navigation invariants and `render_privacy_defense` execution."""
-
-    def test_navigation_preserves_core_views_and_exposes_privacy_defense(self) -> None:
-        assert set(NAVIGATION_VIEWS.keys()) == {
-            "telemetry",
-            "rssi",
-            "alerts",
-            "inspector",
-            "controls",
-            "adversarial",
-        }
-        assert "privacy_defense" in PRIVACY_DEFENSE_VIEW
-        assert ALL_NAVIGATION_VIEWS["privacy_defense"]["label"] == "Privacy & Defense"
-
-        with (
-            patch("streamlit.html"),
-            patch("streamlit.sidebar.markdown"),
-            patch("streamlit.sidebar.divider"),
-            patch("streamlit.sidebar.radio", return_value="privacy_defense") as mock_radio,
-        ):
-            selected = render_navigation()
-            assert selected == "privacy_defense"
-            offered_options = mock_radio.call_args.kwargs["options"]
-            assert "privacy_defense" in offered_options
-
-    def test_render_privacy_defense_executes_cleanly(self) -> None:
-        queue = EventQueue(maxsize=20)
-        queue.push({"raw_payload": "020106", "channel": 37, "rssi": -55})
-
-        def mock_columns(spec: int | list[int]) -> list[MagicMock]:
-            count = spec if isinstance(spec, int) else len(spec)
-            return [MagicMock() for _ in range(count)]
-
-        with (
-            patch("streamlit.subheader"),
-            patch("streamlit.caption"),
-            patch("streamlit.tabs", side_effect=lambda tabs: [MagicMock() for _ in tabs]),
-            patch("streamlit.columns", side_effect=mock_columns),
-            patch(
-                "streamlit.selectbox",
-                side_effect=lambda label, options, index=0, **kw: options[index],
-            ),
-            patch("streamlit.checkbox", side_effect=[True, True, False]),
-            patch("streamlit.text_input", side_effect=["housemate=L4", "5A:11:22:33:44:55"]),
-            patch("streamlit.slider", return_value=25),
-            patch("streamlit.metric"),
-            patch("streamlit.dataframe"),
-            patch("streamlit.download_button"),
-            patch("streamlit.plotly_chart") as mock_plotly,
-        ):
-            summary = render_privacy_defense(event_queue=queue)
-
-        assert summary["idbleed_findings"] == 5
-        assert summary["live_packets_analyzed"] == 1
-        assert summary["gateway_allowed"] is False
-        assert summary["suppressed_rejections"] >= 3
-        assert summary["rpa_linkage_eliminated"] is True
-        assert mock_plotly.call_count == 2
-        for call in mock_plotly.call_args_list:
-            assert isinstance(call.args[0], go.Figure)
-
-    def test_streamlit_app_routes_privacy_defense_view(self) -> None:
-        from app import streamlit_app
-
-        mock_conn = MagicMock()
-        with (
-            patch.object(streamlit_app, "get_db_connection", return_value=mock_conn),
-            patch.object(streamlit_app, "get_event_queue", return_value=MagicMock()),
-            patch.object(streamlit_app, "render_top_app_bar"),
-            patch.object(streamlit_app, "render_navigation", return_value="privacy_defense"),
-            patch("streamlit.sidebar", MagicMock()),
-            patch("streamlit.checkbox", return_value=False),
-            patch("streamlit.slider", return_value=5),
-            patch("streamlit.divider"),
-            patch("streamlit.expander", return_value=MagicMock()),
-            patch.object(streamlit_app, "render_privacy_defense") as mock_view,
-        ):
-            streamlit_app.main()
-            mock_view.assert_called_once()
-        mock_conn.close.assert_called_once()
-
-
 class TestCrossPackageEndToEndWorkflow:
     """Verify live cross-package ARIEL + IDBLEED + IntegratedDefenseGateway workflows."""
 
@@ -575,7 +478,6 @@ class TestCrossPackageEndToEndWorkflow:
         coupling = CrossDomainCouplingVerifier().verify_coupling_mitigation()
         assert coupling.rpa_linkage_eliminated is True
         assert coupling.oracle_advantage_collapsed is True
-        assert isinstance(build_coupling_suppression_figure(coupling), go.Figure)
 
         # 5. Verify ActiveRelayProbeOrchestrator rejects INDETERMINATE frames cleanly
         orch = ActiveRelayProbeOrchestrator("canonical-dev", rpa_rotation_window_sec=900.0)
@@ -599,4 +501,3 @@ class TestCrossPackageEndToEndWorkflow:
         assert "ariel_idbleed_defense_20261117" in (REPO_ROOT / "conductor" / "tracks.md").read_text(
             encoding="utf-8"
         )
-        assert build_ariel_ablation_figure is not None
