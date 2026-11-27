@@ -18,7 +18,6 @@ body:
         - "Topology B: Dual-Channel Passive Observer"
         - "Topology C: Link Layer Relay"
         - "CLI Side-Channel / Adversarial Ingestion"
-        - "Streamlit Dashboard UI"
         - "VirtualRadioBus (Mock Simulation / Offline)"
         - "Other"
     validations:

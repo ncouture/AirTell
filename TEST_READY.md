@@ -31,7 +31,7 @@ The validation suite is partitioned into four distinct End-to-End tiers in `test
 | **Tier 1** | `TestTier1FeatureCoverage` | 33 | **Features in Isolation**: F1 (OUI engine & endianness), F2 (device classification), F3 (PDU ingestion), F4 (OUI filtering & chrono order), F5 (metadata enrichment), F6 (report formats & CLI). |
 | **Tier 2** | `TestTier2BoundaryAndCornerCases` | 25 | **Boundary & Corner Cases**: B1 (empty/truncated PCAPs), B2 (pure RPA zero-match captures), B3 (LPM collisions /36 > /28 > /24), B4 (broadcast/multicast/malformed MACs), B5 (extreme timestamps & out-of-order packets). |
 | **Tier 3** | `TestTier3CrossFeatureCombinations` | 7 | **Cross-Feature Combinations**: Multi-role devices (`AdvA` + `ScanA`), category and surveillance filtering combined with multi-format serialization, mixed prefix lengths, and telemetry congruence. |
-| **Tier 4** | `TestTier4RealWorldApplicationScenarios` | 7 | **Real-World Application Scenarios**: Execution against `app/data/merged.pcap` asserting ground-truth detection of Flock Safety, DJI drones, Skydio drones, Wyze cameras, Ring scanners, and Hikvision cameras. |
+| **Tier 4** | `TestTier4RealWorldApplicationScenarios` | 7 | **Real-World Application Scenarios**: Execution against `data/merged.pcap` asserting ground-truth detection of Flock Safety, DJI drones, Skydio drones, Wyze cameras, Ring scanners, and Hikvision cameras. |
 | **Engine Unit** | `test_spectramesh_ouidb.py` | 61 | **C Extension & Mmap Primitives**: Binary SOUI header parsing, string pool offsets, binary search, memory-mapped safety, and multi-threading. |
 | **Total** | | **133** | **Total Verification Tests for Spectra Mesh & Timeline Track** |
 
@@ -88,9 +88,9 @@ Every feature defined in `ORIGINAL_REQUEST.md` (R1–R4) and `PROJECT.md` is cov
 
 ---
 
-## 4. Real-World Ground Truth Surveillance Assertions (`app/data/merged.pcap`)
+## 4. Real-World Ground Truth Surveillance Assertions (`data/merged.pcap`)
 
-The Tier 4 test suite validates the detection of known ground truth surveillance devices in `app/data/merged.pcap`:
+The Tier 4 test suite validates the detection of known ground truth surveillance devices in `data/merged.pcap`:
 
 | Target Device | MAC Address | Expected Vendor | Expected Category | Verified Roles | Test Function |
 |:---|:---|:---|:---:|:---:|:---|
@@ -119,4 +119,4 @@ Tier 2 exercises component resilience under edge-case conditions:
 In accordance with project integrity mandates:
 - **Zero Mock Shortcuts**: All test assertions evaluate real data transformations, protocol parsing, and bit-level fields. No test results or verification strings are hardcoded in application logic.
 - **Genuine Protocol Decoding**: Link Layer PDUs, AD structures, pseudo-headers, CRC polynomials, and beacon payloads maintain real state and execute genuine bit-level packing and unpacking.
-- **Authoritative Expected Outputs**: Expected values are derived directly from the binary database `spectramesh_ouidb/oui_db.bin` and the verified ground truth of `app/data/merged.pcap`.
+- **Authoritative Expected Outputs**: Expected values are derived directly from the binary database `spectramesh_ouidb/oui_db.bin` and the verified ground truth of `data/merged.pcap`.

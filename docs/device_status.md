@@ -4,7 +4,7 @@
 
 In operational testbeds and multi-dongle environments, determining whether a physical serial device (such as `/dev/ttyUSB0` or `/dev/ttyUSB1`) is actively locked by a capture process, sniffer daemon, or relay script is critical to prevent device contention, I/O collisions, and port lockups.
 
-Within the **Bluetooth-Sniffle** framework and its **Streamlit application**, device status can be determined **at all times** using standard Linux system commands.
+Within the **Bluetooth-Sniffle** framework, device status can be determined **at all times** using standard Linux system commands and `airtell.device.serial_port` helpers.
 
 ---
 
@@ -19,10 +19,10 @@ lsof /dev/ttyUSB1
 
 ### Return Code Contract
 
-| Return Code | Meaning | Hardware Status | Streamlit Status Indicator |
+| Return Code | Meaning | Hardware Status | Status Label |
 | :---: | :--- | :--- | :--- |
-| **`0`** | Process holds an open file descriptor on the device node. | **Device is OPEN and BEING USED** | `IN USE` (Green Dot `var(--md-sys-color-success)`) |
-| **Non-Zero (`1`, `2`, `127`)** | No active process has the device open, or device node is not present. | **Device is NOT OPEN and NOT IN USE** | `IDLE` (Muted Dot `#8E919A`) |
+| **`0`** | Process holds an open file descriptor on the device node. | **Device is OPEN and BEING USED** | `IN USE` |
+| **Non-Zero (`1`, `2`, `127`)** | No active process has the device open, or device node is not present. | **Device is NOT OPEN and NOT IN USE** | `IDLE` |
 
 ### Terminal Verification Examples
 
@@ -98,27 +98,6 @@ def check_device_usage(device_path: str = "/dev/ttyUSB0") -> bool:
     except (subprocess.SubprocessError, FileNotFoundError, PermissionError, OSError):
         return False
 ```
-
----
-
-## Streamlit Application Integration
-
-The Streamlit web application surfaces live device status **at all times** across all operational views:
-
-### 1. M3 Top App Bar (Global Header)
-Rendered at the top of every dashboard view (`app/components/navigation.py`):
-- Displays real-time status badges for `/dev/ttyUSB0` and `/dev/ttyUSB1`.
-- When in use (exit code 0): Displays green pulsating status dot (`.m3-status-dot`) with `IN USE`.
-- When idle (exit code non-zero): Displays muted tactical status dot (`.m3-status-dot-idle`) with `IDLE`.
-
-### 2. M3 Navigation Rail (Sidebar Footer)
-Rendered in the persistent left-hand navigation rail across all views:
-- Displays instant status for `Device 1: /dev/ttyUSB0: IN USE / IDLE`.
-- Displays instant status for `Device 2: /dev/ttyUSB1: IN USE / IDLE`.
-
-### 3. Testbed & Radio Controls View (`app/views/radio_controls.py`)
-- **Hardware Status Card**: Displays live `lsof` verification for both primary and secondary ports (`IN USE (open)` vs `IDLE (not open)`).
-- **Auto-Discovery Telemetry Expander**: Appends live `[IN USE]` or `[IDLE]` badges next to every enumerated USB serial device on the host.
 
 ---
 

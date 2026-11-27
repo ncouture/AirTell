@@ -91,4 +91,4 @@ While PDF sources are indexed by their symposium URL filenames in the notebook l
 The following workspace artifacts were developed specifically to parse and control live Bluetooth packet captures using Sniffle hardware dongles:
 
 1.  `src/airtell/extcap/runner.py` (`TsharkStreamRunner`)
-    -   **Description:** An asynchronous Python backend module that executes `tshark` subprocesses wrapping the Sniffle extcap plugin to stream live Bluetooth JSON data to a Streamlit web application.
+    -   **Description:** An asynchronous Python backend module that executes `tshark` subprocesses wrapping the Sniffle extcap plugin to stream live Bluetooth JSON data into the AirTell `EventQueue`.
