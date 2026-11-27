@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 
 from airtell.extcap.parser import TsharkBleJsonParser
-from app.queue_bridge import EventQueue
+from airtell.telemetry.queue_bridge import EventQueue
 
 
 class TestTsharkBleJsonParser:

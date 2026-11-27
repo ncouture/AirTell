@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import sys
 import threading
 import time
 from typing import Any
 
-from app.queue_bridge import EventQueue, get_event_queue
+from airtell.telemetry.queue_bridge import EventQueue, get_event_queue, packet_to_event_dict
 
 
 def test_queue_initialization_and_capacity() -> None:
@@ -121,3 +122,69 @@ def test_queue_non_destructive_reads() -> None:
     assert len(all_items) == 10
     assert [p["pkt"] for p in all_items] == list(range(10))
     assert q.size() == 10
+
+
+def test_queue_bridge_has_no_streamlit_dependency() -> None:
+    """Validate that airtell.telemetry.queue_bridge does not import streamlit."""
+    import inspect
+
+    import airtell.telemetry.queue_bridge as qb
+
+    source = inspect.getsource(qb)
+    assert "import streamlit" not in source
+    assert "st.cache_resource" not in source
+    assert "streamlit" not in sys.modules or "streamlit" not in qb.__dict__
+
+
+def test_singleton_get_event_queue_thread_safe_concurrent_init() -> None:
+    """Validate concurrent calls to get_event_queue() always return the exact same singleton."""
+    import airtell.telemetry.queue_bridge as qb
+
+    original = qb._DEFAULT_EVENT_QUEUE
+    try:
+        qb._DEFAULT_EVENT_QUEUE = None
+        results: list[EventQueue] = []
+        lock = threading.Lock()
+        barrier = threading.Barrier(8)
+
+        def worker() -> None:
+            barrier.wait()
+            instance = get_event_queue()
+            with lock:
+                results.append(instance)
+
+        threads = [threading.Thread(target=worker) for _ in range(8)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert len(results) == 8
+        assert all(item is results[0] for item in results)
+    finally:
+        qb._DEFAULT_EVENT_QUEUE = original
+
+
+def test_packet_to_event_dict_and_push_packet() -> None:
+    """Validate dict normalization and raw BLE packet conversion via push_packet."""
+    partial = packet_to_event_dict({"rssi": -42})
+    assert partial["rssi"] == -42
+    assert partial["channel"] == 37
+    assert partial["mac_address"] == "00:00:00:00:00:00"
+    assert partial["network_type"] == "Unknown"
+
+    class FakePacket:
+        ts_epoch = 1729000000.0
+        chan = 38
+        rssi = -51
+        # 2-byte header + 6-byte reversed AdvA (AA:BB:CC:DD:EE:FF) + Apple Find My signature
+        body = bytes([0x00, 0x10, 0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA]) + bytes.fromhex("4c001219" + "ab" * 16)
+
+    q = EventQueue(maxsize=10)
+    assert q.push_packet(FakePacket()) is True
+    assert q.size() == 1
+    ev = q.drain(1)[0]
+    assert ev["channel"] == 38
+    assert ev["rssi"] == -51
+    assert ev["mac_address"] == "AA:BB:CC:DD:EE:FF"
+    assert ev["network_type"] == "Apple Find My"
