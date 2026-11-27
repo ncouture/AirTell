@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.6.0](https://github.com/ncouture/AirTell/compare/v0.5.0...v0.6.0) (2026-11-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* **app:** delete app directory, .streamlit config, and Streamlit test suites ([#253](https://github.com/ncouture/AirTell/issues/253)) (#257)
+
+### Bug Fixes
+
+* **cleanup:** remove residual Streamlit references, fix EventQueue bounds, and harden regression tests ([#261](https://github.com/ncouture/AirTell/issues/261)) ([#262](https://github.com/ncouture/AirTell/issues/262)) ([2efb8cc](https://github.com/ncouture/AirTell/commit/2efb8ccd5146db84400d937f931ebddc9866d52e))
+
+
+### Documentation
+
+* remove Streamlit dashboard artifacts, styleguide, and references ([#255](https://github.com/ncouture/AirTell/issues/255)) ([#259](https://github.com/ncouture/AirTell/issues/259)) ([df4d0d5](https://github.com/ncouture/AirTell/commit/df4d0d5e856867973f79ae052e154853368d2cc1))
+
+
+### Code Refactoring
+
+* **app:** delete app directory, .streamlit config, and Streamlit test suites ([#253](https://github.com/ncouture/AirTell/issues/253)) ([#257](https://github.com/ncouture/AirTell/issues/257)) ([5eb49a8](https://github.com/ncouture/AirTell/commit/5eb49a8ee7a7939b31cf0fb32ab7680c5a681ac4))
+* **telemetry:** migrate pure-Python EventQueue bridge from app to airtell.telemetry ([#252](https://github.com/ncouture/AirTell/issues/252)) ([#256](https://github.com/ncouture/AirTell/issues/256)) ([8c64f40](https://github.com/ncouture/AirTell/commit/8c64f40de34cd10cc2414de8bc157116101430fa))
+
+
+### Miscellaneous Chores
+
+* **deps:** remove streamlit and plotly dependencies and pin pandas explicitly ([#254](https://github.com/ncouture/AirTell/issues/254)) ([#258](https://github.com/ncouture/AirTell/issues/258)) ([069c8d5](https://github.com/ncouture/AirTell/commit/069c8d5a0bfa5cfdd87f8c43e36538697329cce2))
+
 ## [0.5.0](https://github.com/ncouture/AirTell/compare/v0.4.0...v0.5.0) (2026-11-26)
 
 
