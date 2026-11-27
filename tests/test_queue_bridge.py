@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import ast
 import sys
 import threading
 import time
+from pathlib import Path
 from typing import Any
 
 from airtell.telemetry.queue_bridge import EventQueue, get_event_queue, packet_to_event_dict
@@ -124,16 +126,54 @@ def test_queue_non_destructive_reads() -> None:
     assert q.size() == 10
 
 
-def test_queue_bridge_has_no_streamlit_dependency() -> None:
-    """Validate that airtell.telemetry.queue_bridge does not import streamlit."""
-    import inspect
+def test_queue_non_positive_count_boundaries() -> None:
+    """Validate get_recent, peek, and drain return empty lists for zero or negative counts."""
+    q = EventQueue(maxsize=10)
+    for i in range(5):
+        q.push({"pkt": i})
 
+    assert q.get_recent(0) == []
+    assert q.get_recent(-1) == []
+    assert q.get_recent(-5) == []
+    assert q.peek(0) == []
+    assert q.peek(-1) == []
+    assert q.peek(-5) == []
+    assert q.drain(0) == []
+    assert q.drain(-1) == []
+    assert q.size() == 5
+
+
+def test_airtell_package_and_repo_have_no_streamlit_or_app_dependencies() -> None:
+    """Validate via AST that airtell has no streamlit/plotly/app imports and removed artifacts stay absent."""
     import airtell.telemetry.queue_bridge as qb
 
-    source = inspect.getsource(qb)
-    assert "import streamlit" not in source
-    assert "st.cache_resource" not in source
-    assert "streamlit" not in sys.modules or "streamlit" not in qb.__dict__
+    repo_root = Path(__file__).resolve().parent.parent
+    forbidden_roots = {"streamlit", "plotly", "app"}
+
+    for py_file in sorted((repo_root / "src" / "airtell").rglob("*.py")):
+        tree = ast.parse(py_file.read_text(encoding="utf-8"), filename=str(py_file))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    top = alias.name.split(".")[0]
+                    assert top not in forbidden_roots, f"Forbidden import '{alias.name}' in {py_file}"
+            elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+                top = node.module.split(".")[0]
+                assert top not in forbidden_roots, f"Forbidden import from '{node.module}' in {py_file}"
+
+    for val in qb.__dict__.values():
+        mod_name = getattr(val, "__name__", "")
+        assert not (isinstance(mod_name, str) and mod_name.split(".")[0] in forbidden_roots)
+    assert "streamlit" not in sys.modules
+
+    assert not (repo_root / "app").exists(), "Deleted app/ directory must not exist"
+    assert not (repo_root / ".streamlit").exists(), "Deleted .streamlit/ directory must not exist"
+    assert not (repo_root / "conductor" / "code_styleguides" / "streamlit.md").exists()
+
+    pyproject_text = (repo_root / "pyproject.toml").read_text(encoding="utf-8")
+    assert "streamlit" not in pyproject_text.lower()
+    assert "plotly" not in pyproject_text.lower()
+    assert "pandas" in pyproject_text.lower()
 
 
 def test_singleton_get_event_queue_thread_safe_concurrent_init() -> None:

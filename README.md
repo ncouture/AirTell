@@ -117,7 +117,7 @@ To determine at all times whether a Sniffle device is open and being used:
 lsof /dev/ttyUSB0  # Return code 0 = OPEN and IN USE; Non-zero = IDLE / NOT OPEN
 lsof /dev/ttyUSB1
 ```
-The application checks this status continuously via `airtell.device.serial_port.check_device_usage()`, displaying real-time telemetry badges in the top app bar, sidebar, and radio controls view. See [`docs/device_status.md`](docs/device_status.md).
+The framework checks this status programmatically via `airtell.device.serial_port.check_device_usage()` and `get_sniffle_devices_status()`. See [`docs/device_status.md`](docs/device_status.md).
 
 ---
 
@@ -319,7 +319,7 @@ airtell/
 │   │   ├── scripts/            # Script entrypoints and radar engine wrappers
 │   │   ├── sidechannel/        # BAT allowlist, CSRK counter, encryption side-channels
 │   │   ├── sniff/              # Packet dissectors, PCAP/PCAPNG serialization
-│   │   ├── telemetry/          # SQLite & DuckDB storage backends, schemas
+│   │   ├── telemetry/          # SQLite & DuckDB storage backends, EventQueue bridge, schemas
 │   │   ├── topology/           # Topologies A & B, multi-dongle orchestration
 │   │   └── cli.py              # Centralized unified AirTell CLI entrypoint
 │   └── sniffle/                # Embedded Sniffle C firmware & CLI library
