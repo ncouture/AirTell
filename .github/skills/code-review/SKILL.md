@@ -78,11 +78,10 @@ When activated, execute this protocol sequentially:
    - BLE Radar & Proximity Tracking (`src/airtell/radar/`) and Sniffle Radar (`src/sniffle/src/sniffle/radar/`)
    - Sniffle Firmware & Python CLI (`src/sniffle/`)
    - CLI, Scripts & Extcap (`src/airtell/cli.py`, `src/airtell/scripts/`, `src/airtell/extcap/`)
-   - UI / Dashboard (`app/`)
 
 ### Step 2: High Thinking Cognitive Simulation
 Before emitting findings, enter deep internal reflection:
-- **Trace the Data Path:** Trace a byte from the serial wire / `VirtualRadioBus` through framing, `mark_and_flush` synchronization, dispatch, queueing, analytics extraction, and storage/UI.
+- **Trace the Data Path:** Trace a byte from the serial wire / `VirtualRadioBus` through framing, `mark_and_flush` synchronization, dispatch, queueing, analytics extraction, and storage/CLI output.
 - **Adversarial State Exploration:** What happens if the USB dongle is unplugged mid-burst or CP2102 returns zero-byte reads? What if a beacon sends payload length `0xFF` on an advertising channel? What if two dongles report identical timestamps on different channels?
 - **Regression Analysis:** Does this break backwards compatibility with legacy Sniffle commands, CLI flags, or `CONTRIBUTE.md` verification gates?
 

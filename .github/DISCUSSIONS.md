@@ -90,7 +90,7 @@ GitHub Issues are reserved for kernel panics, firmware lockups, UART framing des
 - Threat modeling for executive protection, defense-in-depth, and air-gapped SCADA/sensitive facilities.
 
 ### 💡 5. Ideas, Feature Requests & Wild Experiments
-- Dream features, protocol extensions, Wireshark dissector Lua scripts, Streamlit visualization enhancements, and machine learning models for fingerprint classification.
+- Dream features, protocol extensions, Wireshark dissector Lua scripts, visualization enhancements, and machine learning models for fingerprint classification.
 
 ---
 
