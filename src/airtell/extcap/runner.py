@@ -357,7 +357,7 @@ class TsharkExtcapRunner:
             return None
 
     def get_metrics(self) -> dict[str, Any]:
-        """Return operational metrics for monitoring and dashboard display.
+        """Return operational metrics for monitoring and telemetry consumers.
 
         Returns:
             Dictionary containing running status, counters, and buffer size.

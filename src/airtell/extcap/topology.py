@@ -387,7 +387,7 @@ class TsharkTopologyManager:
         return True
 
     def get_status(self) -> dict[str, Any]:
-        """Return aggregated operational telemetry for monitoring and UI display.
+        """Return aggregated operational telemetry for monitoring and downstream consumers.
 
         Returns:
             Dictionary with active topology, running status, counters, and runner metrics.

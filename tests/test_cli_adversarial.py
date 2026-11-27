@@ -1,4 +1,4 @@
-"""CLI and dashboard view tests for adversarial relay, deanonymization, and rogue beacon injection."""
+"""CLI tests for adversarial relay, deanonymization, and rogue beacon injection."""
 
 from __future__ import annotations
 

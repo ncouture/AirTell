@@ -74,6 +74,8 @@ class EventQueue:
         Returns:
             List of recent event dictionaries in chronological order.
         """
+        if max_items <= 0:
+            return []
         with self._lock:
             if not self._deque:
                 return []
@@ -98,6 +100,8 @@ class EventQueue:
         Returns:
             List of peeked event dictionaries.
         """
+        if count <= 0:
+            return []
         with self._lock:
             return list(self._deque)[:count]
 
