@@ -142,7 +142,7 @@ class TopologyAOrchestrator(BaseTopology):
         # 3. In single-dongle passive mode, connect to shared EventQueue if not already attached
         if self.stimulator is None and self.event_queue is None:
             try:
-                from app.queue_bridge import get_event_queue
+                from airtell.telemetry.queue_bridge import get_event_queue
 
                 self.event_queue = get_event_queue()
             except Exception:
@@ -256,7 +256,7 @@ class TopologyAOrchestrator(BaseTopology):
             if hasattr(self.event_queue, "push_packet"):
                 self.event_queue.push_packet(pkt)
             elif hasattr(self.event_queue, "push"):
-                from app.queue_bridge import packet_to_event_dict
+                from airtell.telemetry.queue_bridge import packet_to_event_dict
 
                 self.event_queue.push(packet_to_event_dict(pkt))
         except Exception as exc:

@@ -15,8 +15,8 @@ from airtell.device.serial_port import allocate_dual_ports
 from airtell.protocol.beacons import build_ibeacon
 from airtell.protocol.wire import PacketMessage
 from airtell.sniff.pcap import PcapBleReader, PcapBleWriter
+from airtell.telemetry.queue_bridge import EventQueue, packet_to_event_dict
 from airtell.topology.topology_a import TopologyAOrchestrator
-from app.queue_bridge import EventQueue, packet_to_event_dict
 
 
 class TestAllocateDualPortsSingleDongleFallback:
@@ -230,7 +230,7 @@ class TestSingleDongleEventQueueStreaming:
     """Test packet streaming from single-dongle observer into EventQueue (Issue #32)."""
 
     def test_forward_packet_to_event_queue(self) -> None:
-        """Captured packets must be forwarded into the EventQueue for Streamlit visualization."""
+        """Captured packets must be forwarded into the EventQueue for live telemetry consumers."""
         queue = EventQueue(maxsize=100)
         bus = VirtualRadioBus()
 

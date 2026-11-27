@@ -5,7 +5,7 @@ Follows the 4-tier testing methodology:
 - Tier 1: Feature Coverage (≥5 tests per feature for F1 to F6)
 - Tier 2: Boundary & Corner Cases (≥5 tests per feature for B1 to B5)
 - Tier 3: Cross-Feature Combinations (Pairwise coverage)
-- Tier 4: Real-World Application Scenarios (Against app/data/merged.pcap)
+- Tier 4: Real-World Application Scenarios (Against data/merged.pcap)
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 SPECTRAMESH_DIR = REPO_ROOT / "spectramesh_ouidb"
 SRC_DIR = REPO_ROOT / "src"
 OUIDB_BIN_PATH = SPECTRAMESH_DIR / "oui_db.bin"
-MERGED_PCAP_PATH = REPO_ROOT / "app" / "data" / "merged.pcap"
+MERGED_PCAP_PATH = REPO_ROOT / "data" / "merged.pcap"
 
 if str(SPECTRAMESH_DIR) not in sys.path:
     sys.path.insert(0, str(SPECTRAMESH_DIR))
@@ -729,12 +729,12 @@ class TestTier1FeatureCoverage:
             pytest.fail("create_parser is not implemented in airtell.cli")
 
         parser = create_parser()
-        args1 = parser.parse_args(["pcap-timeline", "-i", "app/data/merged.pcap", "--json"])
-        assert args1.pcap == "app/data/merged.pcap"
+        args1 = parser.parse_args(["pcap-timeline", "-i", "data/merged.pcap", "--json"])
+        assert args1.pcap == "data/merged.pcap"
         assert args1.json is True
 
-        args2 = parser.parse_args(["timeline", "-i", "app/data/merged.pcap", "--surveillance-only"])
-        assert args2.pcap == "app/data/merged.pcap"
+        args2 = parser.parse_args(["timeline", "-i", "data/merged.pcap", "--surveillance-only"])
+        assert args2.pcap == "data/merged.pcap"
         assert args2.surveillance_only is True
 
 
@@ -1246,15 +1246,15 @@ class TestTier3CrossFeatureCombinations:
 
 
 # ---------------------------------------------------------------------------
-# Tier 4: Real-World Application Scenarios (Against app/data/merged.pcap)
+# Tier 4: Real-World Application Scenarios (Against data/merged.pcap)
 # ---------------------------------------------------------------------------
 
 class TestTier4RealWorldApplicationScenarios:
-    """Tier 4: Verification of Real-World Ground Truth against app/data/merged.pcap."""
+    """Tier 4: Verification of Real-World Ground Truth against data/merged.pcap."""
 
     @pytest.fixture
     def require_merged_pcap(self) -> Path:
-        """Ensure app/data/merged.pcap exists and is readable."""
+        """Ensure data/merged.pcap exists and is readable."""
         if not MERGED_PCAP_PATH.exists():
             pytest.skip(f"Capture file {MERGED_PCAP_PATH} not found")
         return MERGED_PCAP_PATH

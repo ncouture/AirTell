@@ -16,7 +16,7 @@ from typing import Any
 
 from airtell.extcap.parser import TsharkBleJsonParser
 from airtell.extcap.runner import TsharkConfig, TsharkExtcapRunner
-from app.queue_bridge import EventQueue, get_event_queue
+from airtell.telemetry.queue_bridge import EventQueue, get_event_queue
 
 logger = logging.getLogger(__name__)
 

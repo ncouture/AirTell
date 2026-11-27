@@ -13,7 +13,7 @@ from airtell.extcap.topology import (
     check_port_availability,
     get_process_holding_port,
 )
-from app.queue_bridge import EventQueue
+from airtell.telemetry.queue_bridge import EventQueue
 
 
 class TestPortAvailabilityGuard:

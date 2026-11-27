@@ -470,14 +470,14 @@ class TestTimelineOrderingAndFiltering:
 
 
 # ==============================================================================
-# 6. Integration Verification with `app/data/merged.pcap`
+# 6. Integration Verification with `data/merged.pcap`
 # ==============================================================================
 
 
 class TestMergedPcapIntegration:
     """Verifies fast streaming extraction and ground truth against merged.pcap."""
 
-    PCAP_PATH = Path("app/data/merged.pcap")
+    PCAP_PATH = Path("data/merged.pcap")
 
     @pytest.mark.skipif(not PCAP_PATH.exists(), reason="merged.pcap not present")
     def test_merged_pcap_fast_slice_extraction(self):
