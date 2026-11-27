@@ -32,8 +32,3 @@ python3 src/airtell/scripts/ble_antistalking_tracker.py -s /dev/ttyUSB0 -c 37 --
 # Monitor Channel 38 via Dongle 2
 python3 src/airtell/scripts/ble_antistalking_tracker.py -s /dev/ttyUSB1 -c 38 --db ble_tracker.db
 ```
-
-### 3. Launch the Streamlit Web Dashboard
-```bash
-streamlit run app/streamlit_app.py
-```

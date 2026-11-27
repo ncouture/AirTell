@@ -13,7 +13,7 @@ The test suite validates compliance with requirements R1 through R4 from `ORIGIN
 | **Tier 1** | Feature Coverage in Isolation | `tests/test_e2e_ouidb_timeline.py` | 33 | Exhaustive coverage of features F1–F6 (≥5 tests per feature). |
 | **Tier 2** | Boundary & Corner Cases | `tests/test_e2e_ouidb_timeline.py` | 25 | Degraded, extreme, and malformed inputs (B1–B5, ≥5 per category). |
 | **Tier 3** | Cross-Feature Combinations | `tests/test_e2e_ouidb_timeline.py` | 7 | Pairwise feature interactions, multi-role devices, and filter compositions. |
-| **Tier 4** | Real-World Application Scenarios | `tests/test_e2e_ouidb_timeline.py` | 7 | End-to-end execution against `app/data/merged.pcap` asserting ground truth. |
+| **Tier 4** | Real-World Application Scenarios | `tests/test_e2e_ouidb_timeline.py` | 7 | End-to-end execution against `data/merged.pcap` asserting ground truth. |
 | **Unit** | Internal Engine Unit Tests | `spectramesh_ouidb/test_spectramesh_ouidb.py` | 61 | C extension structures, mmap safety, binary format, and thread safety. |
 | **Total** | | | **133** | **Full OUI DB & Timeline Verification Suite** |
 
@@ -27,7 +27,7 @@ bluetooth-sniffle/
 │   ├── oui_db.bin                 # Production 58,197-entry binary OUI database (SOUI v1)
 │   ├── spectramesh_ouidb.py       # Python OuiDb interface
 │   └── test_spectramesh_ouidb.py  # Engine unit tests (61 tests)
-├── app/data/
+├── data/
 │   └── merged.pcap                # 683 MB real-world BLE capture (8,899,578 packets, PCAPNG)
 ├── src/airtell/
 │   ├── sniff/
@@ -76,9 +76,9 @@ Packages custom in-memory binary databases adhering to the packed `soui_header_t
 
 ---
 
-## 4. Real-World Dataset: `app/data/merged.pcap`
+## 4. Real-World Dataset: `data/merged.pcap`
 
-The primary production validation dataset is `app/data/merged.pcap`:
+The primary production validation dataset is `data/merged.pcap`:
 - **Format**: PCAPNG (magic `0x0A0D0D0A`), Link Layer RF encapsulation (DLT 161 / 256).
 - **Volume**: 8,899,578 packets across 18 merged channel captures (683,034,112 bytes).
 - **Duration**: 33,313 seconds (~9.25 hours).

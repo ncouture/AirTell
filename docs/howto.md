@@ -532,15 +532,6 @@ df = backend.query_df(
 )
 ```
 
-### Streamlit Dashboard Acceleration
-
-The Streamlit tactical dashboard (`app/streamlit_app.py`) automatically initializes and caches the DuckDB backend in `st.session_state` (`@st.cache_resource`). The following operational views leverage DuckDB vectorized queries for sub-second interaction:
-
-* **Deep Packet Inspector (`app/views/packet_inspector.py`)**: Sub-second text search and filtering across MAC addresses, ephemeral keys, and protocol types over 5M+ packets.
-* **RSSI Trends (`app/views/rssi_trends.py`)**: Instantaneous aggregation and extraction of chronological signal trajectories for interactive Plotly charts.
-* **Threat Feed & Triage (`app/views/alert_feed.py`)**: Rapid retrieval of historical anti-stalking incident records.
-* **Live Telemetry Overview (`app/views/telemetry_overview.py`)**: Real-time channel distribution and network volume metrics.
-
 ### Migration Guide for Large PCAP Files
 
 When analyzing large multi-gigabyte PCAP files containing 1M to 5M+ packets:

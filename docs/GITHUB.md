@@ -47,7 +47,7 @@ AirTell uses **GitHub Discussions** as an open RF salon and research exchange to
 2. **🛠️ Hardware Rigs & Testbed Engineering**: CC2652 dongle flashing, LaunchPad / Sonoff antennas, attenuation, and `VirtualRadioBus` mock harnesses.
 3. **⚔️ Red Team Tradecraft & Stimulus Chains**: Active `SCAN_REQ` stimulus timing, persistence across MAC rotation intervals, and physical perimeter tracking.
 4. **🛡️ Risk, Governance & Privacy Engineering**: Fleet privacy posture evaluations, empirical tracking benchmarks, and sensitive facility threat modeling.
-5. **💡 Ideas, Feature Requests & Wild Experiments**: Protocol extensions, Wireshark dissectors, and Streamlit visualization ideas.
+5. **💡 Ideas, Feature Requests & Wild Experiments**: Protocol extensions, Wireshark dissectors, and visualization ideas.
 
 ### Maintainer Triage Rules
 - **Issues are for Bugs**: Hardware desyncs, UART buffer underruns, packet parsing panics, and CI testbed failures.
@@ -66,7 +66,7 @@ Issue creation is governed by GitHub Issue Forms located in [`.github/ISSUE_TEMP
 
 ### 2. Bug Report Form ([`bug_report.yml`](../.github/ISSUE_TEMPLATE/bug_report.yml))
 Enforces mandatory collection of critical environmental telemetry:
-- **Operating Topology**: Dropdown selection (Topology A, Topology B, Topology C, CLI Side-Channel, UI Dashboard, or `VirtualRadioBus`).
+- **Operating Topology**: Dropdown selection (Topology A, Topology B, Topology C, CLI Side-Channel, or `VirtualRadioBus`).
 - **Hardware Dongles & Firmware**: CC2652 model, USB ports, and Sniffle firmware versions (e.g., CC2652P on `/dev/ttyUSB0` with Sniffle v1.10.0).
 - **Environment**: OS and Python versions.
 - **Reproduction Steps**: Exact CLI commands and arguments.

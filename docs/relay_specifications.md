@@ -240,4 +240,4 @@ python3 scripts/relay_slave.py \
 lsof /dev/ttyUSB0  # Return code 0 (IN USE)
 lsof /dev/ttyUSB1  # Return code 0 (IN USE)
 ```
-Check the **Streamlit Top App Bar** or **Radio Controls** view: both dongles will show `IN USE` with green indicator dots.
+Both dongles will report exit code `0` (`IN USE`) via `lsof` and `airtell.device.serial_port.get_sniffle_devices_status()`.

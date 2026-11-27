@@ -279,10 +279,6 @@ airtell/
 │   ├── ISSUE_TEMPLATE/         # Structured issue forms (bug, feature, config)
 │   ├── skills/code-review/     # Gemini 3.8 Flash (Thinking=High) review skill
 │   └── workflows/              # GitHub Actions CI (code-review.yml)
-├── app/                        # Material Design v3 Tactical Streamlit Dashboard
-│   ├── components/             # Navigation rail, top app bar, PWA assets
-│   ├── views/                  # Telemetry, RSSI trends, alerts, radio controls
-│   └── streamlit_app.py        # Dashboard application entrypoint
 ├── docs/                       # Centralized documentation hub
 │   ├── index.md                # Documentation navigation index
 │   ├── GITHUB.md               # GitHub operations, governance, & AI code review

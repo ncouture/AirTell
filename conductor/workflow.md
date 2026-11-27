@@ -48,7 +48,7 @@ All tasks follow a strict lifecycle:
 
 6.  **Verify Coverage:** Run coverage reports using the project's chosen tools.
     For example, in a Python project, this might look like: `bash pytest
-    --cov=app --cov-report=html` Target: >80% coverage for new code. The
+    --cov=airtell --cov-report=html` Target: >80% coverage for new code. The
     specific tools and commands will vary by language and framework.
 
 7.  **Document Deviations:** If implementation differs from tech stack:
@@ -149,14 +149,6 @@ that also concludes a phase in `plan.md`.
         expected outcomes.
     -   The plan you present to the user **must** follow this format:
 
-        **For a Frontend / Dashboard Change:** ``` The automated tests have passed. For
-        manual verification, please follow these steps:
-
-        **Manual Verification Steps:** 1. **Start the Streamlit dashboard with
-        the command:** `streamlit run app/streamlit_app.py` 2. **Open your browser to:**
-        `http://localhost:8501` 3. **Confirm that you see:** The tactical BLE
-        telemetry views and controls updating cleanly. ```
-
         **For a Backend / CLI Change:** ``` The automated tests have passed. For
         manual verification, please follow these steps:
 
@@ -240,9 +232,6 @@ uv run pytest -v tests/
 # Run linter
 uv run ruff check .
 
-# Run tactical Streamlit dashboard
-streamlit run app/streamlit_app.py
-
 # Run AirTell CLI
 python3 -m airtell.cli --help
 ```
@@ -279,7 +268,7 @@ uv run ruff check .
 -   Test against `VirtualRadioBus` mock interfaces for zero-device verification
 -   Validate dual CC2652P serial dongles (`/dev/ttyUSB0` & `/dev/ttyUSB1`) when hardware is present
 -   Verify multi-channel capture, hopping sequence, and PCAP output integrity
--   Verify Streamlit tactical telemetry rendering and WebSocket/queue bridges
+-   Verify thread-safe `EventQueue` streaming bridge behavior (`airtell.telemetry.queue_bridge`)
 
 ## Code Review Process
 
@@ -321,8 +310,7 @@ Before requesting review:
 
 6.  **Telemetry & Hardware Experience**
 
-    -   Streamlit tactical UI renders cleanly without layout overflow
-    -   RSSI charts, radar tomographic heatmaps, and threat lists refresh smoothly
+    -   CLI outputs, radar tomographic heatmaps, and threat reports render cleanly
     -   Serial communication handles disconnects and re-enumerations gracefully
 
 ## Commit Guidelines

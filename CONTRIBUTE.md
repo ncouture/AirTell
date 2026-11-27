@@ -162,9 +162,6 @@ All development commands work either via `uv run` or directly inside an activate
 uv run airtell --help
 python3 -m airtell.cli --help
 
-# Launch the Material Design v3 Streamlit tactical dashboard
-uv run streamlit run app/streamlit_app.py
-
 # Run the main unit, integration, and end-to-end test suite
 uv run pytest -v -W error tests/
 
@@ -185,7 +182,7 @@ uv run python3 scripts/check_docs.py
 AirTell follows a red-green-refactor test-driven development (TDD) workflow for all features and bug fixes:
 
 1. Write failing tests first (red phase): Create or update a `tests/test_*.py` module that defines the expected behavior, boundary conditions, or bug reproduction. Run `uv run pytest` and confirm the new tests fail for the expected reason.
-2. Implement the minimal fix or feature (green phase): Write the application code under `src/airtell/`, `app/`, or `scripts/` required to pass the tests. Re-run `uv run pytest` to verify all tests pass.
+2. Implement the minimal fix or feature (green phase): Write the application code under `src/airtell/` or `scripts/` required to pass the tests. Re-run `uv run pytest` to verify all tests pass.
 3. Refactor and clean up: Remove duplication, verify type annotations, and check performance in hot packet loops while keeping the test suite green.
 4. Check test coverage: Target at least 80% coverage for modified modules:
    ```bash

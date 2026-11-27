@@ -2,7 +2,7 @@
 
 Welcome to the centralized documentation hub for **AirTell** (Bluetooth Low Energy testbed framework) and **Sniffle**.
 
-This repository pairs firmware for Texas Instruments CC1352 / CC26x2 wireless microcontrollers (and Sonoff Zigbee 3.0 Dongle Plus CC2652P adapters) with Python host-side tools, Streamlit operations dashboards, and dual-dongle coordination testbeds.
+This repository pairs firmware for Texas Instruments CC1352 / CC26x2 wireless microcontrollers (and Sonoff Zigbee 3.0 Dongle Plus CC2652P adapters) with Python host-side tools, unified CLI analytics, and dual-dongle coordination testbeds.
 
 ---
 
@@ -24,7 +24,7 @@ This repository pairs firmware for Texas Instruments CC1352 / CC26x2 wireless mi
 * [**Link Layer Traffic Relay Specifications**](relay_specifications.md)
   Full architectural and protocol specifications to implement Link Layer Traffic Relay using a master/slave topology (`/dev/ttyUSB0` and `/dev/ttyUSB1`) across two Sniffle devices (`relay_master.py` and `relay_slave.py`). Includes PDU sequencing, fast connection interval tuning, XDS110 DMA latency workarounds, and security warnings.
 * [**Device Status & LSOF Validation**](device_status.md)
-  Specification and operations guide for runtime detection of Sniffle device availability. Explains validation via `lsof /dev/ttyUSB0` and `lsof /dev/ttyUSB1` (exit code 0 = open/in use, non-zero = idle/not open) and real-time dashboard telemetry.
+  Specification and operations guide for runtime detection of Sniffle device availability. Explains validation via `lsof /dev/ttyUSB0` and `lsof /dev/ttyUSB1` (exit code 0 = open/in use, non-zero = idle/not open) and programmatic device status APIs.
 
 ### 2. Scripts & CLI Reference
 * [**Complete CLI Reference Manual**](CLI.md)
@@ -62,9 +62,6 @@ This repository pairs firmware for Texas Instruments CC1352 / CC26x2 wireless mi
 
 ```text
 airtell/
-├── app/                      # Material Design v3 Dark Tactical Streamlit Dashboard
-│   ├── components/           # M3 Top App Bar, Navigation Rail, PWA Service Worker
-│   └── views/                # Live Telemetry, RSSI Trends, Threat Alerts, Radio Controls
 ├── conductor/                # Conductor workflow tracks, plans, and specifications
 ├── docs/                     # Centralized technical documentation hub
 ├── scripts/                  # Standalone CLI tools, parsers, relays, and decoders
